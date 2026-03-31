@@ -1,11 +1,7 @@
 {
-    "name": "Core",
+    "name": "WordList",
     "rootNamespace": "",
-    "references": [
-        "Unity.InputSystem",
-        "Unity.TextMeshPro",
-        "WordList"
-    ],
+    "references": [],
     "includePlatforms": [],
     "excludePlatforms": [],
     "allowUnsafeCode": false,
