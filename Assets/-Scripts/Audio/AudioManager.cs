@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Audio;
 using UnityEngine.Rendering;
 
 public class AudioManager : MonoBehaviour
@@ -16,18 +17,15 @@ public class AudioManager : MonoBehaviour
     public AudioClip fail;
 
 
+    [Header("Mixer")]
+    [SerializeField] private AudioMixerGroup mixerGroup;
+
     private AudioSource audioSource;
 
-    // Start is called before the first frame update
     void Start()
     {
         audioSource = GetComponent<AudioSource>();
-    }
-
-    // Update is called once per frame
-    void Update()
-    {
-       
+        if (mixerGroup != null) audioSource.outputAudioMixerGroup = mixerGroup;
     }
 
     public virtual void PlaySound(AudioClip clip)
