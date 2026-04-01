@@ -79,6 +79,9 @@ public class InputHandler : MonoBehaviour
         // Check backspace
         if (keyboard.backspaceKey.wasPressedThisFrame)
         {
+            // Clear UI selection so EventSystem doesn't also fire Submit on a button
+            if (EventSystem.current != null)
+                EventSystem.current.SetSelectedGameObject(null);
             OnBackspacePressed?.Invoke();
             return;
         }
@@ -86,6 +89,9 @@ public class InputHandler : MonoBehaviour
         // Check enter
         if (keyboard.enterKey.wasPressedThisFrame)
         {
+            // Clear UI selection so EventSystem doesn't also fire Submit on a button
+            if (EventSystem.current != null)
+                EventSystem.current.SetSelectedGameObject(null);
             OnEnterPressed?.Invoke();
             return;
         }
