@@ -11,7 +11,8 @@ Unity typing game targeting Steam release. Players hold a key on first letter ap
 - CRT-Free shader package (post-processing)
 
 ## Project Structure
-- `Assets/-Scripts/Core/` — GameStateManager, GameCoordinator, WordEngine, InputHandler, PhaseManager, TimerSystem, SettingsManager
+- `Assets/-Scripts/Core/` — GameStateManager, WordEngine, InputHandler, PhaseManager, TimerSystem, SettingsManager
+- `Assets/-Scripts/GameCoordinator.cs` — Central wiring (root of Assembly-CSharp, not in Core asmdef)
 - `Assets/-Scripts/Feedback/` — FeedbackController, CameraShakeAndZoom, KeyboardShake
 - `Assets/-Scripts/UI/` — UIController, KeyboardVisualController, CurTextTMPanim, CircularScrollingText, MenuAnimOnOff
 - `Assets/-Scripts/Audio/` — AudioManager (with AudioMixer support)
@@ -39,3 +40,6 @@ Unity typing game targeting Steam release. Players hold a key on first letter ap
 - Core assembly (`Core.asmdef`) for shared types and systems; UI/Feedback/Audio in Assembly-CSharp
 - Singletons use `Instance` pattern with `Destroy(gameObject)` guard in Awake
 - Systems subscribe to events in OnEnable/Start, unsubscribe in OnDisable
+- InputHandler clears EventSystem selection on Enter/Backspace to prevent UI button double-triggers
+- TimerSystem pauses on failed input, resumes on restart — paused time excluded from phase duration
+- KeyboardVisualController resets key colors on phase complete, restart, and game reset
