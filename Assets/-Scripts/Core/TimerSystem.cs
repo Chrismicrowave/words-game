@@ -28,10 +28,12 @@ public class TimerSystem : MonoBehaviour
     {
         if (IsRunning)
         {
-            CurrentPhaseDuration = Time.time - phaseStartTime;
+            CurrentPhaseDuration = Time.time - phaseStartTime - pausedDuration;
             OnTimerUpdated?.Invoke(CurrentPhaseDuration, TotalElapsedTime + CurrentPhaseDuration);
         }
     }
+
+    private float pausedDuration;
 
     public void StartTimer()
     {
@@ -39,6 +41,25 @@ public class TimerSystem : MonoBehaviour
         {
             IsRunning = true;
             phaseStartTime = Time.time;
+            pausedDuration = 0f;
+        }
+    }
+
+    public void PauseTimer()
+    {
+        if (IsRunning)
+        {
+            CurrentPhaseDuration = Time.time - phaseStartTime - pausedDuration;
+            IsRunning = false;
+        }
+    }
+
+    public void ResumeTimer()
+    {
+        if (!IsRunning && phaseStartTime > 0f)
+        {
+            pausedDuration = Time.time - phaseStartTime - CurrentPhaseDuration;
+            IsRunning = true;
         }
     }
 

@@ -88,6 +88,7 @@ public class GameCoordinator : MonoBehaviour
                 GameStateManager.Instance.TransitionTo(GameState.PhaseComplete);
                 break;
             case StepResult.Failed:
+                TimerSystem.Instance.PauseTimer();
                 GameStateManager.Instance.TransitionTo(GameState.PhaseFailed);
                 break;
         }
