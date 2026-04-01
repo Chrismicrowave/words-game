@@ -428,6 +428,7 @@ MonoBehaviour:
   m_VerticalAlignment: 256
   m_textAlignment: 65535
   m_characterSpacing: 0
+  m_characterHorizontalScale: 1
   m_wordSpacing: 0
   m_lineSpacing: 0
   m_lineSpacingMax: 0
@@ -695,6 +696,7 @@ MonoBehaviour:
   m_VerticalAlignment: 256
   m_textAlignment: 65535
   m_characterSpacing: 0
+  m_characterHorizontalScale: 1
   m_wordSpacing: 0
   m_lineSpacing: 0
   m_lineSpacingMax: 0
@@ -859,6 +861,7 @@ MonoBehaviour:
   m_VerticalAlignment: 256
   m_textAlignment: 65535
   m_characterSpacing: 0
+  m_characterHorizontalScale: 1
   m_wordSpacing: 0
   m_lineSpacing: 0
   m_lineSpacingMax: 0
@@ -1208,6 +1211,7 @@ MonoBehaviour:
   m_VerticalAlignment: 256
   m_textAlignment: 65535
   m_characterSpacing: 0
+  m_characterHorizontalScale: 1
   m_wordSpacing: 0
   m_lineSpacing: 0
   m_lineSpacingMax: 0
@@ -1456,6 +1460,7 @@ MonoBehaviour:
   m_VerticalAlignment: 512
   m_textAlignment: 65535
   m_characterSpacing: 0
+  m_characterHorizontalScale: 1
   m_wordSpacing: 0
   m_lineSpacing: 0
   m_lineSpacingMax: 0
@@ -1668,6 +1673,7 @@ MonoBehaviour:
   m_VerticalAlignment: 512
   m_textAlignment: 65535
   m_characterSpacing: 0
+  m_characterHorizontalScale: 1
   m_wordSpacing: 0
   m_lineSpacing: 0
   m_lineSpacingMax: 0
@@ -2287,6 +2293,7 @@ MonoBehaviour:
   m_VerticalAlignment: 512
   m_textAlignment: 65535
   m_characterSpacing: 0
+  m_characterHorizontalScale: 1
   m_wordSpacing: 0
   m_lineSpacing: 0
   m_lineSpacingMax: 0
@@ -2758,6 +2765,7 @@ MonoBehaviour:
   m_VerticalAlignment: 256
   m_textAlignment: 65535
   m_characterSpacing: 0
+  m_characterHorizontalScale: 1
   m_wordSpacing: 0
   m_lineSpacing: 0
   m_lineSpacingMax: 0
@@ -3277,6 +3285,7 @@ MonoBehaviour:
   m_VerticalAlignment: 256
   m_textAlignment: 65535
   m_characterSpacing: 0
+  m_characterHorizontalScale: 1
   m_wordSpacing: 0
   m_lineSpacing: 0
   m_lineSpacingMax: 0
@@ -3471,7 +3480,6 @@ MonoBehaviour:
   m_ScreenCoordScaleBias: {x: 0, y: 0, z: 0, w: 0}
   m_RequiresDepthTexture: 0
   m_RequiresColorTexture: 0
-  m_Version: 2
   m_TaaSettings:
     m_Quality: 3
     m_FrameInfluence: 0.1
@@ -3479,6 +3487,7 @@ MonoBehaviour:
     m_MipBias: 0
     m_VarianceClampScale: 0.9
     m_ContrastAdaptiveSharpening: 0
+  m_Version: 2
 --- !u!114 &330585548
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3638,6 +3647,7 @@ MonoBehaviour:
   m_VerticalAlignment: 256
   m_textAlignment: 65535
   m_characterSpacing: 0
+  m_characterHorizontalScale: 1
   m_wordSpacing: 0
   m_lineSpacing: 0
   m_lineSpacingMax: 0
@@ -4003,6 +4013,7 @@ MonoBehaviour:
   m_VerticalAlignment: 512
   m_textAlignment: 65535
   m_characterSpacing: 0
+  m_characterHorizontalScale: 1
   m_wordSpacing: 0
   m_lineSpacing: 0
   m_lineSpacingMax: 0
@@ -4139,6 +4150,7 @@ MonoBehaviour:
   m_VerticalAlignment: 512
   m_textAlignment: 65535
   m_characterSpacing: 0
+  m_characterHorizontalScale: 1
   m_wordSpacing: 0
   m_lineSpacing: 0
   m_lineSpacingMax: 0
@@ -4282,7 +4294,7 @@ AudioSource:
   m_Enabled: 1
   serializedVersion: 4
   OutputAudioMixerGroup: {fileID: 0}
-  m_audioClip: {fileID: 8300000, guid: fc1a626d684868f469add1fdef77f320, type: 3}
+  m_audioClip: {fileID: 0}
   m_Resource: {fileID: 8300000, guid: fc1a626d684868f469add1fdef77f320, type: 3}
   m_PlayOnAwake: 1
   m_Volume: 0.3
@@ -4383,6 +4395,137 @@ Transform:
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 1761848515}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &369087720
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 369087728}
+  - component: {fileID: 369087727}
+  - component: {fileID: 369087726}
+  - component: {fileID: 369087725}
+  - component: {fileID: 369087724}
+  - component: {fileID: 369087723}
+  - component: {fileID: 369087722}
+  - component: {fileID: 369087721}
+  m_Layer: 0
+  m_Name: GameSystems
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &369087721
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 369087720}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 86f53c2596af6a34ab7afcaf2f0781fa, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::FeedbackController
+  cameraShake: {fileID: 330585550}
+  keyboardShake: {fileID: 1255161823}
+  audioKeys: {fileID: 2079988418}
+  audioResult: {fileID: 1535896217}
+--- !u!114 &369087722
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 369087720}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 983a62dc05d2b0d469deb737630e51d1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::GameCoordinator
+  keyboardVisual: {fileID: 1255161824}
+  customCursor: {fileID: 0}
+  cursorHotspot: {x: 0, y: 0}
+  defaultWordList: {fileID: 11400000, guid: 130043c01d85e03469798c86a98fdf32, type: 2}
+--- !u!114 &369087723
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 369087720}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b794b199ba8d6e54a86f8c645d529630, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Core::SettingsManager
+  mainMixer: {fileID: 0}
+--- !u!114 &369087724
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 369087720}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 25a39d040c1b3d44abacefd42b428f40, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Core::TimerSystem
+--- !u!114 &369087725
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 369087720}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 424a143cb1c34b243ade6e8fed2c62bf, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Core::PhaseManager
+--- !u!114 &369087726
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 369087720}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 23357236252c20e4f91a2b650df538c5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Core::InputHandler
+--- !u!114 &369087727
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 369087720}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 968335d9017a7e8489f6b6a8126383e2, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Core::GameStateManager
+--- !u!4 &369087728
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 369087720}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &374566401
 GameObject:
@@ -4560,14 +4703,14 @@ Light:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 410087039}
   m_Enabled: 1
-  serializedVersion: 11
+  serializedVersion: 12
   m_Type: 1
   m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_Intensity: 2
   m_Range: 10
   m_SpotAngle: 30
   m_InnerSpotAngle: 21.80208
-  m_CookieSize: 10
+  m_CookieSize2D: {x: 10, y: 10}
   m_Shadows:
     m_Type: 2
     m_Resolution: -1
@@ -4644,17 +4787,23 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 474bcb49853aa07438625e644c072ee6, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  m_Version: 3
   m_UsePipelineSettings: 1
   m_AdditionalLightsShadowResolutionTier: 2
-  m_LightLayerMask: 1
-  m_RenderingLayers: 1
   m_CustomShadowLayers: 0
-  m_ShadowLayerMask: 1
-  m_ShadowRenderingLayers: 1
   m_LightCookieSize: {x: 1, y: 1}
   m_LightCookieOffset: {x: 0, y: 0}
   m_SoftShadowQuality: 1
+  m_RenderingLayersMask:
+    serializedVersion: 0
+    m_Bits: 1
+  m_ShadowRenderingLayersMask:
+    serializedVersion: 0
+    m_Bits: 1
+  m_Version: 4
+  m_LightLayerMask: 1
+  m_ShadowLayerMask: 1
+  m_RenderingLayers: 1
+  m_ShadowRenderingLayers: 1
 --- !u!1001 &413342476
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -4923,7 +5072,7 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 1902836641}
+      - m_Target: {fileID: 0}
         m_TargetAssemblyTypeName: GameManager, Assembly-CSharp
         m_MethodName: SwapPhase
         m_Mode: 1
@@ -5284,7 +5433,7 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 1902836641}
+      - m_Target: {fileID: 0}
         m_TargetAssemblyTypeName: GameManager, Assembly-CSharp
         m_MethodName: MovePhaseUp
         m_Mode: 1
@@ -5429,6 +5578,7 @@ MonoBehaviour:
   m_VerticalAlignment: 512
   m_textAlignment: 65535
   m_characterSpacing: 0
+  m_characterHorizontalScale: 1
   m_wordSpacing: 0
   m_lineSpacing: 0
   m_lineSpacingMax: 0
@@ -5565,6 +5715,7 @@ MonoBehaviour:
   m_VerticalAlignment: 512
   m_textAlignment: 65535
   m_characterSpacing: 0
+  m_characterHorizontalScale: 1
   m_wordSpacing: 0
   m_lineSpacing: 0
   m_lineSpacingMax: 0
@@ -5729,6 +5880,7 @@ MonoBehaviour:
   m_VerticalAlignment: 256
   m_textAlignment: 65535
   m_characterSpacing: 0
+  m_characterHorizontalScale: 1
   m_wordSpacing: 0
   m_lineSpacing: 0
   m_lineSpacingMax: 0
@@ -6264,6 +6416,7 @@ MonoBehaviour:
   m_VerticalAlignment: 256
   m_textAlignment: 65535
   m_characterSpacing: 0
+  m_characterHorizontalScale: 1
   m_wordSpacing: 0
   m_lineSpacing: 0
   m_lineSpacingMax: 0
@@ -6428,6 +6581,7 @@ MonoBehaviour:
   m_VerticalAlignment: 256
   m_textAlignment: 65535
   m_characterSpacing: 0
+  m_characterHorizontalScale: 1
   m_wordSpacing: 0
   m_lineSpacing: 0
   m_lineSpacingMax: 0
@@ -7124,6 +7278,7 @@ MonoBehaviour:
   m_VerticalAlignment: 256
   m_textAlignment: 65535
   m_characterSpacing: 0
+  m_characterHorizontalScale: 1
   m_wordSpacing: 0
   m_lineSpacing: 0
   m_lineSpacingMax: 0
@@ -7555,6 +7710,7 @@ MonoBehaviour:
   m_VerticalAlignment: 256
   m_textAlignment: 65535
   m_characterSpacing: 0
+  m_characterHorizontalScale: 1
   m_wordSpacing: 0
   m_lineSpacing: 0
   m_lineSpacingMax: 0
@@ -7608,6 +7764,7 @@ GameObject:
   - component: {fileID: 680745021}
   - component: {fileID: 680745020}
   - component: {fileID: 680745019}
+  - component: {fileID: 680745023}
   m_Layer: 5
   m_Name: --- UI ---
   m_TagString: Untagged
@@ -7704,6 +7861,34 @@ RectTransform:
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 1920, y: 1080}
   m_Pivot: {x: 0.5, y: 0.5}
+--- !u!114 &680745023
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 680745018}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 782f19c7b1bf12b47ac92a71f876a155, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::UIController
+  targetTextUI: {fileID: 1829801795}
+  matchedTextUI: {fileID: 358275383}
+  statusTextUI: {fileID: 1885423110}
+  cursorBlinkInterval: 0.25
+  phaseInputField: {fileID: 1069122250}
+  inputFieldActiveColor: {r: 0.7059, g: 1, b: 0.9373, a: 1}
+  inputFieldInactiveColor: {r: 1, g: 1, b: 1, a: 1}
+  phaseListContent: {fileID: 920743731}
+  phaseButtonPrefab: {fileID: 3288893664048079578, guid: cc04af5ae044edf4f9373674f6e567ec, type: 3}
+  phaseSelectedColor: {r: 0.7516, g: 1, b: 0.9959, a: 0.502}
+  phaseUnselectedColor: {r: 0, g: 0, b: 0, a: 0}
+  phaseTimeUI: {fileID: 1894536267}
+  totalTimeUI: {fileID: 1477368923}
+  deleteDelayBetweenLetters: 0.02
+  audioKeys: {fileID: 2079988418}
+  showActionPromptOnFirstPhase: 1
 --- !u!1 &683000842
 GameObject:
   m_ObjectHideFlags: 0
@@ -8240,6 +8425,7 @@ MonoBehaviour:
   m_VerticalAlignment: 256
   m_textAlignment: 65535
   m_characterSpacing: 0
+  m_characterHorizontalScale: 1
   m_wordSpacing: 0
   m_lineSpacing: 0
   m_lineSpacingMax: 0
@@ -8789,7 +8975,7 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 1902836641}
+      - m_Target: {fileID: 0}
         m_TargetAssemblyTypeName: GameManager, Assembly-CSharp
         m_MethodName: DeletePhase
         m_Mode: 1
@@ -8936,6 +9122,7 @@ MonoBehaviour:
   m_VerticalAlignment: 512
   m_textAlignment: 65535
   m_characterSpacing: 0
+  m_characterHorizontalScale: 1
   m_wordSpacing: 0
   m_lineSpacing: 0
   m_lineSpacingMax: 0
@@ -9573,7 +9760,7 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 1902836641}
+      - m_Target: {fileID: 0}
         m_TargetAssemblyTypeName: GameManager, Assembly-CSharp
         m_MethodName: CloseGame
         m_Mode: 1
@@ -9746,6 +9933,7 @@ MonoBehaviour:
   m_VerticalAlignment: 256
   m_textAlignment: 65535
   m_characterSpacing: 0
+  m_characterHorizontalScale: 1
   m_wordSpacing: 0
   m_lineSpacing: 0
   m_lineSpacingMax: 0
@@ -9870,7 +10058,7 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 1902836641}
+      - m_Target: {fileID: 0}
         m_TargetAssemblyTypeName: GameManager, Assembly-CSharp
         m_MethodName: ResetGame
         m_Mode: 1
@@ -10240,6 +10428,7 @@ MonoBehaviour:
   m_VerticalAlignment: 256
   m_textAlignment: 65535
   m_characterSpacing: 0
+  m_characterHorizontalScale: 1
   m_wordSpacing: 0
   m_lineSpacing: 0
   m_lineSpacingMax: 0
@@ -10378,6 +10567,7 @@ MonoBehaviour:
   m_VerticalAlignment: 512
   m_textAlignment: 65535
   m_characterSpacing: 0
+  m_characterHorizontalScale: 1
   m_wordSpacing: 0
   m_lineSpacing: 0
   m_lineSpacingMax: 0
@@ -10542,6 +10732,7 @@ MonoBehaviour:
   m_VerticalAlignment: 256
   m_textAlignment: 65535
   m_characterSpacing: 0
+  m_characterHorizontalScale: 1
   m_wordSpacing: 0
   m_lineSpacing: 0
   m_lineSpacingMax: 0
@@ -10816,6 +11007,7 @@ MonoBehaviour:
   m_VerticalAlignment: 256
   m_textAlignment: 65535
   m_characterSpacing: 0
+  m_characterHorizontalScale: 1
   m_wordSpacing: 0
   m_lineSpacing: 0
   m_lineSpacingMax: 0
@@ -11583,6 +11775,7 @@ MonoBehaviour:
   m_VerticalAlignment: 256
   m_textAlignment: 65535
   m_characterSpacing: 0
+  m_characterHorizontalScale: 1
   m_wordSpacing: 0
   m_lineSpacing: 0
   m_lineSpacingMax: 0
@@ -12152,6 +12345,7 @@ MonoBehaviour:
   m_VerticalAlignment: 256
   m_textAlignment: 65535
   m_characterSpacing: 0
+  m_characterHorizontalScale: 1
   m_wordSpacing: 0
   m_lineSpacing: 0
   m_lineSpacingMax: 0
@@ -12392,6 +12586,7 @@ MonoBehaviour:
   m_VerticalAlignment: 256
   m_textAlignment: 65535
   m_characterSpacing: 0
+  m_characterHorizontalScale: 1
   m_wordSpacing: 0
   m_lineSpacing: 0
   m_lineSpacingMax: 0
@@ -12555,6 +12750,7 @@ GameObject:
   - component: {fileID: 1255161822}
   - component: {fileID: 1255161821}
   - component: {fileID: 1255161823}
+  - component: {fileID: 1255161824}
   m_Layer: 5
   m_Name: keyboard
   m_TagString: Untagged
@@ -12695,6 +12891,97 @@ MonoBehaviour:
   magnitudeStart: 3
   speed: 20
   increament: 0.5
+--- !u!114 &1255161824
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1255161819}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f3f7ca6f5610c4e47a30136bad66d3c3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::KeyboardVisualController
+  keyMappings:
+  - keyCode: 97
+    keyImage: {fileID: 1367099317}
+  - keyCode: 98
+    keyImage: {fileID: 884125060}
+  - keyCode: 99
+    keyImage: {fileID: 579610562}
+  - keyCode: 100
+    keyImage: {fileID: 611622105}
+  - keyCode: 101
+    keyImage: {fileID: 460161192}
+  - keyCode: 102
+    keyImage: {fileID: 926531889}
+  - keyCode: 103
+    keyImage: {fileID: 1648325404}
+  - keyCode: 104
+    keyImage: {fileID: 215748821}
+  - keyCode: 105
+    keyImage: {fileID: 1538309825}
+  - keyCode: 106
+    keyImage: {fileID: 24270236}
+  - keyCode: 107
+    keyImage: {fileID: 771691937}
+  - keyCode: 108
+    keyImage: {fileID: 1320425263}
+  - keyCode: 109
+    keyImage: {fileID: 178557191}
+  - keyCode: 110
+    keyImage: {fileID: 1118698919}
+  - keyCode: 111
+    keyImage: {fileID: 1418017856}
+  - keyCode: 112
+    keyImage: {fileID: 1192108849}
+  - keyCode: 113
+    keyImage: {fileID: 726025114}
+  - keyCode: 114
+    keyImage: {fileID: 1727148233}
+  - keyCode: 115
+    keyImage: {fileID: 1212307972}
+  - keyCode: 116
+    keyImage: {fileID: 946414645}
+  - keyCode: 117
+    keyImage: {fileID: 1943131747}
+  - keyCode: 118
+    keyImage: {fileID: 210674671}
+  - keyCode: 119
+    keyImage: {fileID: 1526705226}
+  - keyCode: 120
+    keyImage: {fileID: 266446563}
+  - keyCode: 121
+    keyImage: {fileID: 1165005937}
+  - keyCode: 122
+    keyImage: {fileID: 773772324}
+  - keyCode: 48
+    keyImage: {fileID: 472480634}
+  - keyCode: 49
+    keyImage: {fileID: 340411233}
+  - keyCode: 50
+    keyImage: {fileID: 1447156949}
+  - keyCode: 51
+    keyImage: {fileID: 1456538297}
+  - keyCode: 52
+    keyImage: {fileID: 725125909}
+  - keyCode: 53
+    keyImage: {fileID: 2016063614}
+  - keyCode: 54
+    keyImage: {fileID: 951518444}
+  - keyCode: 55
+    keyImage: {fileID: 1863471309}
+  - keyCode: 56
+    keyImage: {fileID: 464067857}
+  - keyCode: 57
+    keyImage: {fileID: 346722048}
+  - keyCode: 8
+    keyImage: {fileID: 216042880}
+  - keyCode: 13
+    keyImage: {fileID: 727382451}
+  defaultColor: {r: 1, g: 1, b: 1, a: 1}
+  holdColor: {r: 1, g: 0.5713, b: 0.3553, a: 0.3725}
 --- !u!1 &1269279171
 GameObject:
   m_ObjectHideFlags: 0
@@ -12865,6 +13152,7 @@ MonoBehaviour:
   m_VerticalAlignment: 512
   m_textAlignment: 65535
   m_characterSpacing: 0
+  m_characterHorizontalScale: 1
   m_wordSpacing: 0
   m_lineSpacing: 0
   m_lineSpacingMax: 0
@@ -13105,6 +13393,7 @@ MonoBehaviour:
   m_VerticalAlignment: 256
   m_textAlignment: 65535
   m_characterSpacing: 0
+  m_characterHorizontalScale: 1
   m_wordSpacing: 0
   m_lineSpacing: 0
   m_lineSpacingMax: 0
@@ -13421,7 +13710,7 @@ AudioSource:
   m_Enabled: 1
   serializedVersion: 4
   OutputAudioMixerGroup: {fileID: 0}
-  m_audioClip: {fileID: 8300000, guid: c900f3771c1395b42bbc6511c6969970, type: 3}
+  m_audioClip: {fileID: 0}
   m_Resource: {fileID: 8300000, guid: c900f3771c1395b42bbc6511c6969970, type: 3}
   m_PlayOnAwake: 0
   m_Volume: 1
@@ -13929,7 +14218,7 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 1902836641}
+      - m_Target: {fileID: 0}
         m_TargetAssemblyTypeName: GameManager, Assembly-CSharp
         m_MethodName: AddPhase
         m_Mode: 1
@@ -14259,6 +14548,7 @@ MonoBehaviour:
   m_VerticalAlignment: 512
   m_textAlignment: 65535
   m_characterSpacing: 0
+  m_characterHorizontalScale: 1
   m_wordSpacing: 0
   m_lineSpacing: 0
   m_lineSpacingMax: 0
@@ -14395,6 +14685,7 @@ MonoBehaviour:
   m_VerticalAlignment: 512
   m_textAlignment: 65535
   m_characterSpacing: 0
+  m_characterHorizontalScale: 1
   m_wordSpacing: 0
   m_lineSpacing: 0
   m_lineSpacingMax: 0
@@ -14782,6 +15073,7 @@ MonoBehaviour:
   released: {fileID: 0}
   complete: {fileID: 8300000, guid: b5da93327af831e4dbb0bb3897a6c654, type: 3}
   fail: {fileID: 8300000, guid: 2c272ad6d7b920f4cb666e7d5c0ce449, type: 3}
+  mixerGroup: {fileID: 0}
 --- !u!82 &1535896218
 AudioSource:
   m_ObjectHideFlags: 0
@@ -15078,6 +15370,7 @@ MonoBehaviour:
   m_VerticalAlignment: 256
   m_textAlignment: 65535
   m_characterSpacing: 0
+  m_characterHorizontalScale: 1
   m_wordSpacing: 0
   m_lineSpacing: 0
   m_lineSpacingMax: 0
@@ -16038,6 +16331,7 @@ MonoBehaviour:
   m_VerticalAlignment: 256
   m_textAlignment: 65535
   m_characterSpacing: 0
+  m_characterHorizontalScale: 1
   m_wordSpacing: 0
   m_lineSpacing: 0
   m_lineSpacingMax: 0
@@ -16445,6 +16739,7 @@ MonoBehaviour:
   m_VerticalAlignment: 256
   m_textAlignment: 65535
   m_characterSpacing: 0
+  m_characterHorizontalScale: 1
   m_wordSpacing: 0
   m_lineSpacing: 0
   m_lineSpacingMax: 0
@@ -16761,6 +17056,7 @@ MonoBehaviour:
   m_VerticalAlignment: 512
   m_textAlignment: 65535
   m_characterSpacing: 0
+  m_characterHorizontalScale: 1
   m_wordSpacing: 0
   m_lineSpacing: 0
   m_lineSpacingMax: 0
@@ -16974,6 +17270,7 @@ MonoBehaviour:
   m_VerticalAlignment: 512
   m_textAlignment: 65535
   m_characterSpacing: 0
+  m_characterHorizontalScale: 1
   m_wordSpacing: 0
   m_lineSpacing: 0
   m_lineSpacingMax: 0
@@ -17460,6 +17757,7 @@ MonoBehaviour:
   m_VerticalAlignment: 512
   m_textAlignment: 65535
   m_characterSpacing: 0
+  m_characterHorizontalScale: 1
   m_wordSpacing: 0
   m_lineSpacing: 0
   m_lineSpacingMax: 0
@@ -17584,7 +17882,7 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 1902836641}
+      - m_Target: {fileID: 0}
         m_TargetAssemblyTypeName: GameManager, Assembly-CSharp
         m_MethodName: MovePhaseDown
         m_Mode: 1
@@ -17729,6 +18027,7 @@ MonoBehaviour:
   m_VerticalAlignment: 512
   m_textAlignment: 65535
   m_characterSpacing: 0
+  m_characterHorizontalScale: 1
   m_wordSpacing: 0
   m_lineSpacing: 0
   m_lineSpacingMax: 0
@@ -17779,99 +18078,14 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1902836642}
-  - component: {fileID: 1902836641}
   - component: {fileID: 1902836643}
   m_Layer: 0
-  m_Name: GameManager
+  m_Name: Utility
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!114 &1902836641
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1902836640}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 727ba2317098295438166a59a0e99994, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  targetTexts:
-  - skrrrt
-  - Melbourne
-  - 'No Food '
-  - No Food and Drinks
-  - No Food and Drinks in the lab!
-  - Stop fueling wars
-  targetTextUI: {fileID: 1829801795}
-  matchedTextUI: {fileID: 358275383}
-  notMatchedTextUI: {fileID: 1885423110}
-  showActionPrompt: 0
-  cursorBlinkInterval: 0.25
-  audioKeys: {fileID: 2079988418}
-  audioResult: {fileID: 1535896217}
-  keyReleaseColor: {r: 1, g: 1, b: 1, a: 1}
-  keyHoldColor: {r: 1, g: 0.5713017, b: 0.35534585, a: 0.37254903}
-  inputField: {fileID: 1069122250}
-  inputFieldActiveColor: {r: 0.7058824, g: 1, b: 0.9372549, a: 1}
-  inputFieldInactiveColor: {r: 1, g: 1, b: 1, a: 1}
-  scrollRect: {fileID: 2124874884}
-  scrollText: {fileID: 334381777}
-  phaseUnselected: {r: 0, g: 0, b: 0, a: 0}
-  phaseSelected: {r: 0.75157225, g: 1, b: 0.9959383, a: 0.5019608}
-  scrollContent: {fileID: 920743731}
-  phaseButtonPrefab: {fileID: 3288893664048079578, guid: cc04af5ae044edf4f9373674f6e567ec, type: 3}
-  curPhaseTime: {fileID: 1894536267}
-  totalTime: {fileID: 1477368923}
-  curFloatSpeed: 2
-  curFloatAmplitude: 2
-  transitionDuration: 1
-  offsetToFadein: {x: 10, y: 20, z: 0}
-  deleteDelayBetweenLetters: 0.02
-  customCursor: {fileID: 0}
-  hotspot: {x: 0, y: 0}
-  k1: {fileID: 340411231}
-  k2: {fileID: 1447156947}
-  k3: {fileID: 1456538295}
-  k4: {fileID: 725125907}
-  k5: {fileID: 2016063612}
-  k6: {fileID: 951518442}
-  k7: {fileID: 1863471307}
-  k8: {fileID: 464067855}
-  k9: {fileID: 346722046}
-  k0: {fileID: 472480632}
-  q: {fileID: 726025112}
-  w: {fileID: 1526705224}
-  e: {fileID: 460161190}
-  r: {fileID: 1727148231}
-  t: {fileID: 946414643}
-  y: {fileID: 1165005935}
-  u: {fileID: 1943131745}
-  i: {fileID: 1538309823}
-  o: {fileID: 1418017854}
-  p: {fileID: 1192108847}
-  a: {fileID: 1367099315}
-  s: {fileID: 1212307970}
-  d: {fileID: 611622103}
-  f: {fileID: 926531887}
-  g: {fileID: 1648325402}
-  h: {fileID: 215748819}
-  j: {fileID: 24270234}
-  k: {fileID: 771691935}
-  l: {fileID: 1320425261}
-  z: {fileID: 773772322}
-  x: {fileID: 266446561}
-  c: {fileID: 579610560}
-  v: {fileID: 210674669}
-  b: {fileID: 884125058}
-  n: {fileID: 1118698917}
-  m: {fileID: 178557189}
-  backspace: {fileID: 216042878}
-  enter: {fileID: 727382449}
 --- !u!4 &1902836642
 Transform:
   m_ObjectHideFlags: 0
@@ -18022,6 +18236,7 @@ MonoBehaviour:
   m_VerticalAlignment: 256
   m_textAlignment: 65535
   m_characterSpacing: 0
+  m_characterHorizontalScale: 1
   m_wordSpacing: 0
   m_lineSpacing: 0
   m_lineSpacingMax: 0
@@ -18261,6 +18476,7 @@ MonoBehaviour:
   m_VerticalAlignment: 256
   m_textAlignment: 65535
   m_characterSpacing: 0
+  m_characterHorizontalScale: 1
   m_wordSpacing: 0
   m_lineSpacing: 0
   m_lineSpacingMax: 0
@@ -18425,6 +18641,7 @@ MonoBehaviour:
   m_VerticalAlignment: 256
   m_textAlignment: 65535
   m_characterSpacing: 0
+  m_characterHorizontalScale: 1
   m_wordSpacing: 0
   m_lineSpacing: 0
   m_lineSpacingMax: 0
@@ -19382,6 +19599,7 @@ MonoBehaviour:
   m_VerticalAlignment: 512
   m_textAlignment: 65535
   m_characterSpacing: 0
+  m_characterHorizontalScale: 1
   m_wordSpacing: 0
   m_lineSpacing: 0
   m_lineSpacingMax: 0
@@ -19794,6 +20012,7 @@ MonoBehaviour:
   released: {fileID: 8300000, guid: 5b71f664abfb87348b8d479d1a6e92c3, type: 3}
   complete: {fileID: 0}
   fail: {fileID: 0}
+  mixerGroup: {fileID: 0}
 --- !u!1 &2094355245
 GameObject:
   m_ObjectHideFlags: 0
@@ -19917,6 +20136,7 @@ MonoBehaviour:
   m_VerticalAlignment: 256
   m_textAlignment: 65535
   m_characterSpacing: 0
+  m_characterHorizontalScale: 1
   m_wordSpacing: 0
   m_lineSpacing: 0
   m_lineSpacingMax: 0
@@ -20064,6 +20284,7 @@ MonoBehaviour:
   m_VerticalAlignment: 256
   m_textAlignment: 65535
   m_characterSpacing: 0
+  m_characterHorizontalScale: 1
   m_wordSpacing: 0
   m_lineSpacing: 0
   m_lineSpacingMax: 0
@@ -20355,6 +20576,7 @@ MonoBehaviour:
   m_VerticalAlignment: 256
   m_textAlignment: 65535
   m_characterSpacing: 0
+  m_characterHorizontalScale: 1
   m_wordSpacing: 0
   m_lineSpacing: 0
   m_lineSpacingMax: 0
@@ -20511,3 +20733,4 @@ SceneRoots:
   - {fileID: 1761848515}
   - {fileID: 774874139}
   - {fileID: 680745022}
+  - {fileID: 369087728}
