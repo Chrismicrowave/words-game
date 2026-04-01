@@ -42,6 +42,9 @@ public class UIController : MonoBehaviour
     [SerializeField] private bool showActionPromptOnFirstPhase = true;
     private bool hasCompletedFirstPhase;
 
+    [Header("Info / Rules")]
+    [SerializeField] private GameObject instructionPanel;
+
     private WordEngine wordEngine;
     private int selectedPhaseIndex = -1;
     private Coroutine deleteAnimCoroutine;
@@ -278,8 +281,8 @@ public class UIController : MonoBehaviour
 
     public void OnTogglePromptsClicked()
     {
-        showActionPromptOnFirstPhase = !showActionPromptOnFirstPhase;
-        UpdateTextDisplay();
+        if (instructionPanel != null)
+            instructionPanel.SetActive(!instructionPanel.activeSelf);
     }
 
     // --- Delete Text Animation ---
