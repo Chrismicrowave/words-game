@@ -276,6 +276,12 @@ public class UIController : MonoBehaviour
         selectedPhaseIndex++;
     }
 
+    public void OnTogglePromptsClicked()
+    {
+        showActionPromptOnFirstPhase = !showActionPromptOnFirstPhase;
+        UpdateTextDisplay();
+    }
+
     // --- Delete Text Animation ---
 
     private IEnumerator DeleteTextAnim()
