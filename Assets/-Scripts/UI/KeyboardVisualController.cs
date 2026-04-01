@@ -34,6 +34,7 @@ public class KeyboardVisualController : MonoBehaviour
         if (GameStateManager.Instance != null)
         {
             GameStateManager.Instance.OnStepProcessed += HandleStepProcessed;
+            GameStateManager.Instance.OnPhaseCompleted += ResetAllKeys;
             GameStateManager.Instance.OnPhaseRestarted += ResetAllKeys;
             GameStateManager.Instance.OnGameReset += ResetAllKeys;
         }
@@ -44,6 +45,7 @@ public class KeyboardVisualController : MonoBehaviour
         if (GameStateManager.Instance != null)
         {
             GameStateManager.Instance.OnStepProcessed -= HandleStepProcessed;
+            GameStateManager.Instance.OnPhaseCompleted -= ResetAllKeys;
             GameStateManager.Instance.OnPhaseRestarted -= ResetAllKeys;
             GameStateManager.Instance.OnGameReset -= ResetAllKeys;
         }
