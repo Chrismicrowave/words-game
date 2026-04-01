@@ -2,6 +2,8 @@
 
 Unity typing game targeting Steam release. Players hold a key on first letter appearance, release on second, alternating for repeated letters, progressing through word phases.
 
+Architecture details: `docs/architecture.md`
+
 ## Tech Stack
 - Unity 6 (6000.3.11f1), C#
 - New Input System (1.19.0) via InputHandler
@@ -10,36 +12,12 @@ Unity typing game targeting Steam release. Players hold a key on first letter ap
 - StandaloneFileBrowser plugin (screenshot save dialogs)
 - CRT-Free shader package (post-processing)
 
-## Project Structure
-- `Assets/-Scripts/Core/` — GameStateManager, WordEngine, InputHandler, PhaseManager, TimerSystem, SettingsManager
-- `Assets/-Scripts/GameCoordinator.cs` — Central wiring (root of Assembly-CSharp, not in Core asmdef)
-- `Assets/-Scripts/Feedback/` — FeedbackController, CameraShakeAndZoom, KeyboardShake
-- `Assets/-Scripts/UI/` — UIController, KeyboardVisualController, CurTextTMPanim, CircularScrollingText, MenuAnimOnOff
-- `Assets/-Scripts/Audio/` — AudioManager (with AudioMixer support)
-- `Assets/-Scripts/WordList/` — IWordListProvider, FixedWordListProvider, FileWordListProvider, DailyWordListProvider (stub)
-- `Assets/-Scripts/Leaderboard/` — ILeaderboardService, NullLeaderboardService (stub)
-- `Assets/-Scripts/Utility/` — Screenshot
-- `Assets/-Data/` — ScriptableObject assets (DemoWordList)
-- `Assets/Tests/EditMode/` — WordEngine unit tests
-- `Assets/-Anim/`, `-Audio/`, `-Images/`, `-Material/`, `-Prefabs/` — Game assets
-- `Assets/Scenes/` — Unity scenes
-- `Assets/CRT-Free/` — CRT post-processing effect
-- `Assets/StandaloneFileBrowser/` — Native file dialog plugin
-
-## Architecture
-- Event-driven MonoBehaviour systems connected by C# events
-- GameStateManager owns the state machine (Idle, Playing, PhaseFailed, PhaseComplete, AllComplete)
-- GameCoordinator wires systems together — the only class that knows about all systems
-- WordEngine is a pure C# class (no MonoBehaviour) for testability
-- IWordListProvider interface: FixedWordListProvider (demo), FileWordListProvider (player custom JSON), DailyWordListProvider (future API)
-- ILeaderboardService interface ready for Steam/web leaderboard integration
-- SettingsManager persists player preferences via PlayerPrefs
-
 ## Conventions
 - Script folder uses dash prefix (`-Scripts`) for sorting at top of Assets
 - Core assembly (`Core.asmdef`) for shared types and systems; UI/Feedback/Audio in Assembly-CSharp
+- GameCoordinator lives at `-Scripts/` root (not in Core asmdef) because it references Assembly-CSharp types
 - Singletons use `Instance` pattern with `Destroy(gameObject)` guard in Awake
+- Systems communicate via C# events on GameStateManager — no direct cross-references
 - Systems subscribe to events in OnEnable/Start, unsubscribe in OnDisable
 - InputHandler clears EventSystem selection on Enter/Backspace to prevent UI button double-triggers
 - TimerSystem pauses on failed input, resumes on restart — paused time excluded from phase duration
-- KeyboardVisualController resets key colors on phase complete, restart, and game reset
