@@ -4450,6 +4450,7 @@ MonoBehaviour:
   keyboardVisual: {fileID: 1255161824}
   customCursor: {fileID: 0}
   cursorHotspot: {x: 0, y: 0}
+  config: {fileID: 11400000, guid: 2b556900e3f14c94fb47f46e82546a4f, type: 2}
   defaultWordList: {fileID: 11400000, guid: 130043c01d85e03469798c86a98fdf32, type: 2}
 --- !u!114 &369087723
 MonoBehaviour:
@@ -8348,6 +8349,7 @@ MonoBehaviour:
   instructionPanel: {fileID: 2109820979}
   importBtn: {fileID: 585433825}
   exportBtn: {fileID: 1362999032}
+  config: {fileID: 11400000, guid: 2b556900e3f14c94fb47f46e82546a4f, type: 2}
 --- !u!1 &683000842
 GameObject:
   m_ObjectHideFlags: 0
