@@ -4,6 +4,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Text;
 using System.Text.RegularExpressions;
+using SFB;
 using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -24,7 +25,8 @@ public class UIController : MonoBehaviour
     [Header("Phase List UI")]
     [SerializeField] private TMP_InputField phaseInputField;
     [SerializeField] private Color inputFieldActiveColor = Color.white;
-    [SerializeField] private Color inputFieldInactiveColor = Color.gray;
+    [SerializeField] private Color inputFieldInactiveColor = new Color(0.75f, 0.75f, 0.75f, 1f);
+    [SerializeField] private GameObject phaseInputFocusBorder;
     [SerializeField] private Transform phaseListContent;
     [SerializeField] private GameObject phaseButtonPrefab;
     [SerializeField] private Color phaseSelectedColor = Color.yellow;
@@ -39,15 +41,20 @@ public class UIController : MonoBehaviour
     [SerializeField] private AudioManager audioKeys;
 
     [Header("Action Prompt")]
-    [SerializeField] private bool showActionPromptOnFirstPhase = true;
-    private bool hasCompletedFirstPhase;
+    [SerializeField] private bool showActionPrompt = true;
 
     [Header("Info / Rules")]
     [SerializeField] private GameObject instructionPanel;
 
+    [Header("Import / Export")]
+    [SerializeField] private Button importBtn;
+    [SerializeField] private Button exportBtn;
+
     private WordEngine wordEngine;
     private int selectedPhaseIndex = -1;
     private Coroutine deleteAnimCoroutine;
+    private Color matchedTextOriginalColor;
+    private Color phaseInputTextOriginalColor;
 
     void OnEnable()
     {
@@ -100,29 +107,51 @@ public class UIController : MonoBehaviour
     public void Initialize(WordEngine engine)
     {
         wordEngine = engine;
+        matchedTextOriginalColor = matchedTextUI.color;
+        if (phaseInputField != null)
+            phaseInputTextOriginalColor = phaseInputField.textComponent.color;
         UpdateTextDisplay();
         RefreshPhaseList();
     }
 
     void Update()
     {
+        bool phaseFieldFocused = phaseInputField != null
+            && EventSystem.current != null
+            && EventSystem.current.currentSelectedGameObject == phaseInputField.gameObject;
+
         // Input field visual feedback
         if (phaseInputField != null)
-        {
-            bool focused = EventSystem.current != null
-                && EventSystem.current.currentSelectedGameObject == phaseInputField.gameObject;
-            phaseInputField.GetComponent<Image>().color = focused
+            phaseInputField.GetComponent<Image>().color = phaseFieldFocused
                 ? inputFieldActiveColor
                 : inputFieldInactiveColor;
-        }
 
-        // Cursor blink
-        blinkTimer += Time.deltaTime;
-        if (blinkTimer >= cursorBlinkInterval)
+        // Orange focus border on the add-phase field
+        if (phaseInputFocusBorder != null)
+            phaseInputFocusBorder.SetActive(phaseFieldFocused);
+
+        // Gameplay text: dim and freeze cursor when add-phase field has focus
+        if (phaseFieldFocused)
         {
-            blinkTimer = 0f;
-            showCursor = !showCursor;
-            UpdateTextDisplay();
+            matchedTextUI.color = new Color(0.45f, 0.45f, 0.45f, 1f);
+            phaseInputField.textComponent.color = Color.white;
+            if (showCursor)
+            {
+                showCursor = false;
+                UpdateTextDisplay();
+            }
+        }
+        else
+        {
+            matchedTextUI.color = matchedTextOriginalColor;
+            phaseInputField.textComponent.color = phaseInputTextOriginalColor;
+            blinkTimer += Time.deltaTime;
+            if (blinkTimer >= cursorBlinkInterval)
+            {
+                blinkTimer = 0f;
+                showCursor = !showCursor;
+                UpdateTextDisplay();
+            }
         }
     }
 
@@ -133,9 +162,8 @@ public class UIController : MonoBehaviour
         targetTextUI.text = wordEngine.TargetText;
         matchedTextUI.text = wordEngine.GetDisplayText(showCursor);
 
-        // Action prompt for first phase
-        if (showActionPromptOnFirstPhase && !hasCompletedFirstPhase
-            && GameStateManager.Instance.CurrentState == GameState.Playing)
+        // Action prompt
+        if (showActionPrompt && GameStateManager.Instance.CurrentState == GameState.Playing)
         {
             string prompt = wordEngine.GetActionPrompt();
             if (!string.IsNullOrEmpty(prompt))
@@ -156,7 +184,6 @@ public class UIController : MonoBehaviour
 
     private void HandlePhaseCompleted()
     {
-        hasCompletedFirstPhase = true;
         statusTextUI.text = "Phase complete! Hit Return to continue...";
     }
 
@@ -175,7 +202,6 @@ public class UIController : MonoBehaviour
 
     private void HandleGameReset()
     {
-        hasCompletedFirstPhase = false;
         HandleRestart();
     }
 
@@ -283,6 +309,29 @@ public class UIController : MonoBehaviour
     {
         if (instructionPanel != null)
             instructionPanel.SetActive(!instructionPanel.activeSelf);
+    }
+
+    public void OnImportClicked()
+    {
+        var ext = new[] { new ExtensionFilter("Text Files", "txt") };
+        StandaloneFileBrowser.OpenFilePanelAsync("Import Word List", "", ext, false, paths =>
+        {
+            if (paths.Length == 0 || string.IsNullOrEmpty(paths[0])) return;
+            var provider = TxtWordListImporter.ImportFromTxt(paths[0]);
+            PhaseManager.Instance.LoadWordList(provider);
+        });
+    }
+
+    public void OnExportClicked()
+    {
+        var provider = PhaseManager.Instance.ActiveProvider;
+        string defaultName = provider.DisplayName.Replace(" ", "_");
+        var ext = new[] { new ExtensionFilter("Text Files", "txt") };
+        StandaloneFileBrowser.SaveFilePanelAsync("Export Word List", "", defaultName, ext, path =>
+        {
+            if (string.IsNullOrEmpty(path)) return;
+            TxtWordListImporter.ExportToTxt(provider, path);
+        });
     }
 
     // --- Delete Text Animation ---
