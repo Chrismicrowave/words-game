@@ -50,6 +50,9 @@ public class UIController : MonoBehaviour
     [SerializeField] private Button importBtn;
     [SerializeField] private Button exportBtn;
 
+    [Header("Config")]
+    [SerializeField] private GameConfig config;
+
     private WordEngine wordEngine;
     private int selectedPhaseIndex = -1;
     private Coroutine deleteAnimCoroutine;
@@ -102,6 +105,13 @@ public class UIController : MonoBehaviour
     {
         OnDisable();
         OnEnable();
+
+        if (config != null)
+        {
+            bool showImportExport = !config.isDemo;
+            if (importBtn != null) importBtn.gameObject.SetActive(showImportExport);
+            if (exportBtn != null) exportBtn.gameObject.SetActive(showImportExport);
+        }
     }
 
     public void Initialize(WordEngine engine)

@@ -10,6 +10,9 @@ public class GameCoordinator : MonoBehaviour
     [SerializeField] private Texture2D customCursor;
     [SerializeField] private Vector2 cursorHotspot = Vector2.zero;
 
+    [Header("Config")]
+    [SerializeField] private GameConfig config;
+
     [Header("Word List")]
     [SerializeField] private FixedWordListProvider defaultWordList;
 
