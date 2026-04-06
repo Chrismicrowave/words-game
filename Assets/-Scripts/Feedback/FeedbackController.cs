@@ -13,6 +13,7 @@ public class FeedbackController : MonoBehaviour
         if (GameStateManager.Instance != null)
         {
             GameStateManager.Instance.OnStepProcessed += HandleStepProcessed;
+            GameStateManager.Instance.OnPhaseStarted += HandlePhaseStarted;
             GameStateManager.Instance.OnPhaseCompleted += HandlePhaseCompleted;
             GameStateManager.Instance.OnPhaseRestarted += HandleRestart;
             GameStateManager.Instance.OnGameReset += HandleRestart;
@@ -24,6 +25,7 @@ public class FeedbackController : MonoBehaviour
         if (GameStateManager.Instance != null)
         {
             GameStateManager.Instance.OnStepProcessed -= HandleStepProcessed;
+            GameStateManager.Instance.OnPhaseStarted -= HandlePhaseStarted;
             GameStateManager.Instance.OnPhaseCompleted -= HandlePhaseCompleted;
             GameStateManager.Instance.OnPhaseRestarted -= HandleRestart;
             GameStateManager.Instance.OnGameReset -= HandleRestart;
@@ -59,10 +61,17 @@ public class FeedbackController : MonoBehaviour
         }
     }
 
+    private void HandlePhaseStarted()
+    {
+        cameraShake.ResetFOV();
+    }
+
     private void HandlePhaseCompleted()
     {
         audioKeys.ResetPitch();
         audioResult.PlaySound(audioResult.complete);
+        keyboardShake.SetShaking(false);
+        keyboardShake.ResetMagnitude();
     }
 
     private void OnCorrectHold()
@@ -94,6 +103,8 @@ public class FeedbackController : MonoBehaviour
         audioResult.PlaySound(audioResult.fail);
 
         cameraShake.StrongShake();
+        keyboardShake.SetShaking(false);
+        keyboardShake.ResetMagnitude();
     }
 
     private void HandleRestart()
