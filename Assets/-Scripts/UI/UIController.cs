@@ -44,13 +44,20 @@ public class UIController : MonoBehaviour
     [SerializeField] private bool showActionPrompt = true;
 
     [Header("Tabs")]
-    [SerializeField] private GameObject myListPanel;
-    [SerializeField] private GameObject dailyPanel;
     [SerializeField] private Button myListTabBtn;
     [SerializeField] private Button dailyTabBtn;
 
+    [Header("Panel Buttons")]
+    [SerializeField] private GameObject myListPanelBtns;
+    [SerializeField] private GameObject dailyPanelBtns;
+
+    [Header("Panel Toggles")]
+    [SerializeField] private MenuAnimOnOff wordsPanelAnim;
+    [SerializeField] private MenuAnimOnOff timerPanelAnim;
+
     [Header("Info / Rules")]
     [SerializeField] private GameObject instructionPanel;
+    private bool _infoPanelOn;
 
     [Header("Import / Export")]
     [SerializeField] private Button importBtn;
@@ -58,6 +65,13 @@ public class UIController : MonoBehaviour
 
     [Header("Config")]
     [SerializeField] private GameConfig config;
+
+    private const string ActiveTabPrefKey = "ActiveTab"; // "mylist" or "daily"
+    private const string WordsPanelPrefKey = "WordsPanelOn";
+    private const string TimerPanelPrefKey = "TimerPanelOn";
+    private const string InfoPanelPrefKey  = "InfoPanelOn";
+
+    private IWordListProvider myListProvider;
 
     private WordEngine wordEngine;
     private int selectedPhaseIndex = -1;
@@ -112,15 +126,45 @@ public class UIController : MonoBehaviour
         OnDisable();
         OnEnable();
 
-        if (dailyPanel != null)
-            dailyPanel.SetActive(false);
-
         if (config != null)
         {
             bool showImportExport = !config.isDemo;
             if (importBtn != null) importBtn.gameObject.SetActive(showImportExport);
             if (exportBtn != null) exportBtn.gameObject.SetActive(showImportExport);
         }
+
+        if (PhaseManager.Instance != null)
+            myListProvider = PhaseManager.Instance.ActiveProvider;
+
+        // Load saved tab preference, default to mylist
+        string savedTab = PlayerPrefs.GetString(ActiveTabPrefKey, "mylist");
+        if (savedTab == "daily")
+        {
+            OnDailyTabClicked();
+        }
+        else
+        {
+            OnMyListTabClicked();
+        }
+
+        // Restore Words panel state (startOn default = false)
+        if (wordsPanelAnim != null)
+        {
+            bool wordsOn = PlayerPrefs.GetInt(WordsPanelPrefKey, 0) == 1;
+            if (wordsOn) wordsPanelAnim.On(); else wordsPanelAnim.Off();
+        }
+
+        // Restore Timer panel state (startOn default = false)
+        if (timerPanelAnim != null)
+        {
+            bool timerOn = PlayerPrefs.GetInt(TimerPanelPrefKey, 0) == 1;
+            if (timerOn) timerPanelAnim.On(); else timerPanelAnim.Off();
+        }
+
+        // Restore Info panel state (starts active in scene, default = 1)
+        _infoPanelOn = PlayerPrefs.GetInt(InfoPanelPrefKey, 1) == 1;
+        if (instructionPanel != null)
+            instructionPanel.SetActive(_infoPanelOn);
     }
 
     public void Initialize(WordEngine engine)
@@ -326,20 +370,60 @@ public class UIController : MonoBehaviour
 
     public void OnMyListTabClicked()
     {
-        if (myListPanel != null) myListPanel.SetActive(true);
-        if (dailyPanel != null) dailyPanel.SetActive(false);
+        PlayerPrefs.SetString(ActiveTabPrefKey, "mylist");
+        if (myListProvider != null)
+            PhaseManager.Instance.LoadWordList(myListProvider);
+        if (myListPanelBtns != null) myListPanelBtns.SetActive(true);
+        if (dailyPanelBtns != null) dailyPanelBtns.SetActive(false);
     }
 
     public void OnDailyTabClicked()
     {
-        if (myListPanel != null) myListPanel.SetActive(false);
-        if (dailyPanel != null) dailyPanel.SetActive(true);
+        PlayerPrefs.SetString(ActiveTabPrefKey, "daily");
+        string date = System.DateTime.Now.ToString("yyyy-MM-dd");
+        string dir = System.IO.Path.GetFullPath(System.IO.Path.Combine(Application.dataPath, "..", "DailyLists"));
+        string path = System.IO.Path.Combine(dir, date + ".json");
+
+        if (!System.IO.File.Exists(path))
+        {
+            // Create sample for today if missing
+            if (!System.IO.Directory.Exists(dir))
+                System.IO.Directory.CreateDirectory(dir);
+            string json = "{\"name\":\"Daily - " + date + "\",\"words\":[\"hello\",\"world\",\"unity\"],\"date\":\"" + date + "\"}";
+            System.IO.File.WriteAllText(path, json);
+        }
+
+        var provider = new DailyWordListProvider(path);
+        PhaseManager.Instance.LoadWordList(provider);
+        if (myListPanelBtns != null) myListPanelBtns.SetActive(false);
+        if (dailyPanelBtns != null) dailyPanelBtns.SetActive(true);
+    }
+
+    public void OnToggleWordsClicked()
+    {
+        if (wordsPanelAnim == null) return;
+        wordsPanelAnim.Toggle();
+        bool isOn = wordsPanelAnim.GetComponent<Animator>().GetBool("ON");
+        PlayerPrefs.SetInt(WordsPanelPrefKey, isOn ? 1 : 0);
+        PlayerPrefs.Save();
+    }
+
+    public void OnToggleTimerClicked()
+    {
+        if (timerPanelAnim == null) return;
+        timerPanelAnim.Toggle();
+        bool isOn = timerPanelAnim.GetComponent<Animator>().GetBool("ON");
+        PlayerPrefs.SetInt(TimerPanelPrefKey, isOn ? 1 : 0);
+        PlayerPrefs.Save();
     }
 
     public void OnTogglePromptsClicked()
     {
-        if (instructionPanel != null)
-            instructionPanel.SetActive(!instructionPanel.activeSelf);
+        if (instructionPanel == null) return;
+        _infoPanelOn = !_infoPanelOn;
+        instructionPanel.SetActive(_infoPanelOn);
+        PlayerPrefs.SetInt(InfoPanelPrefKey, _infoPanelOn ? 1 : 0);
+        PlayerPrefs.Save();
     }
 
     public void OnImportClicked()

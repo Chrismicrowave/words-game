@@ -11,6 +11,9 @@ public class DailyListPanelController : MonoBehaviour
 
     private List<DailyWordListProvider> providers = new List<DailyWordListProvider>();
 
+    public IWordListProvider SelectedProvider { get; private set; }
+    public int SelectedIndex { get; private set; } = -1;
+
     void OnEnable()
     {
         RefreshList();
@@ -23,7 +26,7 @@ public class DailyListPanelController : MonoBehaviour
 
         providers.Clear();
 
-        string dir = Path.Combine(Application.persistentDataPath, "DailyLists");
+        string dir = Path.GetFullPath(Path.Combine(Application.dataPath, "..", "DailyLists"));
         if (!Directory.Exists(dir))
         {
             Directory.CreateDirectory(dir);
@@ -50,6 +53,8 @@ public class DailyListPanelController : MonoBehaviour
 
     private void OnDailyListSelected(DailyWordListProvider provider)
     {
+        SelectedProvider = provider;
+        SelectedIndex = 0;
         PhaseManager.Instance.LoadWordList(provider);
     }
 
