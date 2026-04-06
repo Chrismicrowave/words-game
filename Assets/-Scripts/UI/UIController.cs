@@ -43,6 +43,12 @@ public class UIController : MonoBehaviour
     [Header("Action Prompt")]
     [SerializeField] private bool showActionPrompt = true;
 
+    [Header("Tabs")]
+    [SerializeField] private GameObject myListPanel;
+    [SerializeField] private GameObject dailyPanel;
+    [SerializeField] private Button myListTabBtn;
+    [SerializeField] private Button dailyTabBtn;
+
     [Header("Info / Rules")]
     [SerializeField] private GameObject instructionPanel;
 
@@ -105,6 +111,9 @@ public class UIController : MonoBehaviour
     {
         OnDisable();
         OnEnable();
+
+        if (dailyPanel != null)
+            dailyPanel.SetActive(false);
 
         if (config != null)
         {
@@ -313,6 +322,18 @@ public class UIController : MonoBehaviour
         if (selectedPhaseIndex < 0 || selectedPhaseIndex >= PhaseManager.Instance.TotalPhases - 1) return;
         PhaseManager.Instance.MovePhase(selectedPhaseIndex, selectedPhaseIndex + 1);
         selectedPhaseIndex++;
+    }
+
+    public void OnMyListTabClicked()
+    {
+        if (myListPanel != null) myListPanel.SetActive(true);
+        if (dailyPanel != null) dailyPanel.SetActive(false);
+    }
+
+    public void OnDailyTabClicked()
+    {
+        if (myListPanel != null) myListPanel.SetActive(false);
+        if (dailyPanel != null) dailyPanel.SetActive(true);
     }
 
     public void OnTogglePromptsClicked()
