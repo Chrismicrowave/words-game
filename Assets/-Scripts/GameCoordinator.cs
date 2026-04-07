@@ -149,7 +149,6 @@ public class GameCoordinator : MonoBehaviour
     private void HandleWordListChanged()
     {
         TimerSystem.Instance.ResetAll();
-        GameStateManager.Instance.RaiseGameReset();
         GameStateManager.Instance.TransitionTo(GameState.Playing);
     }
 
