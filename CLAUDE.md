@@ -12,6 +12,11 @@ Architecture details: `docs/architecture.md`
 - StandaloneFileBrowser plugin (screenshot save dialogs)
 - CRT-Free shader package (post-processing)
 
+## Editor Workflow
+- Always use Unity MCP (coplay-mcp) tools for all Unity Editor tasks — creating assets, wiring components, building scene hierarchy, etc.
+- Never ask the user to perform Unity Editor actions manually unless the MCP tool truly cannot do it
+- All scene text must use TextMeshProUGUI (TMP) — never legacy Unity Text component
+
 ## Conventions
 - Script folder uses dash prefix (`-Scripts`) for sorting at top of Assets
 - Core assembly (`Core.asmdef`) for shared types and systems; UI/Feedback/Audio in Assembly-CSharp
