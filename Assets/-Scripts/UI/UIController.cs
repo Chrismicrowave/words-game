@@ -75,6 +75,7 @@ public class UIController : MonoBehaviour
     private const string InfoPanelPrefKey  = "InfoPanelOn";
 
     private IWordListProvider myListProvider;
+    private IWordListProvider dailyProvider;
 
     private WordEngine wordEngine;
     private int selectedPhaseIndex = -1;
@@ -396,6 +397,7 @@ public class UIController : MonoBehaviour
         if (dailyPickerPanel == null) return;
         dailyPickerPanel.OnListSelected = (provider) =>
         {
+            dailyProvider = provider;
             PhaseManager.Instance.LoadWordList(provider);
             PlayerPrefs.SetString(ActiveTabPrefKey, "daily");
             if (myListPanelBtns != null) myListPanelBtns.SetActive(false);
@@ -409,21 +411,30 @@ public class UIController : MonoBehaviour
     {
         SetTabColors(myListActive: false);
         PlayerPrefs.SetString(ActiveTabPrefKey, "daily");
-        string date = System.DateTime.Now.ToString("yyyy-MM-dd");
-        string dir = System.IO.Path.GetFullPath(System.IO.Path.Combine(Application.dataPath, "..", "DailyLists"));
-        string path = System.IO.Path.Combine(dir, date + ".json");
 
-        if (!System.IO.File.Exists(path))
+        if (dailyProvider != null)
         {
-            // Create sample for today if missing
-            if (!System.IO.Directory.Exists(dir))
-                System.IO.Directory.CreateDirectory(dir);
-            string json = "{\"name\":\"Daily - " + date + "\",\"words\":[\"hello\",\"world\",\"unity\"],\"date\":\"" + date + "\"}";
-            System.IO.File.WriteAllText(path, json);
+            PhaseManager.Instance.LoadWordList(dailyProvider);
+        }
+        else
+        {
+            string date = System.DateTime.Now.ToString("yyyy-MM-dd");
+            string dir = System.IO.Path.GetFullPath(System.IO.Path.Combine(Application.dataPath, "..", "DailyLists"));
+            string path = System.IO.Path.Combine(dir, date + ".json");
+
+            if (!System.IO.File.Exists(path))
+            {
+                // Create sample for today if missing
+                if (!System.IO.Directory.Exists(dir))
+                    System.IO.Directory.CreateDirectory(dir);
+                string json = "{\"name\":\"Daily - " + date + "\",\"words\":[\"hello\",\"world\",\"unity\"],\"date\":\"" + date + "\"}";
+                System.IO.File.WriteAllText(path, json);
+            }
+
+            dailyProvider = new DailyWordListProvider(path);
+            PhaseManager.Instance.LoadWordList(dailyProvider);
         }
 
-        var provider = new DailyWordListProvider(path);
-        PhaseManager.Instance.LoadWordList(provider);
         if (myListPanelBtns != null) myListPanelBtns.SetActive(false);
         if (dailyPanelBtns != null) dailyPanelBtns.SetActive(true);
     }
