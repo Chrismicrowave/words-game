@@ -6,6 +6,8 @@ using UnityEngine.Rendering;
 
 public class AudioManager : MonoBehaviour
 {
+    public static AudioManager Instance { get; private set; }
+
     [Header ("List")]
     public List<AudioClip> clipList = new List<AudioClip>();
 
@@ -22,10 +24,47 @@ public class AudioManager : MonoBehaviour
 
     private AudioSource audioSource;
 
+    void Awake()
+    {
+        if (Instance == null)
+            Instance = this;
+        else
+        {
+            Destroy(gameObject);
+            return;
+        }
+    }
+
     void Start()
     {
         audioSource = GetComponent<AudioSource>();
         if (mixerGroup != null) audioSource.outputAudioMixerGroup = mixerGroup;
+
+        // Apply saved volume settings on start
+        float master = PlayerPrefs.GetFloat(SettingsManager.KeyMasterVolume, 1f);
+        float sfx    = PlayerPrefs.GetFloat(SettingsManager.KeySFXVolume,    1f);
+        float bgm    = PlayerPrefs.GetFloat(SettingsManager.KeyBGMVolume,    1f);
+        SetMasterVolume(master);
+        SetSFXVolume(sfx);
+        SetBGMVolume(bgm);
+    }
+
+    public void SetMasterVolume(float linear)
+    {
+        if (SettingsManager.Instance != null)
+            SettingsManager.Instance.MasterVolume = linear;
+    }
+
+    public void SetSFXVolume(float linear)
+    {
+        if (SettingsManager.Instance != null)
+            SettingsManager.Instance.SFXVolume = linear;
+    }
+
+    public void SetBGMVolume(float linear)
+    {
+        // BGM is stored; SettingsManager will apply when mixer param exists
+        PlayerPrefs.SetFloat(SettingsManager.KeyBGMVolume, linear);
     }
 
     public virtual void PlaySound(AudioClip clip)
