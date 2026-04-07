@@ -40,6 +40,7 @@ public class GameCoordinator : MonoBehaviour
 
         // Subscribe to phase changes
         PhaseManager.Instance.OnPhaseWordChanged += HandlePhaseWordChanged;
+        PhaseManager.Instance.OnWordListChanged  += HandleWordListChanged;
 
         // Start the first phase
         wordEngine.LoadWord(PhaseManager.Instance.CurrentWord);
@@ -58,6 +59,7 @@ public class GameCoordinator : MonoBehaviour
         if (PhaseManager.Instance != null)
         {
             PhaseManager.Instance.OnPhaseWordChanged -= HandlePhaseWordChanged;
+            PhaseManager.Instance.OnWordListChanged  -= HandleWordListChanged;
         }
     }
 
@@ -142,6 +144,13 @@ public class GameCoordinator : MonoBehaviour
     {
         wordEngine.LoadWord(word);
         uiController.UpdateTextDisplay();
+    }
+
+    private void HandleWordListChanged()
+    {
+        TimerSystem.Instance.ResetAll();
+        GameStateManager.Instance.RaiseGameReset();
+        GameStateManager.Instance.TransitionTo(GameState.Playing);
     }
 
     // Called from UI button
