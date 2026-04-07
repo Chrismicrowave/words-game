@@ -371,6 +371,15 @@ public class UIController : MonoBehaviour
         selectedPhaseIndex++;
     }
 
+    private static readonly Color TabActiveColor   = new Color(1f, 0.5f, 0f, 1f); // orange
+    private static readonly Color TabInactiveColor = Color.white;
+
+    private void SetTabColors(bool myListActive)
+    {
+        if (myListTabBtn != null) myListTabBtn.GetComponent<Image>().color = myListActive ? TabActiveColor : TabInactiveColor;
+        if (dailyTabBtn  != null) dailyTabBtn .GetComponent<Image>().color = myListActive ? TabInactiveColor : TabActiveColor;
+    }
+
     public void OnMyListTabClicked()
     {
         PlayerPrefs.SetString(ActiveTabPrefKey, "mylist");
@@ -378,6 +387,7 @@ public class UIController : MonoBehaviour
             PhaseManager.Instance.LoadWordList(myListProvider);
         if (myListPanelBtns != null) myListPanelBtns.SetActive(true);
         if (dailyPanelBtns != null) dailyPanelBtns.SetActive(false);
+        SetTabColors(myListActive: true);
     }
 
     public void OnFetchDailyClicked()
@@ -393,6 +403,7 @@ public class UIController : MonoBehaviour
 
     public void OnDailyTabClicked()
     {
+        SetTabColors(myListActive: false);
         PlayerPrefs.SetString(ActiveTabPrefKey, "daily");
         string date = System.DateTime.Now.ToString("yyyy-MM-dd");
         string dir = System.IO.Path.GetFullPath(System.IO.Path.Combine(Application.dataPath, "..", "DailyLists"));
