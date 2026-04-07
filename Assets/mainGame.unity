@@ -10062,7 +10062,6 @@ RectTransform:
   - {fileID: 773190230}
   - {fileID: 2077970174}
   - {fileID: 2032625076}
-  - {fileID: 885220075}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
@@ -10851,7 +10850,7 @@ GameObject:
   m_Component:
   - component: {fileID: 773190230}
   m_Layer: 5
-  m_Name: Btns
+  m_Name: HUD-Btns
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -11751,13 +11750,13 @@ RectTransform:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 885220074}
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 351103801}
-  m_Father: {fileID: 680745022}
+  m_Father: {fileID: 2077970174}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 1, y: 1}
@@ -20971,7 +20970,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1761848515}
   m_Layer: 0
-  m_Name: ---Audio---
+  m_Name: --- Audio ---
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -21550,7 +21549,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1878826811}
   m_Layer: 5
-  m_Name: MylistPanelBtns
+  m_Name: MyListPanelBtns
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -24222,6 +24221,7 @@ RectTransform:
   m_Children:
   - {fileID: 2124874883}
   - {fileID: 308446942}
+  - {fileID: 885220075}
   m_Father: {fileID: 680745022}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
@@ -24850,7 +24850,7 @@ GameObject:
   - component: {fileID: 2124874887}
   - component: {fileID: 2124874888}
   m_Layer: 5
-  m_Name: Scroll View
+  m_Name: WordListPanel
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
