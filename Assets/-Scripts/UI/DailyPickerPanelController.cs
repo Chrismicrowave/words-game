@@ -12,15 +12,19 @@ public class DailyPickerPanelController : MonoBehaviour
     [SerializeField] private GameObject listItemPrefab;
     [SerializeField] private TMP_InputField searchField;
     [SerializeField] private Button loadBtn;
+    [SerializeField] private Color dateSelectedColor   = new Color(1f, 0.5f, 0f, 1f);
+    [SerializeField] private Color dateUnselectedColor = Color.white;
 
     public System.Action<DailyWordListProvider> OnListSelected;
 
     private List<DailyWordListProvider> allProviders = new List<DailyWordListProvider>();
     private DailyWordListProvider selectedProvider;
+    private Image selectedDateImage;
 
     void OnEnable()
     {
         selectedProvider = null;
+        selectedDateImage = null;
         if (loadBtn != null) loadBtn.interactable = false;
 
         LoadAllLists();
@@ -71,15 +75,21 @@ public class DailyPickerPanelController : MonoBehaviour
             if (label != null) label.text = provider.DisplayName;
 
             var btn = item.GetComponent<Button>();
+            var img = item.GetComponent<Image>();
             var captured = provider;
             if (btn != null)
-                btn.onClick.AddListener(() => OnDateClicked(captured));
+                btn.onClick.AddListener(() => OnDateClicked(captured, img));
         }
     }
 
-    private void OnDateClicked(DailyWordListProvider provider)
+    private void OnDateClicked(DailyWordListProvider provider, Image btnImage)
     {
+        // Deselect previous
+        if (selectedDateImage != null) selectedDateImage.color = dateUnselectedColor;
+
         selectedProvider = provider;
+        selectedDateImage = btnImage;
+        if (selectedDateImage != null) selectedDateImage.color = dateSelectedColor;
         if (loadBtn != null) loadBtn.interactable = true;
 
         // Populate word preview
