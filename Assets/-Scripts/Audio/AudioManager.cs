@@ -34,11 +34,13 @@ public class AudioManager : MonoBehaviour
             return;
         }
         audioSource = GetComponent<AudioSource>();
+        if (audioSource == null)
+            Debug.LogError("AudioManager: no AudioSource on " + gameObject.name);
     }
 
     void Start()
     {
-        if (mixerGroup != null && audioSource != null) audioSource.outputAudioMixerGroup = mixerGroup;
+        if (audioSource != null && mixerGroup != null) audioSource.outputAudioMixerGroup = mixerGroup;
 
         // Apply saved volume settings on start
         float master = PlayerPrefs.GetFloat(SettingsManager.KeyMasterVolume, 1f);
@@ -69,39 +71,41 @@ public class AudioManager : MonoBehaviour
 
     public virtual void PlaySound(AudioClip clip)
     {
+        if (audioSource == null) return;
         audioSource.clip = clip;
-
-        if (!audioSource.isPlaying)
-        { audioSource.Play(); }
+        if (!audioSource.isPlaying) audioSource.Play();
     }
 
     public virtual void PlayAudioList(List<AudioClip> list)
     {
+        if (audioSource == null) return;
         int r = Random.Range(0, list.Count);
-
-        if (!audioSource.isPlaying)
-        { PlaySound(list[r]); }
+        if (!audioSource.isPlaying) PlaySound(list[r]);
     }
 
     public void ShiftPitch(float pitch)
     {
+        if (audioSource == null) return;
         audioSource.pitch = Random.Range(audioSource.pitch - pitch, audioSource.pitch + pitch);
     }
 
     public void AddPitch(float pitch)
     {
+        if (audioSource == null) return;
         audioSource.pitch += pitch;
-        audioSource.volume +=0.1f;
+        audioSource.volume += 0.1f;
     }
 
     public void ResetPitch()
     {
+        if (audioSource == null) return;
         audioSource.pitch = 1f;
         audioSource.volume = 1f;
     }
 
     public void SetVolume(float volume)
     {
+        if (audioSource == null) return;
         audioSource.volume = volume;
     }
 
