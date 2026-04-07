@@ -8,64 +8,57 @@ public class SettingsManager : MonoBehaviour
 
     [SerializeField] private AudioMixer mainMixer;
 
-    public const string KeyMasterVolume = "MasterVolume";
-    public const string KeySFXVolume    = "SFXVolume";
-    public const string KeyBGMVolume    = "BGMVolume";
-    public const string KeyFullscreen   = "Fullscreen";
-    public const string KeyResolution   = "Resolution";
-    public const string KeyVSync        = "VSync";
-    public const string KeyCRTFilter    = "CRTFilter";
-    public const string KeyScreenShake  = "ScreenShake";
-
-    private const string KEY_MASTER_VOL = "settings_masterVolume";
-    private const string KEY_SFX_VOL = "settings_sfxVolume";
-    private const string KEY_FULLSCREEN = "settings_fullscreen";
-    private const string KEY_RESOLUTION = "settings_resolution";
-    private const string KEY_QUALITY = "settings_quality";
-    private const string KEY_ACTION_PROMPTS = "settings_actionPrompts";
+    public const string KeyMasterVolume   = "settings_masterVolume";
+    public const string KeySFXVolume      = "settings_sfxVolume";
+    public const string KeyBGMVolume      = "settings_bgmVolume";
+    public const string KeyFullscreen     = "settings_fullscreen";
+    public const string KeyResolution     = "settings_resolution";
+    public const string KeyVSync          = "settings_vsync";
+    public const string KeyCRTFilter      = "settings_crtFilter";
+    public const string KeyScreenShake    = "settings_screenShake";
+    public const string KeyQuality        = "settings_quality";
+    public const string KeyActionPrompts  = "settings_actionPrompts";
 
     public float MasterVolume
     {
-        get => PlayerPrefs.GetFloat(KEY_MASTER_VOL, 1f);
-        set { PlayerPrefs.SetFloat(KEY_MASTER_VOL, value); ApplyAudio(); }
+        get => PlayerPrefs.GetFloat(KeyMasterVolume, 1f);
+        set { PlayerPrefs.SetFloat(KeyMasterVolume, value); ApplyAudio(); }
     }
 
     public float SFXVolume
     {
-        get => PlayerPrefs.GetFloat(KEY_SFX_VOL, 1f);
-        set { PlayerPrefs.SetFloat(KEY_SFX_VOL, value); ApplyAudio(); }
+        get => PlayerPrefs.GetFloat(KeySFXVolume, 1f);
+        set { PlayerPrefs.SetFloat(KeySFXVolume, value); ApplyAudio(); }
     }
-
-    private const string KEY_BGM_VOL = "settings_bgmVolume";
 
     public float BGMVolume
     {
-        get => PlayerPrefs.GetFloat(KEY_BGM_VOL, 1f);
-        set { PlayerPrefs.SetFloat(KEY_BGM_VOL, value); ApplyAudio(); }
+        get => PlayerPrefs.GetFloat(KeyBGMVolume, 1f);
+        set { PlayerPrefs.SetFloat(KeyBGMVolume, value); ApplyAudio(); }
     }
 
     public bool Fullscreen
     {
-        get => PlayerPrefs.GetInt(KEY_FULLSCREEN, 1) == 1;
-        set { PlayerPrefs.SetInt(KEY_FULLSCREEN, value ? 1 : 0); ApplyDisplay(); }
+        get => PlayerPrefs.GetInt(KeyFullscreen, 1) == 1;
+        set { PlayerPrefs.SetInt(KeyFullscreen, value ? 1 : 0); ApplyDisplay(); }
     }
 
     public int ResolutionIndex
     {
-        get => PlayerPrefs.GetInt(KEY_RESOLUTION, -1);
-        set { PlayerPrefs.SetInt(KEY_RESOLUTION, value); ApplyDisplay(); }
+        get => PlayerPrefs.GetInt(KeyResolution, -1);
+        set { PlayerPrefs.SetInt(KeyResolution, value); ApplyDisplay(); }
     }
 
     public int QualityLevel
     {
-        get => PlayerPrefs.GetInt(KEY_QUALITY, QualitySettings.GetQualityLevel());
-        set { PlayerPrefs.SetInt(KEY_QUALITY, value); QualitySettings.SetQualityLevel(value); }
+        get => PlayerPrefs.GetInt(KeyQuality, QualitySettings.GetQualityLevel());
+        set { PlayerPrefs.SetInt(KeyQuality, value); QualitySettings.SetQualityLevel(value); }
     }
 
     public bool ShowActionPrompts
     {
-        get => PlayerPrefs.GetInt(KEY_ACTION_PROMPTS, 1) == 1;
-        set => PlayerPrefs.SetInt(KEY_ACTION_PROMPTS, value ? 1 : 0);
+        get => PlayerPrefs.GetInt(KeyActionPrompts, 1) == 1;
+        set => PlayerPrefs.SetInt(KeyActionPrompts, value ? 1 : 0);
     }
 
     public event Action OnSettingsChanged;
@@ -79,8 +72,11 @@ public class SettingsManager : MonoBehaviour
             Destroy(gameObject);
             return;
         }
+    }
 
-        Load();
+    void Start()
+    {
+        Load(); // Must be Start, not Awake — AudioMixer.SetFloat is ignored in Awake
     }
 
     public void Load()
@@ -96,18 +92,6 @@ public class SettingsManager : MonoBehaviour
         OnSettingsChanged?.Invoke();
     }
 
-    public void ResetDefaults()
-    {
-        PlayerPrefs.DeleteKey(KEY_MASTER_VOL);
-        PlayerPrefs.DeleteKey(KEY_SFX_VOL);
-        PlayerPrefs.DeleteKey(KEY_FULLSCREEN);
-        PlayerPrefs.DeleteKey(KEY_RESOLUTION);
-        PlayerPrefs.DeleteKey(KEY_QUALITY);
-        PlayerPrefs.DeleteKey(KEY_ACTION_PROMPTS);
-        Load();
-        OnSettingsChanged?.Invoke();
-    }
-
     public void ResetToDefaults()
     {
         PlayerPrefs.DeleteKey(KeyMasterVolume);
@@ -118,7 +102,11 @@ public class SettingsManager : MonoBehaviour
         PlayerPrefs.DeleteKey(KeyVSync);
         PlayerPrefs.DeleteKey(KeyCRTFilter);
         PlayerPrefs.DeleteKey(KeyScreenShake);
+        PlayerPrefs.DeleteKey(KeyQuality);
+        PlayerPrefs.DeleteKey(KeyActionPrompts);
         PlayerPrefs.Save();
+        Load();
+        OnSettingsChanged?.Invoke();
     }
 
     private void ApplyAudio()

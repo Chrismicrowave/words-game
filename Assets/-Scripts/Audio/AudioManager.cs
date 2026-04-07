@@ -41,14 +41,6 @@ public class AudioManager : MonoBehaviour
     void Start()
     {
         if (audioSource != null && mixerGroup != null) audioSource.outputAudioMixerGroup = mixerGroup;
-
-        // Apply saved volume settings on start
-        float master = PlayerPrefs.GetFloat(SettingsManager.KeyMasterVolume, 1f);
-        float sfx    = PlayerPrefs.GetFloat(SettingsManager.KeySFXVolume,    1f);
-        float bgm    = PlayerPrefs.GetFloat(SettingsManager.KeyBGMVolume,    1f);
-        SetMasterVolume(master);
-        SetSFXVolume(sfx);
-        SetBGMVolume(bgm);
     }
 
     public void SetMasterVolume(float linear)
