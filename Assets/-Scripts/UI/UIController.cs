@@ -62,6 +62,9 @@ public class UIController : MonoBehaviour
     [SerializeField] private GameObject instructionPanel;
     private bool _infoPanelOn;
 
+    [Header("Settings")]
+    [SerializeField] private SettingsPanelController settingsPanel;
+
     [Header("Import / Export")]
     [SerializeField] private Button importBtn;
     [SerializeField] private Button exportBtn;
@@ -471,6 +474,11 @@ public class UIController : MonoBehaviour
         instructionPanel.SetActive(_infoPanelOn);
         PlayerPrefs.SetInt(InfoPanelPrefKey, _infoPanelOn ? 1 : 0);
         PlayerPrefs.Save();
+    }
+
+    public void OnSettingsBtnClicked()
+    {
+        if (settingsPanel != null) settingsPanel.gameObject.SetActive(true);
     }
 
     public void OnImportClicked()
