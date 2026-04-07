@@ -15,6 +15,11 @@ Architecture details: `docs/architecture.md`
 ## Debugging Rules
 - After 2 failed fix attempts on the same bug: search online (WebSearch) before trying again — do not rely solely on internal reasoning
 - Always search for Unity-version-specific solutions (include "Unity 6" in queries)
+- After 2 failed fix attempts: also audit the Unity Editor thoroughly for missing references (e.g. unassigned slider OnClick callbacks), duplicate components (e.g. two SettingsManager instances), and stale static declarations — code bugs and Editor wiring bugs are equally likely
+
+## UI Element Creation
+- Always use Unity's built-in UI elements (Slider, InputField, Toggle, Dropdown, ScrollView, etc.) via DefaultControls or ExecuteMenuItem — never build them manually from scratch via MCP create_game_object
+- Only build custom UI from primitives if the built-in element genuinely cannot do the job, and ask the user first before doing so
 
 ## Editor Workflow
 - Always use Unity MCP (coplay-mcp) tools for all Unity Editor tasks — creating assets, wiring components, building scene hierarchy, etc.

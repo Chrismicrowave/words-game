@@ -4,7 +4,7 @@ using UnityEngine.Audio;
 
 public class AudioManager : MonoBehaviour
 {
-    public static AudioManager Instance { get; private set; }
+    //public static AudioManager Instance { get; private set; }
 
     [Header("List")]
     public List<AudioClip> clipList = new List<AudioClip>();
@@ -22,8 +22,8 @@ public class AudioManager : MonoBehaviour
 
     void Awake()
     {
-        if (Instance == null) Instance = this;
-        else { Destroy(gameObject); return; }
+        //if (Instance == null) Instance = this;
+        //else { Destroy(gameObject); return; }
 
         audioSource = GetComponent<AudioSource>();
         if (audioSource == null)
