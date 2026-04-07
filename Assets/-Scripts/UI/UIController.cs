@@ -69,7 +69,8 @@ public class UIController : MonoBehaviour
     [Header("Config")]
     [SerializeField] private GameConfig config;
 
-    private const string ActiveTabPrefKey = "ActiveTab"; // "mylist" or "daily"
+    private const string ActiveTabPrefKey    = "ActiveTab"; // "mylist" or "daily"
+    private const string DailyListPathPrefKey = "DailyListPath";
     private const string WordsPanelPrefKey = "WordsPanelOn";
     private const string TimerPanelPrefKey = "TimerPanelOn";
     private const string InfoPanelPrefKey  = "InfoPanelOn";
@@ -139,6 +140,11 @@ public class UIController : MonoBehaviour
 
         if (PhaseManager.Instance != null)
             myListProvider = PhaseManager.Instance.ActiveProvider;
+
+        // Restore saved daily list path if any
+        string savedDailyPath = PlayerPrefs.GetString(DailyListPathPrefKey, "");
+        if (!string.IsNullOrEmpty(savedDailyPath) && System.IO.File.Exists(savedDailyPath))
+            dailyProvider = new DailyWordListProvider(savedDailyPath);
 
         // Load saved tab preference, default to mylist
         string savedTab = PlayerPrefs.GetString(ActiveTabPrefKey, "mylist");
@@ -398,6 +404,7 @@ public class UIController : MonoBehaviour
         dailyPickerPanel.OnListSelected = (provider) =>
         {
             dailyProvider = provider;
+            PlayerPrefs.SetString(DailyListPathPrefKey, provider.FilePath);
             PhaseManager.Instance.LoadWordList(provider);
             PlayerPrefs.SetString(ActiveTabPrefKey, "daily");
             if (myListPanelBtns != null) myListPanelBtns.SetActive(false);
