@@ -160,7 +160,7 @@ public class BuildDailyPickerPanel
         vlg.childForceExpandWidth = true;
         vlg.childForceExpandHeight = false;
         vlg.childControlWidth = true;
-        vlg.childControlHeight = true;
+        vlg.childControlHeight = false;  // keep prefab-defined height (30px)
         vlg.padding = new RectOffset(4, 4, 4, 4);
         var csf = contentGO.AddComponent<ContentSizeFitter>();
         csf.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
