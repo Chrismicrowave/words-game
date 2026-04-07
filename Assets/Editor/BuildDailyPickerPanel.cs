@@ -34,9 +34,13 @@ public class BuildDailyPickerPanel
 
         var noNav = new Navigation { mode = Navigation.Mode.None };
 
-        // ── Remove existing ───────────────────────────────────────────────────
+        // ── Guard: abort if panel already exists (don't wipe Inspector changes) ─
         var existing = canvas.transform.Find("DailyPickerPanel");
-        if (existing != null) Object.DestroyImmediate(existing.gameObject);
+        if (existing != null)
+        {
+            Debug.LogWarning("DailyPickerPanel already exists — aborting to preserve Inspector values. Delete it manually first if you want a full rebuild.");
+            return;
+        }
 
         // ── Fullscreen dim overlay ────────────────────────────────────────────
         var overlay = new GameObject("DailyPickerPanel");
@@ -215,7 +219,7 @@ public class BuildDailyPickerPanel
         var dvpRT = dateVP.AddComponent<RectTransform>();
         dvpRT.anchorMin = Vector2.zero; dvpRT.anchorMax = Vector2.one;
         dvpRT.offsetMin = Vector2.zero; dvpRT.offsetMax = Vector2.zero;
-        dateVP.AddComponent<Image>().color = new Color(1f, 1f, 1f, 0f);
+        // No Image on viewport — image blocks spawned content raycasts
         var dm = dateVP.AddComponent<Mask>(); dm.showMaskGraphic = false;
 
         var dateContent = new GameObject("Content");
@@ -251,7 +255,7 @@ public class BuildDailyPickerPanel
         var wvpRT = wordVP.AddComponent<RectTransform>();
         wvpRT.anchorMin = Vector2.zero; wvpRT.anchorMax = Vector2.one;
         wvpRT.offsetMin = Vector2.zero; wvpRT.offsetMax = Vector2.zero;
-        wordVP.AddComponent<Image>().color = new Color(1f, 1f, 1f, 0f);
+        // No Image on viewport — image blocks spawned content raycasts
         var wm = wordVP.AddComponent<Mask>(); wm.showMaskGraphic = false;
 
         var wordContent = new GameObject("Content");
