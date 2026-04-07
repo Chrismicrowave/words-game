@@ -33,12 +33,12 @@ public class AudioManager : MonoBehaviour
             Destroy(gameObject);
             return;
         }
+        audioSource = GetComponent<AudioSource>();
     }
 
     void Start()
     {
-        audioSource = GetComponent<AudioSource>();
-        if (mixerGroup != null) audioSource.outputAudioMixerGroup = mixerGroup;
+        if (mixerGroup != null && audioSource != null) audioSource.outputAudioMixerGroup = mixerGroup;
 
         // Apply saved volume settings on start
         float master = PlayerPrefs.GetFloat(SettingsManager.KeyMasterVolume, 1f);
@@ -111,12 +111,8 @@ public class AudioManager : MonoBehaviour
     //}
     public void StopAudio()
     {
-
+        if (audioSource == null) return;
         if (audioSource.isPlaying)
-        { audioSource.Stop(); }
-        else
-        {
-            return;
-        }
+            audioSource.Stop();
     }
 }
