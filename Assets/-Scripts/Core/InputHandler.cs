@@ -15,6 +15,7 @@ public class InputHandler : MonoBehaviour
     public event Action OnEnterPressed;
 
     private Keyboard keyboard;
+    private bool _gameplayBlocked;
 
     // Map New Input System Key enum to legacy KeyCode for WordEngine compatibility
     private readonly Dictionary<Key, KeyCode> keyToKeyCode = new Dictionary<Key, KeyCode>();
@@ -31,6 +32,8 @@ public class InputHandler : MonoBehaviour
 
         BuildKeyMap();
     }
+
+    public void SetGameplayBlocked(bool blocked) => _gameplayBlocked = blocked;
 
     void BuildKeyMap()
     {
@@ -97,20 +100,23 @@ public class InputHandler : MonoBehaviour
         }
 
         // Check all mapped keys for press and release
-        foreach (var kvp in keyToKeyCode)
+        if (!_gameplayBlocked)
         {
-            KeyControl keyControl = keyboard[kvp.Key];
-
-            if (keyControl.wasPressedThisFrame)
+            foreach (var kvp in keyToKeyCode)
             {
-                OnKeyAction?.Invoke(kvp.Value, true);
-                return; // process one key event per frame
-            }
+                KeyControl keyControl = keyboard[kvp.Key];
 
-            if (keyControl.wasReleasedThisFrame)
-            {
-                OnKeyAction?.Invoke(kvp.Value, false);
-                return;
+                if (keyControl.wasPressedThisFrame)
+                {
+                    OnKeyAction?.Invoke(kvp.Value, true);
+                    return; // process one key event per frame
+                }
+
+                if (keyControl.wasReleasedThisFrame)
+                {
+                    OnKeyAction?.Invoke(kvp.Value, false);
+                    return;
+                }
             }
         }
     }

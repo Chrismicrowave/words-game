@@ -8,6 +8,15 @@ public class SettingsManager : MonoBehaviour
 
     [SerializeField] private AudioMixer mainMixer;
 
+    public const string KeyMasterVolume = "MasterVolume";
+    public const string KeySFXVolume    = "SFXVolume";
+    public const string KeyBGMVolume    = "BGMVolume";
+    public const string KeyFullscreen   = "Fullscreen";
+    public const string KeyResolution   = "Resolution";
+    public const string KeyVSync        = "VSync";
+    public const string KeyCRTFilter    = "CRTFilter";
+    public const string KeyScreenShake  = "ScreenShake";
+
     private const string KEY_MASTER_VOL = "settings_masterVolume";
     private const string KEY_SFX_VOL = "settings_sfxVolume";
     private const string KEY_FULLSCREEN = "settings_fullscreen";
@@ -89,6 +98,19 @@ public class SettingsManager : MonoBehaviour
         PlayerPrefs.DeleteKey(KEY_ACTION_PROMPTS);
         Load();
         OnSettingsChanged?.Invoke();
+    }
+
+    public void ResetToDefaults()
+    {
+        PlayerPrefs.DeleteKey(KeyMasterVolume);
+        PlayerPrefs.DeleteKey(KeySFXVolume);
+        PlayerPrefs.DeleteKey(KeyBGMVolume);
+        PlayerPrefs.DeleteKey(KeyFullscreen);
+        PlayerPrefs.DeleteKey(KeyResolution);
+        PlayerPrefs.DeleteKey(KeyVSync);
+        PlayerPrefs.DeleteKey(KeyCRTFilter);
+        PlayerPrefs.DeleteKey(KeyScreenShake);
+        PlayerPrefs.Save();
     }
 
     private void ApplyAudio()

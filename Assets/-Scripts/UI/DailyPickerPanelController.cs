@@ -23,6 +23,7 @@ public class DailyPickerPanelController : MonoBehaviour
 
     void OnEnable()
     {
+        if (InputHandler.Instance != null) InputHandler.Instance.SetGameplayBlocked(true);
         selectedProvider = null;
         selectedDateImage = null;
         if (loadBtn != null) loadBtn.interactable = false;
@@ -117,11 +118,13 @@ public class DailyPickerPanelController : MonoBehaviour
     {
         if (selectedProvider == null) return;
         OnListSelected?.Invoke(selectedProvider);
+        if (InputHandler.Instance != null) InputHandler.Instance.SetGameplayBlocked(false);
         gameObject.SetActive(false);
     }
 
     public void Close()
     {
+        if (InputHandler.Instance != null) InputHandler.Instance.SetGameplayBlocked(false);
         gameObject.SetActive(false);
     }
 }
