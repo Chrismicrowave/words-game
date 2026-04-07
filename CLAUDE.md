@@ -12,6 +12,10 @@ Architecture details: `docs/architecture.md`
 - StandaloneFileBrowser plugin (screenshot save dialogs)
 - CRT-Free shader package (post-processing)
 
+## Debugging Rules
+- After 2 failed fix attempts on the same bug: search online (WebSearch) before trying again — do not rely solely on internal reasoning
+- Always search for Unity-version-specific solutions (include "Unity 6" in queries)
+
 ## Editor Workflow
 - Always use Unity MCP (coplay-mcp) tools for all Unity Editor tasks — creating assets, wiring components, building scene hierarchy, etc.
 - Never ask the user to perform Unity Editor actions manually unless the MCP tool truly cannot do it
