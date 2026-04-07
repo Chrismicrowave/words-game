@@ -9,36 +9,33 @@ public class AudioSettingsController : MonoBehaviour
 
     void OnEnable()
     {
-        // Read from SettingsManager properties so keys are consistent
-        if (masterSlider != null)
-            masterSlider.value = SettingsManager.Instance != null
-                ? SettingsManager.Instance.MasterVolume
-                : PlayerPrefs.GetFloat(SettingsManager.KeyMasterVolume, 1f);
-        if (sfxSlider != null)
-            sfxSlider.value = SettingsManager.Instance != null
-                ? SettingsManager.Instance.SFXVolume
-                : PlayerPrefs.GetFloat(SettingsManager.KeySFXVolume, 1f);
-        if (bgmSlider != null)
-            bgmSlider.value = SettingsManager.Instance != null
-                ? SettingsManager.Instance.BGMVolume
-                : PlayerPrefs.GetFloat(SettingsManager.KeyBGMVolume, 1f);
+        float master = SettingsManager.Instance != null ? SettingsManager.Instance.MasterVolume : PlayerPrefs.GetFloat(SettingsManager.KeyMasterVolume, 1f);
+        float sfx    = SettingsManager.Instance != null ? SettingsManager.Instance.SFXVolume    : PlayerPrefs.GetFloat(SettingsManager.KeySFXVolume,    1f);
+        float bgm    = SettingsManager.Instance != null ? SettingsManager.Instance.BGMVolume    : PlayerPrefs.GetFloat(SettingsManager.KeyBGMVolume,    1f);
+
+        if (masterSlider != null) masterSlider.SetValueWithoutNotify(master);
+        if (sfxSlider    != null) sfxSlider.SetValueWithoutNotify(sfx);
+        if (bgmSlider    != null) bgmSlider.SetValueWithoutNotify(bgm);
     }
 
     public void OnMasterChanged(float value)
     {
         if (SettingsManager.Instance != null)
             SettingsManager.Instance.MasterVolume = value;
+        PlayerPrefs.Save();
     }
 
     public void OnSFXChanged(float value)
     {
         if (SettingsManager.Instance != null)
             SettingsManager.Instance.SFXVolume = value;
+        PlayerPrefs.Save();
     }
 
     public void OnBGMChanged(float value)
     {
         if (SettingsManager.Instance != null)
             SettingsManager.Instance.BGMVolume = value;
+        PlayerPrefs.Save();
     }
 }
