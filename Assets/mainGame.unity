@@ -21444,7 +21444,7 @@ MonoBehaviour:
   released: {fileID: 0}
   complete: {fileID: 8300000, guid: b5da93327af831e4dbb0bb3897a6c654, type: 3}
   fail: {fileID: 8300000, guid: 2c272ad6d7b920f4cb666e7d5c0ce449, type: 3}
-  mixerGroup: {fileID: 0}
+  mixerGroup: {fileID: -1888921009920327559, guid: b910948b1a3ab70448ea40308d02bbee, type: 2}
 --- !u!82 &1535896218
 AudioSource:
   m_ObjectHideFlags: 0
@@ -29000,7 +29000,7 @@ MonoBehaviour:
   released: {fileID: 8300000, guid: 5b71f664abfb87348b8d479d1a6e92c3, type: 3}
   complete: {fileID: 0}
   fail: {fileID: 0}
-  mixerGroup: {fileID: 0}
+  mixerGroup: {fileID: -1888921009920327559, guid: b910948b1a3ab70448ea40308d02bbee, type: 2}
 --- !u!1 &2094355245
 GameObject:
   m_ObjectHideFlags: 0
