@@ -51,6 +51,9 @@ public class UIController : MonoBehaviour
     [SerializeField] private GameObject myListPanelBtns;
     [SerializeField] private GameObject dailyPanelBtns;
 
+    [Header("Daily Picker")]
+    [SerializeField] private DailyPickerPanelController dailyPickerPanel;
+
     [Header("Panel Toggles")]
     [SerializeField] private MenuAnimOnOff wordsPanelAnim;
     [SerializeField] private MenuAnimOnOff timerPanelAnim;
@@ -368,6 +371,16 @@ public class UIController : MonoBehaviour
         selectedPhaseIndex++;
     }
 
+    [Header("Tab Colors")]
+    [SerializeField] private Color tabActiveColor   = new Color(1f, 0.5f, 0f, 1f);
+    [SerializeField] private Color tabInactiveColor = Color.white;
+
+    private void SetTabColors(bool myListActive)
+    {
+        if (myListTabBtn != null) myListTabBtn.GetComponent<Image>().color = myListActive ? tabActiveColor : tabInactiveColor;
+        if (dailyTabBtn  != null) dailyTabBtn .GetComponent<Image>().color = myListActive ? tabInactiveColor : tabActiveColor;
+    }
+
     public void OnMyListTabClicked()
     {
         PlayerPrefs.SetString(ActiveTabPrefKey, "mylist");
@@ -375,10 +388,23 @@ public class UIController : MonoBehaviour
             PhaseManager.Instance.LoadWordList(myListProvider);
         if (myListPanelBtns != null) myListPanelBtns.SetActive(true);
         if (dailyPanelBtns != null) dailyPanelBtns.SetActive(false);
+        SetTabColors(myListActive: true);
+    }
+
+    public void OnFetchDailyClicked()
+    {
+        if (dailyPickerPanel == null) return;
+        dailyPickerPanel.OnListSelected = (provider) =>
+        {
+            PhaseManager.Instance.LoadWordList(provider);
+            PlayerPrefs.SetString(ActiveTabPrefKey, "daily");
+        };
+        dailyPickerPanel.gameObject.SetActive(true);
     }
 
     public void OnDailyTabClicked()
     {
+        SetTabColors(myListActive: false);
         PlayerPrefs.SetString(ActiveTabPrefKey, "daily");
         string date = System.DateTime.Now.ToString("yyyy-MM-dd");
         string dir = System.IO.Path.GetFullPath(System.IO.Path.Combine(Application.dataPath, "..", "DailyLists"));
