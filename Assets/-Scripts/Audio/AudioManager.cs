@@ -63,8 +63,8 @@ public class AudioManager : MonoBehaviour
 
     public void SetBGMVolume(float linear)
     {
-        // BGM is stored; SettingsManager will apply when mixer param exists
-        PlayerPrefs.SetFloat(SettingsManager.KeyBGMVolume, linear);
+        if (SettingsManager.Instance != null)
+            SettingsManager.Instance.BGMVolume = linear;
     }
 
     public virtual void PlaySound(AudioClip clip)

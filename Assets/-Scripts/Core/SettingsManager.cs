@@ -36,6 +36,14 @@ public class SettingsManager : MonoBehaviour
         set { PlayerPrefs.SetFloat(KEY_SFX_VOL, value); ApplyAudio(); }
     }
 
+    private const string KEY_BGM_VOL = "settings_bgmVolume";
+
+    public float BGMVolume
+    {
+        get => PlayerPrefs.GetFloat(KEY_BGM_VOL, 1f);
+        set { PlayerPrefs.SetFloat(KEY_BGM_VOL, value); ApplyAudio(); }
+    }
+
     public bool Fullscreen
     {
         get => PlayerPrefs.GetInt(KEY_FULLSCREEN, 1) == 1;
@@ -120,8 +128,11 @@ public class SettingsManager : MonoBehaviour
         float masterDb = MasterVolume > 0.001f ? Mathf.Log10(MasterVolume) * 20f : -80f;
         float sfxDb = SFXVolume > 0.001f ? Mathf.Log10(SFXVolume) * 20f : -80f;
 
+        float bgmDb = BGMVolume > 0.001f ? Mathf.Log10(BGMVolume) * 20f : -80f;
+
         mainMixer.SetFloat("MasterVolume", masterDb);
         mainMixer.SetFloat("SFXVolume", sfxDb);
+        mainMixer.SetFloat("BGMVolume", bgmDb);
     }
 
     private void ApplyDisplay()
