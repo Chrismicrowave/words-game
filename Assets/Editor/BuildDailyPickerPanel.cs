@@ -9,6 +9,11 @@ using TMPro;
 /// Creates the DailyPickerPanel overlay, adds "Fetch Daily" button to DailyPanelBtns,
 /// and wires UIController.dailyPickerPanel. Run via Tools > Build Daily Picker Panel.
 /// Safe: does NOT modify any existing scroll view layout settings.
+///
+/// Layout:
+///   [Search field — full width]
+///   [Date scroll view | Word preview scroll view]
+///   [Load btn] [Close btn]
 /// </summary>
 public class BuildDailyPickerPanel
 {
@@ -29,7 +34,7 @@ public class BuildDailyPickerPanel
 
         var noNav = new Navigation { mode = Navigation.Mode.None };
 
-        // ── Remove existing DailyPickerPanel if re-running ────────────────────
+        // ── Remove existing ───────────────────────────────────────────────────
         var existing = canvas.transform.Find("DailyPickerPanel");
         if (existing != null) Object.DestroyImmediate(existing.gameObject);
 
@@ -41,20 +46,18 @@ public class BuildDailyPickerPanel
         overlayRT.anchorMax = Vector2.one;
         overlayRT.offsetMin = Vector2.zero;
         overlayRT.offsetMax = Vector2.zero;
-        var overlayImg = overlay.AddComponent<Image>();
-        overlayImg.color = new Color(0f, 0f, 0f, 0.7f);
+        overlay.AddComponent<Image>().color = new Color(0f, 0f, 0f, 0.7f);
 
-        // ── Card ──────────────────────────────────────────────────────────────
+        // ── Card (wider to fit two columns) ───────────────────────────────────
         var card = new GameObject("Card");
         card.transform.SetParent(overlay.transform, false);
         var cardRT = card.AddComponent<RectTransform>();
         cardRT.anchorMin = new Vector2(0.5f, 0.5f);
         cardRT.anchorMax = new Vector2(0.5f, 0.5f);
         cardRT.pivot = new Vector2(0.5f, 0.5f);
-        cardRT.sizeDelta = new Vector2(420f, 460f);
+        cardRT.sizeDelta = new Vector2(700f, 480f);
         cardRT.anchoredPosition = Vector2.zero;
-        var cardImg = card.AddComponent<Image>();
-        cardImg.color = new Color(0.12f, 0.12f, 0.12f, 1f);
+        card.AddComponent<Image>().color = new Color(0.12f, 0.12f, 0.12f, 1f);
 
         // ── Title ─────────────────────────────────────────────────────────────
         var titleGO = new GameObject("Title");
@@ -73,7 +76,7 @@ public class BuildDailyPickerPanel
         titleTMP.color = Color.white;
         titleTMP.raycastTarget = false;
 
-        // ── Search field ──────────────────────────────────────────────────────
+        // ── Search field (full width) ─────────────────────────────────────────
         var searchGO = new GameObject("SearchField");
         searchGO.transform.SetParent(card.transform, false);
         var searchRT = searchGO.AddComponent<RectTransform>();
@@ -88,10 +91,8 @@ public class BuildDailyPickerPanel
         var taGO = new GameObject("Text Area");
         taGO.transform.SetParent(searchGO.transform, false);
         var taRT = taGO.AddComponent<RectTransform>();
-        taRT.anchorMin = Vector2.zero;
-        taRT.anchorMax = Vector2.one;
-        taRT.offsetMin = new Vector2(8f, 0f);
-        taRT.offsetMax = new Vector2(-8f, 0f);
+        taRT.anchorMin = Vector2.zero; taRT.anchorMax = Vector2.one;
+        taRT.offsetMin = new Vector2(8f, 0f); taRT.offsetMax = new Vector2(-8f, 0f);
         taGO.AddComponent<RectMask2D>();
 
         var phGO = new GameObject("Placeholder");
@@ -113,8 +114,7 @@ public class BuildDailyPickerPanel
         itRT.anchorMin = Vector2.zero; itRT.anchorMax = Vector2.one;
         itRT.offsetMin = Vector2.zero; itRT.offsetMax = Vector2.zero;
         var itTMP = itGO.AddComponent<TextMeshProUGUI>();
-        itTMP.fontSize = 16;
-        itTMP.color = Color.white;
+        itTMP.fontSize = 16; itTMP.color = Color.white;
         itTMP.alignment = TextAlignmentOptions.MidlineLeft;
         itTMP.raycastTarget = false;
 
@@ -124,86 +124,207 @@ public class BuildDailyPickerPanel
         searchInput.caretColor = Color.white;
         searchInput.selectionColor = new Color(0.3f, 0.6f, 1f, 0.5f);
 
-        // ── Scroll view ───────────────────────────────────────────────────────
-        var scrollGO = new GameObject("ScrollView");
-        scrollGO.transform.SetParent(card.transform, false);
-        var scrollRT = scrollGO.AddComponent<RectTransform>();
-        scrollRT.anchorMin = new Vector2(0f, 0f);
-        scrollRT.anchorMax = new Vector2(1f, 1f);
-        scrollRT.offsetMin = new Vector2(10f, 44f);
-        scrollRT.offsetMax = new Vector2(-10f, -92f);
-        scrollGO.AddComponent<Image>().color = new Color(0.08f, 0.08f, 0.08f, 1f);
-        var scrollRect = scrollGO.AddComponent<ScrollRect>();
-        scrollRect.horizontal = false;
+        // ── Helper: make a scroll view with Content ───────────────────────────
+        // Returns the Content transform
+        System.Func<Transform, string, RectOffset, Transform> MakeScrollView = (parent, name, padding) =>
+        {
+            var sv = new GameObject(name);
+            sv.transform.SetParent(parent, false);
+            sv.AddComponent<Image>().color = new Color(0.08f, 0.08f, 0.08f, 1f);
+            var sr = sv.AddComponent<ScrollRect>();
+            sr.horizontal = false;
+            sr.movementType = ScrollRect.MovementType.Elastic;
+            sr.elasticity = 0.1f;
+            sr.scrollSensitivity = 20f;
 
-        var vpGO = new GameObject("Viewport");
-        vpGO.transform.SetParent(scrollGO.transform, false);
-        var vpRT = vpGO.AddComponent<RectTransform>();
-        vpRT.anchorMin = Vector2.zero; vpRT.anchorMax = Vector2.one;
-        vpRT.offsetMin = Vector2.zero; vpRT.offsetMax = Vector2.zero;
-        vpGO.AddComponent<Image>().color = new Color(1f, 1f, 1f, 0f);
-        var maskComp = vpGO.AddComponent<Mask>();
-        maskComp.showMaskGraphic = false;
+            var vp = new GameObject("Viewport");
+            vp.transform.SetParent(sv.transform, false);
+            var vpRT2 = vp.AddComponent<RectTransform>();
+            vpRT2.anchorMin = Vector2.zero; vpRT2.anchorMax = Vector2.one;
+            vpRT2.offsetMin = Vector2.zero; vpRT2.offsetMax = Vector2.zero;
+            vp.AddComponent<Image>().color = new Color(1f, 1f, 1f, 0f);
+            var m = vp.AddComponent<Mask>(); m.showMaskGraphic = false;
 
-        var contentGO = new GameObject("Content");
-        contentGO.transform.SetParent(vpGO.transform, false);
-        var contentRT = contentGO.AddComponent<RectTransform>();
-        contentRT.anchorMin = new Vector2(0f, 1f);
-        contentRT.anchorMax = new Vector2(1f, 1f);
-        contentRT.pivot = new Vector2(0.5f, 1f);
-        contentRT.anchoredPosition = Vector2.zero;
-        contentRT.sizeDelta = Vector2.zero;
-        // NOTE: ContentSizeFitter + childForceExpandHeight=false is ONLY on this new Content,
-        // not touching any existing scroll view layouts.
-        var vlg = contentGO.AddComponent<VerticalLayoutGroup>();
-        vlg.spacing = 2f;
-        vlg.childForceExpandWidth = true;
-        vlg.childForceExpandHeight = false;
-        vlg.childControlWidth = true;
-        vlg.childControlHeight = false;  // keep prefab-defined height (30px)
-        vlg.padding = new RectOffset(4, 4, 4, 4);
-        var csf = contentGO.AddComponent<ContentSizeFitter>();
-        csf.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+            var ct = new GameObject("Content");
+            ct.transform.SetParent(vp.transform, false);
+            var ctRT = ct.AddComponent<RectTransform>();
+            ctRT.anchorMin = new Vector2(0f, 1f); ctRT.anchorMax = new Vector2(1f, 1f);
+            ctRT.pivot = new Vector2(0.5f, 1f);
+            ctRT.anchoredPosition = Vector2.zero; ctRT.sizeDelta = Vector2.zero;
+            var vlg2 = ct.AddComponent<VerticalLayoutGroup>();
+            vlg2.spacing = 2f;
+            vlg2.childForceExpandWidth = true;
+            vlg2.childForceExpandHeight = false;
+            vlg2.childControlWidth = true;
+            vlg2.childControlHeight = false;
+            vlg2.padding = padding;
+            var csf2 = ct.AddComponent<ContentSizeFitter>();
+            csf2.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
 
-        scrollRect.content = contentRT;
-        scrollRect.viewport = vpRT;
-        scrollRect.movementType = ScrollRect.MovementType.Elastic;
-        scrollRect.elasticity = 0.1f;
-        scrollRect.scrollSensitivity = 20f;
+            sr.content = ctRT;
+            sr.viewport = vpRT2;
+            return ct.transform;
+        };
+
+        // ── Column labels ─────────────────────────────────────────────────────
+        float colY = -92f;   // top of columns (below search field)
+        float colH = -48f;   // bottom of columns (above buttons)
+        float colPad = 10f;
+
+        // Left label: "Dates"
+        var lblDates = new GameObject("LabelDates");
+        lblDates.transform.SetParent(card.transform, false);
+        var ldRT = lblDates.AddComponent<RectTransform>();
+        ldRT.anchorMin = new Vector2(0f, 1f); ldRT.anchorMax = new Vector2(0.5f, 1f);
+        ldRT.pivot = new Vector2(0f, 1f);
+        ldRT.anchoredPosition = new Vector2(colPad, colY);
+        ldRT.sizeDelta = new Vector2(-colPad * 1.5f, 20f);
+        var ldTMP = lblDates.AddComponent<TextMeshProUGUI>();
+        ldTMP.text = "DATES"; ldTMP.fontSize = 13; ldTMP.color = new Color(0.6f, 0.6f, 0.6f, 1f);
+        ldTMP.fontStyle = FontStyles.Bold; ldTMP.alignment = TextAlignmentOptions.Left;
+        ldTMP.raycastTarget = false;
+
+        // Right label: "Words"
+        var lblWords = new GameObject("LabelWords");
+        lblWords.transform.SetParent(card.transform, false);
+        var lwRT = lblWords.AddComponent<RectTransform>();
+        lwRT.anchorMin = new Vector2(0.5f, 1f); lwRT.anchorMax = new Vector2(1f, 1f);
+        lwRT.pivot = new Vector2(0f, 1f);
+        lwRT.anchoredPosition = new Vector2(colPad * 0.5f, colY);
+        lwRT.sizeDelta = new Vector2(-colPad * 1.5f, 20f);
+        var lwTMP = lblWords.AddComponent<TextMeshProUGUI>();
+        lwTMP.text = "WORDS IN LIST"; lwTMP.fontSize = 13; lwTMP.color = new Color(0.6f, 0.6f, 0.6f, 1f);
+        lwTMP.fontStyle = FontStyles.Bold; lwTMP.alignment = TextAlignmentOptions.Left;
+        lwTMP.raycastTarget = false;
+
+        // ── Date scroll view (left half) ──────────────────────────────────────
+        var dateScrollGO = new GameObject("DateScrollView");
+        dateScrollGO.transform.SetParent(card.transform, false);
+        var dsRT = dateScrollGO.AddComponent<RectTransform>();
+        dsRT.anchorMin = new Vector2(0f, 0f); dsRT.anchorMax = new Vector2(0.5f, 1f);
+        dsRT.offsetMin = new Vector2(colPad, colH);
+        dsRT.offsetMax = new Vector2(-colPad * 0.5f, colY - 20f);
+        dateScrollGO.AddComponent<Image>().color = new Color(0.08f, 0.08f, 0.08f, 1f);
+        var dateSR = dateScrollGO.AddComponent<ScrollRect>();
+        dateSR.horizontal = false;
+        dateSR.movementType = ScrollRect.MovementType.Elastic;
+        dateSR.elasticity = 0.1f; dateSR.scrollSensitivity = 20f;
+
+        var dateVP = new GameObject("Viewport");
+        dateVP.transform.SetParent(dateScrollGO.transform, false);
+        var dvpRT = dateVP.AddComponent<RectTransform>();
+        dvpRT.anchorMin = Vector2.zero; dvpRT.anchorMax = Vector2.one;
+        dvpRT.offsetMin = Vector2.zero; dvpRT.offsetMax = Vector2.zero;
+        dateVP.AddComponent<Image>().color = new Color(1f, 1f, 1f, 0f);
+        var dm = dateVP.AddComponent<Mask>(); dm.showMaskGraphic = false;
+
+        var dateContent = new GameObject("Content");
+        dateContent.transform.SetParent(dateVP.transform, false);
+        var dcRT = dateContent.AddComponent<RectTransform>();
+        dcRT.anchorMin = new Vector2(0f, 1f); dcRT.anchorMax = new Vector2(1f, 1f);
+        dcRT.pivot = new Vector2(0.5f, 1f);
+        dcRT.anchoredPosition = Vector2.zero; dcRT.sizeDelta = Vector2.zero;
+        var dcVLG = dateContent.AddComponent<VerticalLayoutGroup>();
+        dcVLG.spacing = 2f;
+        dcVLG.childForceExpandWidth = true; dcVLG.childForceExpandHeight = false;
+        dcVLG.childControlWidth = true; dcVLG.childControlHeight = false;
+        dcVLG.padding = new RectOffset(4, 4, 4, 4);
+        var dcCSF = dateContent.AddComponent<ContentSizeFitter>();
+        dcCSF.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+        dateSR.content = dcRT; dateSR.viewport = dvpRT;
+
+        // ── Word preview scroll view (right half) ─────────────────────────────
+        var wordScrollGO = new GameObject("WordScrollView");
+        wordScrollGO.transform.SetParent(card.transform, false);
+        var wsRT = wordScrollGO.AddComponent<RectTransform>();
+        wsRT.anchorMin = new Vector2(0.5f, 0f); wsRT.anchorMax = new Vector2(1f, 1f);
+        wsRT.offsetMin = new Vector2(colPad * 0.5f, colH);
+        wsRT.offsetMax = new Vector2(-colPad, colY - 20f);
+        wordScrollGO.AddComponent<Image>().color = new Color(0.08f, 0.08f, 0.08f, 1f);
+        var wordSR = wordScrollGO.AddComponent<ScrollRect>();
+        wordSR.horizontal = false;
+        wordSR.movementType = ScrollRect.MovementType.Elastic;
+        wordSR.elasticity = 0.1f; wordSR.scrollSensitivity = 20f;
+
+        var wordVP = new GameObject("Viewport");
+        wordVP.transform.SetParent(wordScrollGO.transform, false);
+        var wvpRT = wordVP.AddComponent<RectTransform>();
+        wvpRT.anchorMin = Vector2.zero; wvpRT.anchorMax = Vector2.one;
+        wvpRT.offsetMin = Vector2.zero; wvpRT.offsetMax = Vector2.zero;
+        wordVP.AddComponent<Image>().color = new Color(1f, 1f, 1f, 0f);
+        var wm = wordVP.AddComponent<Mask>(); wm.showMaskGraphic = false;
+
+        var wordContent = new GameObject("Content");
+        wordContent.transform.SetParent(wordVP.transform, false);
+        var wcRT = wordContent.AddComponent<RectTransform>();
+        wcRT.anchorMin = new Vector2(0f, 1f); wcRT.anchorMax = new Vector2(1f, 1f);
+        wcRT.pivot = new Vector2(0.5f, 1f);
+        wcRT.anchoredPosition = Vector2.zero; wcRT.sizeDelta = Vector2.zero;
+        var wcVLG = wordContent.AddComponent<VerticalLayoutGroup>();
+        wcVLG.spacing = 2f;
+        wcVLG.childForceExpandWidth = true; wcVLG.childForceExpandHeight = false;
+        wcVLG.childControlWidth = true; wcVLG.childControlHeight = false;
+        wcVLG.padding = new RectOffset(4, 4, 4, 4);
+        var wcCSF = wordContent.AddComponent<ContentSizeFitter>();
+        wcCSF.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+        wordSR.content = wcRT; wordSR.viewport = wvpRT;
+
+        // ── Load button ───────────────────────────────────────────────────────
+        var loadBtnGO = new GameObject("LoadBtn");
+        loadBtnGO.transform.SetParent(card.transform, false);
+        var loadRT = loadBtnGO.AddComponent<RectTransform>();
+        loadRT.anchorMin = new Vector2(0f, 0f); loadRT.anchorMax = new Vector2(0.5f, 0f);
+        loadRT.pivot = new Vector2(0.5f, 0f);
+        loadRT.anchoredPosition = new Vector2(0f, 8f);
+        loadRT.sizeDelta = new Vector2(-20f, 30f);
+        loadBtnGO.AddComponent<Image>().color = new Color(0.2f, 0.6f, 0.2f, 1f);
+        var loadBtnComp = loadBtnGO.AddComponent<Button>();
+        loadBtnComp.navigation = noNav;
+        loadBtnComp.interactable = false; // enabled only when a date is selected
+
+        var loadLblGO = new GameObject("Text");
+        loadLblGO.transform.SetParent(loadBtnGO.transform, false);
+        var llRT = loadLblGO.AddComponent<RectTransform>();
+        llRT.anchorMin = Vector2.zero; llRT.anchorMax = Vector2.one;
+        llRT.offsetMin = Vector2.zero; llRT.offsetMax = Vector2.zero;
+        var llTMP = loadLblGO.AddComponent<TextMeshProUGUI>();
+        llTMP.text = "Load List"; llTMP.fontSize = 16;
+        llTMP.alignment = TextAlignmentOptions.Center;
+        llTMP.color = Color.white; llTMP.raycastTarget = false;
 
         // ── Close button ──────────────────────────────────────────────────────
         var closeBtnGO = new GameObject("CloseBtn");
         closeBtnGO.transform.SetParent(card.transform, false);
         var closeBtnRT = closeBtnGO.AddComponent<RectTransform>();
-        closeBtnRT.anchorMin = new Vector2(0f, 0f);
-        closeBtnRT.anchorMax = new Vector2(1f, 0f);
+        closeBtnRT.anchorMin = new Vector2(0.5f, 0f); closeBtnRT.anchorMax = new Vector2(1f, 0f);
         closeBtnRT.pivot = new Vector2(0.5f, 0f);
         closeBtnRT.anchoredPosition = new Vector2(0f, 8f);
         closeBtnRT.sizeDelta = new Vector2(-20f, 30f);
         closeBtnGO.AddComponent<Image>().color = new Color(0.3f, 0.3f, 0.3f, 1f);
         var closeBtnComp = closeBtnGO.AddComponent<Button>();
         closeBtnComp.navigation = noNav;
-        var closeLabelGO = new GameObject("Text");
-        closeLabelGO.transform.SetParent(closeBtnGO.transform, false);
-        var clRT = closeLabelGO.AddComponent<RectTransform>();
+
+        var closeLblGO = new GameObject("Text");
+        closeLblGO.transform.SetParent(closeBtnGO.transform, false);
+        var clRT = closeLblGO.AddComponent<RectTransform>();
         clRT.anchorMin = Vector2.zero; clRT.anchorMax = Vector2.one;
         clRT.offsetMin = Vector2.zero; clRT.offsetMax = Vector2.zero;
-        var clTMP = closeLabelGO.AddComponent<TextMeshProUGUI>();
-        clTMP.text = "Close";
-        clTMP.fontSize = 16;
+        var clTMP = closeLblGO.AddComponent<TextMeshProUGUI>();
+        clTMP.text = "Close"; clTMP.fontSize = 16;
         clTMP.alignment = TextAlignmentOptions.Center;
-        clTMP.color = Color.white;
-        clTMP.raycastTarget = false;
+        clTMP.color = Color.white; clTMP.raycastTarget = false;
 
         // ── DailyPickerPanelController ────────────────────────────────────────
         var controller = overlay.AddComponent<DailyPickerPanelController>();
         var flags = System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance;
-        typeof(DailyPickerPanelController).GetField("listContent",    flags)?.SetValue(controller, contentGO.transform);
+        typeof(DailyPickerPanelController).GetField("listContent",    flags)?.SetValue(controller, dateContent.transform);
+        typeof(DailyPickerPanelController).GetField("wordContent",    flags)?.SetValue(controller, wordContent.transform);
         typeof(DailyPickerPanelController).GetField("listItemPrefab", flags)?.SetValue(controller, phaseBtnPrefab);
         typeof(DailyPickerPanelController).GetField("searchField",    flags)?.SetValue(controller, searchInput);
+        typeof(DailyPickerPanelController).GetField("loadBtn",        flags)?.SetValue(controller, loadBtnComp);
 
-        // Wire Close button now that controller exists
         UnityEventTools.AddVoidPersistentListener(closeBtnComp.onClick, controller.Close);
+        UnityEventTools.AddVoidPersistentListener(loadBtnComp.onClick, controller.OnLoadClicked);
 
         // ── Wire UIController.dailyPickerPanel ────────────────────────────────
         typeof(UIController).GetField("dailyPickerPanel", flags)?.SetValue(uiController, controller);
@@ -213,18 +334,16 @@ public class BuildDailyPickerPanel
         var dailyBtns = wordListUI.Find("DailyPanelBtns");
         if (dailyBtns != null)
         {
-            var dRT = dailyBtns.GetComponent<RectTransform>();
-            dRT.sizeDelta = new Vector2(200f, 30f);
+            var dRT2 = dailyBtns.GetComponent<RectTransform>();
+            dRT2.sizeDelta = new Vector2(200f, 30f);
 
             var hlg = dailyBtns.GetComponent<HorizontalLayoutGroup>();
             if (hlg == null)
             {
                 hlg = dailyBtns.gameObject.AddComponent<HorizontalLayoutGroup>();
                 hlg.spacing = 4f;
-                hlg.childForceExpandWidth = false;
-                hlg.childForceExpandHeight = true;
-                hlg.childControlWidth = false;
-                hlg.childControlHeight = false;
+                hlg.childForceExpandWidth = false; hlg.childForceExpandHeight = true;
+                hlg.childControlWidth = false; hlg.childControlHeight = false;
                 hlg.childAlignment = TextAnchor.MiddleLeft;
             }
 
@@ -232,8 +351,7 @@ public class BuildDailyPickerPanel
             if (swapBtn != null)
             {
                 var le = swapBtn.GetComponent<LayoutElement>() ?? swapBtn.gameObject.AddComponent<LayoutElement>();
-                le.preferredWidth = 95f;
-                le.preferredHeight = 30f;
+                le.preferredWidth = 95f; le.preferredHeight = 30f;
             }
 
             var oldFetch = dailyBtns.Find("FetchDailyBtn");
@@ -241,31 +359,26 @@ public class BuildDailyPickerPanel
 
             var fetchGO = new GameObject("FetchDailyBtn");
             fetchGO.transform.SetParent(dailyBtns, false);
-            var fetchRT = fetchGO.AddComponent<RectTransform>();
-            fetchRT.sizeDelta = new Vector2(95f, 30f);
+            var fetchRT2 = fetchGO.AddComponent<RectTransform>();
+            fetchRT2.sizeDelta = new Vector2(95f, 30f);
             fetchGO.AddComponent<Image>().color = Color.white;
             var fetchBtn = fetchGO.AddComponent<Button>();
             fetchBtn.navigation = noNav;
             UnityEventTools.AddVoidPersistentListener(fetchBtn.onClick, uiController.OnFetchDailyClicked);
-
             var fetchLE = fetchGO.AddComponent<LayoutElement>();
-            fetchLE.preferredWidth = 95f;
-            fetchLE.preferredHeight = 30f;
+            fetchLE.preferredWidth = 95f; fetchLE.preferredHeight = 30f;
 
-            var fetchLabelGO = new GameObject("Text (TMP)");
-            fetchLabelGO.transform.SetParent(fetchGO.transform, false);
-            var flRT = fetchLabelGO.AddComponent<RectTransform>();
-            flRT.anchorMin = Vector2.zero; flRT.anchorMax = Vector2.one;
-            flRT.offsetMin = Vector2.zero; flRT.offsetMax = Vector2.zero;
-            var flTMP = fetchLabelGO.AddComponent<TextMeshProUGUI>();
-            flTMP.text = "fetch";
-            flTMP.fontSize = 18;
+            var fetchLblGO = new GameObject("Text (TMP)");
+            fetchLblGO.transform.SetParent(fetchGO.transform, false);
+            var flRT2 = fetchLblGO.AddComponent<RectTransform>();
+            flRT2.anchorMin = Vector2.zero; flRT2.anchorMax = Vector2.one;
+            flRT2.offsetMin = Vector2.zero; flRT2.offsetMax = Vector2.zero;
+            var flTMP = fetchLblGO.AddComponent<TextMeshProUGUI>();
+            flTMP.text = "fetch"; flTMP.fontSize = 18;
             flTMP.alignment = TextAlignmentOptions.Center;
-            flTMP.color = Color.black;
-            flTMP.raycastTarget = false;
+            flTMP.color = Color.black; flTMP.raycastTarget = false;
 
             EditorUtility.SetDirty(dailyBtns.gameObject);
-            Debug.Log("FetchDailyBtn created and wired");
         }
 
         // ── Inactive by default ───────────────────────────────────────────────
@@ -277,11 +390,10 @@ public class BuildDailyPickerPanel
         UnityEditor.SceneManagement.EditorSceneManager.SaveOpenScenes();
 
         Debug.Log("=== BuildDailyPickerPanel COMPLETE ===");
-        Debug.Log("  DailyPickerPanel: " + (overlay != null));
+        Debug.Log("  dateContent: " + dateContent.transform);
+        Debug.Log("  wordContent: " + wordContent.transform);
+        Debug.Log("  loadBtn: " + loadBtnComp);
         Debug.Log("  UIController.dailyPickerPanel: " + controller);
-        Debug.Log("  listContent: " + contentGO.transform);
-        Debug.Log("  listItemPrefab: " + phaseBtnPrefab);
-        Debug.Log("  searchField: " + searchInput);
-        Debug.Log("  FetchDailyBtn wired: " + (dailyBtns != null));
+        Debug.Log("  FetchDailyBtn: " + (dailyBtns != null));
     }
 }

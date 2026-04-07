@@ -7,23 +7,31 @@ using TMPro;
 
 public class DailyPickerPanelController : MonoBehaviour
 {
-    [SerializeField] private Transform listContent;
+    [SerializeField] private Transform listContent;       // date buttons
+    [SerializeField] private Transform wordContent;       // word preview buttons
     [SerializeField] private GameObject listItemPrefab;
     [SerializeField] private TMP_InputField searchField;
+    [SerializeField] private Button loadBtn;
 
     public System.Action<DailyWordListProvider> OnListSelected;
 
     private List<DailyWordListProvider> allProviders = new List<DailyWordListProvider>();
+    private DailyWordListProvider selectedProvider;
 
     void OnEnable()
     {
+        selectedProvider = null;
+        if (loadBtn != null) loadBtn.interactable = false;
+
         LoadAllLists();
         if (searchField != null)
         {
+            searchField.text = "";
             searchField.onValueChanged.RemoveAllListeners();
             searchField.onValueChanged.AddListener(OnSearchChanged);
         }
-        RefreshDisplay(allProviders);
+        RefreshDateList(allProviders);
+        ClearWordPreview();
     }
 
     private void LoadAllLists()
@@ -40,7 +48,7 @@ public class DailyPickerPanelController : MonoBehaviour
     {
         if (string.IsNullOrWhiteSpace(query))
         {
-            RefreshDisplay(allProviders);
+            RefreshDateList(allProviders);
             return;
         }
 
@@ -48,10 +56,10 @@ public class DailyPickerPanelController : MonoBehaviour
         var filtered = allProviders
             .Where(p => p.GetWords().Any(w => w.ToLower().Contains(lower)))
             .ToList();
-        RefreshDisplay(filtered);
+        RefreshDateList(filtered);
     }
 
-    private void RefreshDisplay(List<DailyWordListProvider> providers)
+    private void RefreshDateList(List<DailyWordListProvider> providers)
     {
         foreach (Transform child in listContent)
             Destroy(child.gameObject);
@@ -65,12 +73,41 @@ public class DailyPickerPanelController : MonoBehaviour
             var btn = item.GetComponent<Button>();
             var captured = provider;
             if (btn != null)
-                btn.onClick.AddListener(() =>
-                {
-                    OnListSelected?.Invoke(captured);
-                    gameObject.SetActive(false);
-                });
+                btn.onClick.AddListener(() => OnDateClicked(captured));
         }
+    }
+
+    private void OnDateClicked(DailyWordListProvider provider)
+    {
+        selectedProvider = provider;
+        if (loadBtn != null) loadBtn.interactable = true;
+
+        // Populate word preview
+        ClearWordPreview();
+        foreach (var word in provider.GetWords())
+        {
+            var item = Instantiate(listItemPrefab, wordContent);
+            var label = item.GetComponentInChildren<TextMeshProUGUI>();
+            if (label != null) label.text = word;
+
+            // Word items are display-only — remove button interaction
+            var btn = item.GetComponent<Button>();
+            if (btn != null) btn.interactable = false;
+        }
+    }
+
+    private void ClearWordPreview()
+    {
+        if (wordContent == null) return;
+        foreach (Transform child in wordContent)
+            Destroy(child.gameObject);
+    }
+
+    public void OnLoadClicked()
+    {
+        if (selectedProvider == null) return;
+        OnListSelected?.Invoke(selectedProvider);
+        gameObject.SetActive(false);
     }
 
     public void Close()
