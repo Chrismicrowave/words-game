@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(mkdir -p \"D:\\\\Files\\\\Desktop\\\\Unity\\\\Projects\\\\GDS4 Game-a-Week\\\\02-words\\\\words\\\\.claude\\\\state\")",
+      "Bash(touch \"D:\\\\Files\\\\Desktop\\\\Unity\\\\Projects\\\\GDS4 Game-a-Week\\\\02-words\\\\words\\\\.claude\\\\state\\\\delegation_disabled\")"
+    ]
+  }
+}
