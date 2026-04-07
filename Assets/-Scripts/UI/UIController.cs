@@ -371,13 +371,14 @@ public class UIController : MonoBehaviour
         selectedPhaseIndex++;
     }
 
-    private static readonly Color TabActiveColor   = new Color(1f, 0.5f, 0f, 1f); // orange
-    private static readonly Color TabInactiveColor = Color.white;
+    [Header("Tab Colors")]
+    [SerializeField] private Color tabActiveColor   = new Color(1f, 0.5f, 0f, 1f);
+    [SerializeField] private Color tabInactiveColor = Color.white;
 
     private void SetTabColors(bool myListActive)
     {
-        if (myListTabBtn != null) myListTabBtn.GetComponent<Image>().color = myListActive ? TabActiveColor : TabInactiveColor;
-        if (dailyTabBtn  != null) dailyTabBtn .GetComponent<Image>().color = myListActive ? TabInactiveColor : TabActiveColor;
+        if (myListTabBtn != null) myListTabBtn.GetComponent<Image>().color = myListActive ? tabActiveColor : tabInactiveColor;
+        if (dailyTabBtn  != null) dailyTabBtn .GetComponent<Image>().color = myListActive ? tabInactiveColor : tabActiveColor;
     }
 
     public void OnMyListTabClicked()
