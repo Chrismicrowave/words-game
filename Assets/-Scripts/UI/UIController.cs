@@ -398,6 +398,9 @@ public class UIController : MonoBehaviour
         {
             PhaseManager.Instance.LoadWordList(provider);
             PlayerPrefs.SetString(ActiveTabPrefKey, "daily");
+            if (myListPanelBtns != null) myListPanelBtns.SetActive(false);
+            if (dailyPanelBtns != null) dailyPanelBtns.SetActive(true);
+            SetTabColors(myListActive: false);
         };
         dailyPickerPanel.gameObject.SetActive(true);
     }
