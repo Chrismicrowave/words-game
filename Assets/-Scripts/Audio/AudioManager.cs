@@ -1,23 +1,19 @@
-using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Audio;
-using UnityEngine.Rendering;
 
 public class AudioManager : MonoBehaviour
 {
     public static AudioManager Instance { get; private set; }
 
-    [Header ("List")]
+    [Header("List")]
     public List<AudioClip> clipList = new List<AudioClip>();
-
 
     [Header("Clicks")]
     public AudioClip pressed;
     public AudioClip released;
     public AudioClip complete;
     public AudioClip fail;
-
 
     [Header("Mixer")]
     [SerializeField] private AudioMixerGroup mixerGroup;
@@ -26,13 +22,9 @@ public class AudioManager : MonoBehaviour
 
     void Awake()
     {
-        if (Instance == null)
-            Instance = this;
-        else
-        {
-            Destroy(gameObject);
-            return;
-        }
+        if (Instance == null) Instance = this;
+        else { Destroy(gameObject); return; }
+
         audioSource = GetComponent<AudioSource>();
         if (audioSource == null)
             Debug.LogError("AudioManager: no AudioSource on " + gameObject.name);
@@ -40,37 +32,20 @@ public class AudioManager : MonoBehaviour
 
     void Start()
     {
-        if (audioSource != null && mixerGroup != null) audioSource.outputAudioMixerGroup = mixerGroup;
-    }
-
-    public void SetMasterVolume(float linear)
-    {
-        if (SettingsManager.Instance != null)
-            SettingsManager.Instance.MasterVolume = linear;
-    }
-
-    public void SetSFXVolume(float linear)
-    {
-        if (SettingsManager.Instance != null)
-            SettingsManager.Instance.SFXVolume = linear;
-    }
-
-    public void SetBGMVolume(float linear)
-    {
-        if (SettingsManager.Instance != null)
-            SettingsManager.Instance.BGMVolume = linear;
+        if (audioSource != null && mixerGroup != null)
+            audioSource.outputAudioMixerGroup = mixerGroup;
     }
 
     public virtual void PlaySound(AudioClip clip)
     {
-        if (audioSource == null) return;
+        if (audioSource == null || clip == null) return;
         audioSource.clip = clip;
         if (!audioSource.isPlaying) audioSource.Play();
     }
 
     public virtual void PlayAudioList(List<AudioClip> list)
     {
-        if (audioSource == null) return;
+        if (audioSource == null || list == null || list.Count == 0) return;
         int r = Random.Range(0, list.Count);
         if (!audioSource.isPlaying) PlaySound(list[r]);
     }
@@ -101,14 +76,9 @@ public class AudioManager : MonoBehaviour
         audioSource.volume = volume;
     }
 
-    //public virtual void PlayDefault()
-    //{
-    //    audioSource.Play();
-    //}
     public void StopAudio()
     {
         if (audioSource == null) return;
-        if (audioSource.isPlaying)
-            audioSource.Stop();
+        if (audioSource.isPlaying) audioSource.Stop();
     }
 }

@@ -8,16 +8,13 @@ public class SettingsManager : MonoBehaviour
 
     [SerializeField] private AudioMixer mainMixer;
 
-    public const string KeyMasterVolume   = "settings_masterVolume";
-    public const string KeySFXVolume      = "settings_sfxVolume";
-    public const string KeyBGMVolume      = "settings_bgmVolume";
-    public const string KeyFullscreen     = "settings_fullscreen";
-    public const string KeyResolution     = "settings_resolution";
-    public const string KeyVSync          = "settings_vsync";
-    public const string KeyCRTFilter      = "settings_crtFilter";
-    public const string KeyScreenShake    = "settings_screenShake";
-    public const string KeyQuality        = "settings_quality";
-    public const string KeyActionPrompts  = "settings_actionPrompts";
+    public const string KeyMasterVolume  = "settings_masterVolume";
+    public const string KeySFXVolume     = "settings_sfxVolume";
+    public const string KeyBGMVolume     = "settings_bgmVolume";
+    public const string KeyFullscreen    = "settings_fullscreen";
+    public const string KeyResolution    = "settings_resolution";
+    public const string KeyQuality       = "settings_quality";
+    public const string KeyActionPrompts = "settings_actionPrompts";
 
     public float MasterVolume
     {
@@ -65,18 +62,14 @@ public class SettingsManager : MonoBehaviour
 
     void Awake()
     {
-        if (Instance == null)
-            Instance = this;
-        else
-        {
-            Destroy(gameObject);
-            return;
-        }
+        if (Instance == null) Instance = this;
+        else { Destroy(gameObject); return; }
     }
 
     void Start()
     {
-        Load(); // Must be Start, not Awake — AudioMixer.SetFloat is ignored in Awake
+        // Load in Start — AudioMixer.SetFloat is silently ignored in Awake in Unity 6
+        Load();
     }
 
     public void Load()
@@ -99,9 +92,6 @@ public class SettingsManager : MonoBehaviour
         PlayerPrefs.DeleteKey(KeyBGMVolume);
         PlayerPrefs.DeleteKey(KeyFullscreen);
         PlayerPrefs.DeleteKey(KeyResolution);
-        PlayerPrefs.DeleteKey(KeyVSync);
-        PlayerPrefs.DeleteKey(KeyCRTFilter);
-        PlayerPrefs.DeleteKey(KeyScreenShake);
         PlayerPrefs.DeleteKey(KeyQuality);
         PlayerPrefs.DeleteKey(KeyActionPrompts);
         PlayerPrefs.Save();
@@ -112,21 +102,14 @@ public class SettingsManager : MonoBehaviour
     private void ApplyAudio()
     {
         if (mainMixer == null) return;
-
-        float masterDb = MasterVolume > 0.001f ? Mathf.Log10(MasterVolume) * 20f : -80f;
-        float sfxDb = SFXVolume > 0.001f ? Mathf.Log10(SFXVolume) * 20f : -80f;
-
-        float bgmDb = BGMVolume > 0.001f ? Mathf.Log10(BGMVolume) * 20f : -80f;
-
-        mainMixer.SetFloat("MasterVolume", masterDb);
-        mainMixer.SetFloat("SFXVolume", sfxDb);
-        mainMixer.SetFloat("BGMVolume", bgmDb);
+        mainMixer.SetFloat("MasterVolume", ToDb(MasterVolume));
+        mainMixer.SetFloat("SFXVolume",    ToDb(SFXVolume));
+        mainMixer.SetFloat("BGMVolume",    ToDb(BGMVolume));
     }
 
     private void ApplyDisplay()
     {
         Screen.fullScreen = Fullscreen;
-
         int resIdx = ResolutionIndex;
         if (resIdx >= 0 && resIdx < Screen.resolutions.Length)
         {
@@ -134,4 +117,7 @@ public class SettingsManager : MonoBehaviour
             Screen.SetResolution(res.width, res.height, Fullscreen);
         }
     }
+
+    private static float ToDb(float linear) =>
+        linear > 0.001f ? Mathf.Log10(linear) * 20f : -80f;
 }
