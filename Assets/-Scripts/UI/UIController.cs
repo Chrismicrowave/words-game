@@ -347,6 +347,11 @@ public class UIController : MonoBehaviour
         string text = phaseInputField.text.Trim();
         if (string.IsNullOrEmpty(text)) return;
 
+        if (text.Length > 140)
+        {
+          text = text.Substring(0, 140);
+        }
+
         PhaseManager.Instance.AddPhase(text, 0);
         phaseInputField.text = "";
         EventSystem.current.SetSelectedGameObject(null);
