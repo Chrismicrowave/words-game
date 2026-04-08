@@ -6,10 +6,12 @@ public class SettingsPanelController : MonoBehaviour
     [SerializeField] private GameObject audioPanel;
     [SerializeField] private GameObject displayPanel;
     [SerializeField] private GameObject gameplayPanel;
+    [SerializeField] private GameObject customPanel;
 
     [SerializeField] private Image audioTabBtn;
     [SerializeField] private Image displayTabBtn;
     [SerializeField] private Image gameplayTabBtn;
+    [SerializeField] private Image customTabBtn;
 
     [SerializeField] private Color tabActiveColor   = new Color(1f, 0.5f, 0f, 1f);
     [SerializeField] private Color tabInactiveColor = Color.white;
@@ -28,20 +30,26 @@ public class SettingsPanelController : MonoBehaviour
 
     public void ShowAudio()
     {
-        SetActive(audioPanel, displayPanel, gameplayPanel);
-        SetTabColors(audioTabBtn, displayTabBtn, gameplayTabBtn);
+        SetActive(audioPanel, gameplayPanel, displayPanel, customPanel);
+        SetTabColors(audioTabBtn, gameplayTabBtn, displayTabBtn, customTabBtn);
     }
 
     public void ShowDisplay()
     {
-        SetActive(displayPanel, audioPanel, gameplayPanel);
-        SetTabColors(displayTabBtn, audioTabBtn, gameplayTabBtn);
+        SetActive(displayPanel, gameplayPanel, audioPanel, customPanel);
+        SetTabColors(displayTabBtn, gameplayTabBtn, audioTabBtn,customTabBtn);
     }
 
     public void ShowGameplay()
     {
-        SetActive(gameplayPanel, audioPanel, displayPanel);
-        SetTabColors(gameplayTabBtn, audioTabBtn, displayTabBtn);
+        SetActive(gameplayPanel, audioPanel, displayPanel, customPanel);
+        SetTabColors(gameplayTabBtn, audioTabBtn, displayTabBtn, customTabBtn);
+    }
+
+    public void ShowCustom()
+    {
+        SetActive(customPanel, gameplayPanel, audioPanel, displayPanel);
+        SetTabColors(customTabBtn, gameplayTabBtn, audioTabBtn, displayTabBtn);
     }
 
     public void ResetToDefaults()

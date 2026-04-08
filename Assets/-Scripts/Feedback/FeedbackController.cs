@@ -63,15 +63,22 @@ public class FeedbackController : MonoBehaviour
 
     private void HandlePhaseStarted()
     {
-        cameraShake.ResetFOV();
+        if (SettingsManager.Instance.ScreenShake)
+        { 
+            cameraShake.ResetFOV(); 
+        }
     }
 
     private void HandlePhaseCompleted()
     {
         audioKeys.ResetPitch();
         audioResult.PlaySound(audioResult.complete);
-        keyboardShake.SetShaking(false);
-        keyboardShake.ResetMagnitude();
+
+        if (SettingsManager.Instance.ScreenShake)
+        {
+            keyboardShake.SetShaking(false);
+            keyboardShake.ResetMagnitude();
+        }
     }
 
     private void OnCorrectHold()
@@ -80,19 +87,26 @@ public class FeedbackController : MonoBehaviour
         audioKeys.AddPitch(0.2f);
         audioKeys.PlaySound(audioKeys.pressed);
 
-        cameraShake.MildShake();
-        cameraShake.OverZoomCam();
 
-        keyboardShake.SetShaking(true);
-        keyboardShake.UpMagnitude();
+        if (SettingsManager.Instance.ScreenShake)
+        { 
+            cameraShake.MildShake();
+            cameraShake.OverZoomCam();
+
+            keyboardShake.SetShaking(true);
+            keyboardShake.UpMagnitude();
+        }
     }
 
     private void OnCorrectRelease()
     {
         audioKeys.PlaySound(audioKeys.released);
 
-        cameraShake.MildShake();
-        keyboardShake.DownMagnitude();
+        if (SettingsManager.Instance.ScreenShake)
+        {
+            cameraShake.MildShake();
+            keyboardShake.DownMagnitude();
+        }
     }
 
     private void OnFailed()
@@ -102,17 +116,24 @@ public class FeedbackController : MonoBehaviour
         audioResult.StopAudio();
         audioResult.PlaySound(audioResult.fail);
 
-        cameraShake.StrongShake();
-        keyboardShake.SetShaking(false);
-        keyboardShake.ResetMagnitude();
+        if (SettingsManager.Instance.ScreenShake)
+        {
+            cameraShake.StrongShake();
+            keyboardShake.SetShaking(false);
+            keyboardShake.ResetMagnitude();
+        }
     }
 
     private void HandleRestart()
     {
         audioKeys.SetVolume(1.0f);
         audioKeys.ResetPitch();
-        keyboardShake.SetShaking(false);
-        keyboardShake.ResetMagnitude();
-        cameraShake.ResetFOV();
+
+        if (SettingsManager.Instance.ScreenShake)
+        {
+            keyboardShake.SetShaking(false);
+            keyboardShake.ResetMagnitude();
+            cameraShake.ResetFOV();
+        }
     }
 }

@@ -17,6 +17,9 @@ namespace BrewedInk.CRT
 		public Material _runtimeMaterial;
 		public CRTData data;
 
+		[Header("Toggle")]
+		public bool effectActive = true;
+
 		private string lastValidationId;
 
 		private static readonly int PropMaxColorsRed = Shader.PropertyToID("_MaxColorsRed");
@@ -107,6 +110,11 @@ namespace BrewedInk.CRT
 
 		private void OnRenderImage(RenderTexture src, RenderTexture dest)
 		{
+			if (!effectActive || _runtimeMaterial == null || data == null)
+			{
+				Graphics.Blit(src, dest);
+				return;
+			}
 			if (_runtimeMaterial != null && data != null)
 			{
 				Shader.SetGlobalFloatArray(PropBrewedInkBayer4, bayer4);

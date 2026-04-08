@@ -8,6 +8,14 @@ public class SettingsManager : MonoBehaviour
 
     [SerializeField] private AudioMixer mainMixer;
 
+    // Must match DisplaySettingsController.Resolutions order
+    private static readonly (int w, int h)[] Resolutions =
+    {
+        (1280, 720),
+        (1920, 1080),
+        (2560, 1440),
+    };
+
     public const string KeyMasterVolume  = "settings_masterVolume";
     public const string KeySFXVolume     = "settings_sfxVolume";
     public const string KeyBGMVolume     = "settings_bgmVolume";
@@ -15,22 +23,24 @@ public class SettingsManager : MonoBehaviour
     public const string KeyResolution    = "settings_resolution";
     public const string KeyQuality       = "settings_quality";
     public const string KeyActionPrompts = "settings_actionPrompts";
+    public const string KeyCRTFilter     = "settings_crtFilter";
+    public const string KeyScreenShake   = "settings_screenShake";
 
     public float MasterVolume
     {
-        get => PlayerPrefs.GetFloat(KeyMasterVolume, 1f);
+        get => PlayerPrefs.GetFloat(KeyMasterVolume, 0.7f);
         set { PlayerPrefs.SetFloat(KeyMasterVolume, value); ApplyAudio(); }
     }
 
     public float SFXVolume
     {
-        get => PlayerPrefs.GetFloat(KeySFXVolume, 1f);
+        get => PlayerPrefs.GetFloat(KeySFXVolume, 0.7f);
         set { PlayerPrefs.SetFloat(KeySFXVolume, value); ApplyAudio(); }
     }
 
     public float BGMVolume
     {
-        get => PlayerPrefs.GetFloat(KeyBGMVolume, 1f);
+        get => PlayerPrefs.GetFloat(KeyBGMVolume, 0.7f);
         set { PlayerPrefs.SetFloat(KeyBGMVolume, value); ApplyAudio(); }
     }
 
@@ -42,7 +52,7 @@ public class SettingsManager : MonoBehaviour
 
     public int ResolutionIndex
     {
-        get => PlayerPrefs.GetInt(KeyResolution, -1);
+        get => PlayerPrefs.GetInt(KeyResolution, 1);
         set { PlayerPrefs.SetInt(KeyResolution, value); ApplyDisplay(); }
     }
 
@@ -58,18 +68,32 @@ public class SettingsManager : MonoBehaviour
         set => PlayerPrefs.SetInt(KeyActionPrompts, value ? 1 : 0);
     }
 
+    public bool CRTFilter
+    {
+        get => PlayerPrefs.GetInt(KeyCRTFilter, 1) == 1;
+        set { PlayerPrefs.SetInt(KeyCRTFilter, value ? 1 : 0); ApplyCRT(); }
+    }
+
+    public bool ScreenShake
+    {
+        get => PlayerPrefs.GetInt(KeyScreenShake, 1) == 1;
+        set => PlayerPrefs.SetInt(KeyScreenShake, value ? 1 : 0);
+        
+    }
+
     public event Action OnSettingsChanged;
 
     void Awake()
     {
         if (Instance == null) Instance = this;
         else { Destroy(gameObject); return; }
+
+        Load();
     }
 
     void Start()
     {
-        // Load in Start — AudioMixer.SetFloat is silently ignored in Awake in Unity 6
-        Load();
+        //Load();
     }
 
     public void Load()
@@ -77,6 +101,7 @@ public class SettingsManager : MonoBehaviour
         ApplyAudio();
         ApplyDisplay();
         QualitySettings.SetQualityLevel(QualityLevel);
+        ApplyCRT();
     }
 
     public void Save()
@@ -94,6 +119,8 @@ public class SettingsManager : MonoBehaviour
         PlayerPrefs.DeleteKey(KeyResolution);
         PlayerPrefs.DeleteKey(KeyQuality);
         PlayerPrefs.DeleteKey(KeyActionPrompts);
+        PlayerPrefs.DeleteKey(KeyCRTFilter);
+        PlayerPrefs.DeleteKey(KeyScreenShake);
         PlayerPrefs.Save();
         Load();
         OnSettingsChanged?.Invoke();
@@ -109,14 +136,22 @@ public class SettingsManager : MonoBehaviour
 
     private void ApplyDisplay()
     {
-        Screen.fullScreen = Fullscreen;
-        int resIdx = ResolutionIndex;
-        if (resIdx >= 0 && resIdx < Screen.resolutions.Length)
-        {
-            Resolution res = Screen.resolutions[resIdx];
-            Screen.SetResolution(res.width, res.height, Fullscreen);
-        }
+        QualitySettings.vSyncCount = 0;
+        int resIdx = Mathf.Clamp(ResolutionIndex, 0, Resolutions.Length - 1);
+        var (w, h) = Resolutions[resIdx];
+
+        FullScreenMode mode = Fullscreen ? FullScreenMode.FullScreenWindow : FullScreenMode.Windowed;
+        Screen.SetResolution(w, h, mode);
+
     }
+    
+    private void ApplyCRT()
+    {
+        if (FilterManager.Instance != null)
+            FilterManager.Instance.SetFilter(0, CRTFilter);
+    }
+
+ 
 
     private static float ToDb(float linear) =>
         linear > 0.001f ? Mathf.Log10(linear) * 20f : -80f;
