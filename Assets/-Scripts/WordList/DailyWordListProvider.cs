@@ -42,5 +42,5 @@ public class DailyWordListProvider : IWordListProvider
     }
 
     public static string GetDailyListDirectory() =>
-        Path.GetFullPath(Path.Combine(Application.dataPath, "..", "DailyLists"));
+        Path.Combine(Application.streamingAssetsPath, "DailyLists");
 }

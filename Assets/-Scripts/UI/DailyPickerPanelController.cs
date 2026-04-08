@@ -42,7 +42,7 @@ public class DailyPickerPanelController : MonoBehaviour
     private void LoadAllLists()
     {
         allProviders.Clear();
-        string dir = Path.GetFullPath(Path.Combine(Application.dataPath, "..", "DailyLists"));
+        string dir = Path.Combine(Application.streamingAssetsPath, "DailyLists");
         if (!Directory.Exists(dir)) return;
 
         foreach (var file in Directory.GetFiles(dir, "*.json").OrderByDescending(f => f))

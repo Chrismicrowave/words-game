@@ -142,15 +142,28 @@ public class UIController : MonoBehaviour
         }
 
         if (PhaseManager.Instance != null)
-            myListProvider = PhaseManager.Instance.ActiveProvider;
+        {
+            string myListPath = System.IO.Path.Combine(
+                FileWordListProvider.GetWordListDirectory(), "mylist.json");
+            var fileProvider = new FileWordListProvider(myListPath);
+            if (!System.IO.File.Exists(myListPath))
+            {
+                var defaultWords = PhaseManager.Instance.ActiveProvider?.GetWords()
+                    ?? new System.Collections.Generic.List<string>();
+                fileProvider.SetName("My List");
+                fileProvider.SetWords(defaultWords);
+                fileProvider.Save();
+            }
+            myListProvider = fileProvider;
+        }
 
         // Restore saved daily list path if any
         string savedDailyPath = PlayerPrefs.GetString(DailyListPathPrefKey, "");
         if (!string.IsNullOrEmpty(savedDailyPath) && System.IO.File.Exists(savedDailyPath))
             dailyProvider = new DailyWordListProvider(savedDailyPath);
 
-        // Load saved tab preference, default to mylist
-        string savedTab = PlayerPrefs.GetString(ActiveTabPrefKey, "mylist");
+        // Load saved tab preference, default to daily
+        string savedTab = PlayerPrefs.GetString(ActiveTabPrefKey, "daily");
         if (savedTab == "daily")
         {
             OnDailyTabClicked();
@@ -353,6 +366,7 @@ public class UIController : MonoBehaviour
         }
 
         PhaseManager.Instance.AddPhase(text, 0);
+        PhaseManager.Instance.SaveCurrentList();
         phaseInputField.text = "";
         EventSystem.current.SetSelectedGameObject(null);
     }
@@ -361,6 +375,7 @@ public class UIController : MonoBehaviour
     {
         if (selectedPhaseIndex < 0) return;
         PhaseManager.Instance.RemovePhase(selectedPhaseIndex);
+        PhaseManager.Instance.SaveCurrentList();
         selectedPhaseIndex = -1;
     }
 
@@ -413,8 +428,9 @@ public class UIController : MonoBehaviour
         {
             dailyProvider = provider;
             PlayerPrefs.SetString(DailyListPathPrefKey, provider.FilePath);
-            PhaseManager.Instance.LoadWordList(provider);
             PlayerPrefs.SetString(ActiveTabPrefKey, "daily");
+            PlayerPrefs.Save();
+            PhaseManager.Instance.LoadWordList(provider);
             if (myListPanelBtns != null) myListPanelBtns.SetActive(false);
             if (dailyPanelBtns != null) dailyPanelBtns.SetActive(true);
             SetTabColors(myListActive: false);
@@ -431,24 +447,7 @@ public class UIController : MonoBehaviour
         {
             PhaseManager.Instance.LoadWordList(dailyProvider);
         }
-        else
-        {
-            string date = System.DateTime.Now.ToString("yyyy-MM-dd");
-            string dir = System.IO.Path.GetFullPath(System.IO.Path.Combine(Application.dataPath, "..", "DailyLists"));
-            string path = System.IO.Path.Combine(dir, date + ".json");
-
-            if (!System.IO.File.Exists(path))
-            {
-                // Create sample for today if missing
-                if (!System.IO.Directory.Exists(dir))
-                    System.IO.Directory.CreateDirectory(dir);
-                string json = "{\"name\":\"Daily - " + date + "\",\"words\":[\"hello\",\"world\",\"unity\"],\"date\":\"" + date + "\"}";
-                System.IO.File.WriteAllText(path, json);
-            }
-
-            dailyProvider = new DailyWordListProvider(path);
-            PhaseManager.Instance.LoadWordList(dailyProvider);
-        }
+        // No daily list selected yet — player should use the picker to choose one
 
         if (myListPanelBtns != null) myListPanelBtns.SetActive(false);
         if (dailyPanelBtns != null) dailyPanelBtns.SetActive(true);
