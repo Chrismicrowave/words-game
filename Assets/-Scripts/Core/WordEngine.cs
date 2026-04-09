@@ -3,6 +3,14 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using UnityEngine;
 
+public struct ChinesePhaseData
+{
+    public string typeTarget;        // e.g. "nihao"
+    public int[] boundaries;         // cumulative letter counts where each character completes, e.g. [2, 5]
+    public string[] characters;      // the character at each boundary, e.g. ["你", "好"]
+    public ChinesePhaseEntry[] entries;
+}
+
 public class WordEngine
 {
     private readonly List<Step> steps = new List<Step>();
@@ -17,12 +25,68 @@ public class WordEngine
     public string LastFailureMessage { get; private set; } = "";
     public bool IsComplete => CurrentStep >= TotalSteps;
 
+    // Chinese mode
+    public bool IsChinesePhase { get; private set; }
+    public ChinesePhaseData CurrentChineseData { get; private set; }
+
+    // Number of pinyin letters correctly typed so far (equals CurrentStep for plain phases)
+    public int MatchedLength => CurrentStep;
+
+    // How many character boundaries have been passed at the current typed position
+    public int CompletedCharacterCount
+    {
+        get
+        {
+            if (!IsChinesePhase) return 0;
+            int count = 0;
+            foreach (int b in CurrentChineseData.boundaries)
+            {
+                if (CurrentStep >= b) count++;
+                else break;
+            }
+            return count;
+        }
+    }
+
     public void LoadWord(string word)
     {
+        IsChinesePhase = false;
+        CurrentChineseData = default;
         targetText = word;
         CurrentStep = 0;
         LastFailureMessage = "";
         ParseSteps();
+    }
+
+    public void LoadChineseWord(ChineseWordEntry chineseWord)
+    {
+        // Build ChinesePhaseData
+        var entries = chineseWord.entries;
+        int cumulative = 0;
+        var boundaries = new int[entries.Count];
+        var characters = new string[entries.Count];
+        var entryArr = new ChinesePhaseEntry[entries.Count];
+        var pinyinBuilder = new System.Text.StringBuilder();
+
+        for (int i = 0; i < entries.Count; i++)
+        {
+            pinyinBuilder.Append(entries[i].pinyin);
+            cumulative += entries[i].pinyin.Length;
+            boundaries[i] = cumulative;
+            characters[i] = entries[i].character;
+            entryArr[i] = entries[i];
+        }
+
+        CurrentChineseData = new ChinesePhaseData
+        {
+            typeTarget = pinyinBuilder.ToString(),
+            boundaries = boundaries,
+            characters = characters,
+            entries = entryArr
+        };
+
+        IsChinesePhase = true;
+        LoadWord(CurrentChineseData.typeTarget);
     }
 
     public void Reset()
