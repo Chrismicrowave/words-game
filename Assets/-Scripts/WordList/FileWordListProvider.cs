@@ -6,16 +6,20 @@ using UnityEngine;
 public class FileWordListProvider : IWordListProvider
 {
     public string DisplayName { get; private set; }
+    public LanguageMode LanguageMode { get; private set; } = LanguageMode.English;
     public bool IsEditable => true;
     public string FilePath { get; private set; }
 
     private List<string> words = new List<string>();
+    private List<ChineseWordEntry> chineseWords = new List<ChineseWordEntry>();
 
     [Serializable]
     private class WordListData
     {
         public string name;
+        public string languageMode;
         public List<string> words;
+        public List<ChineseWordEntry> chineseWords;
         public string createdAt;
     }
 
@@ -28,6 +32,11 @@ public class FileWordListProvider : IWordListProvider
     public List<string> GetWords()
     {
         return new List<string>(words);
+    }
+
+    public List<ChineseWordEntry> GetChineseWords()
+    {
+        return chineseWords != null ? new List<ChineseWordEntry>(chineseWords) : null;
     }
 
     public void SetWords(List<string> newWords)
@@ -70,6 +79,13 @@ public class FileWordListProvider : IWordListProvider
         var data = JsonUtility.FromJson<WordListData>(json);
         DisplayName = data.name ?? "Untitled";
         words = data.words ?? new List<string>();
+        chineseWords = data.chineseWords ?? new List<ChineseWordEntry>();
+
+        if (!string.IsNullOrEmpty(data.languageMode) &&
+            System.Enum.TryParse<LanguageMode>(data.languageMode, out var mode))
+            LanguageMode = mode;
+        else
+            LanguageMode = LanguageMode.English;
     }
 
     public static string GetWordListDirectory()

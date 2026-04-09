@@ -6,6 +6,7 @@ using UnityEngine;
 public class DailyWordListProvider : IWordListProvider
 {
     public string DisplayName { get; private set; }
+    public LanguageMode LanguageMode => LanguageMode.English;
     public bool IsEditable => false;
     public string FilePath { get; private set; }
 
@@ -26,6 +27,7 @@ public class DailyWordListProvider : IWordListProvider
     }
 
     public List<string> GetWords() => new List<string>(words);
+    public List<ChineseWordEntry> GetChineseWords() => null;
 
     private void Load()
     {
