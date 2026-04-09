@@ -363,30 +363,6 @@ MonoBehaviour:
           m_StringArgument: 
           m_BoolArgument: 0
         m_CallState: 2
-      - m_Target: {fileID: 680745023}
-        m_TargetAssemblyTypeName: UIController, Assembly-CSharp
-        m_MethodName: OnSwapDailyClicked
-        m_Mode: 1
-        m_Arguments:
-          m_ObjectArgument: {fileID: 0}
-          m_ObjectArgumentAssemblyTypeName: 
-          m_IntArgument: 0
-          m_FloatArgument: 0
-          m_StringArgument: 
-          m_BoolArgument: 0
-        m_CallState: 2
-      - m_Target: {fileID: 680745023}
-        m_TargetAssemblyTypeName: UIController, Assembly-CSharp
-        m_MethodName: OnSwapPhaseClicked
-        m_Mode: 1
-        m_Arguments:
-          m_ObjectArgument: {fileID: 0}
-          m_ObjectArgumentAssemblyTypeName: 
-          m_IntArgument: 0
-          m_FloatArgument: 0
-          m_StringArgument: 
-          m_BoolArgument: 0
-        m_CallState: 2
 --- !u!114 &7079129
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3993,8 +3969,8 @@ MonoBehaviour:
           m_StringArgument: 
           m_BoolArgument: 0
         m_CallState: 2
-      - m_Target: {fileID: 680745023}
-        m_TargetAssemblyTypeName: UIController, Assembly-CSharp
+      - m_Target: {fileID: 680745025}
+        m_TargetAssemblyTypeName: WordListTabManager, Assembly-CSharp
         m_MethodName: OnMyListTabClicked
         m_Mode: 1
         m_Arguments:
@@ -6139,8 +6115,8 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 680745023}
-        m_TargetAssemblyTypeName: UIController, Assembly-CSharp
+      - m_Target: {fileID: 680745025}
+        m_TargetAssemblyTypeName: WordListTabManager, Assembly-CSharp
         m_MethodName: OnFetchDailyClicked
         m_Mode: 1
         m_Arguments:
@@ -27299,8 +27275,8 @@ MonoBehaviour:
           m_StringArgument: 
           m_BoolArgument: 0
         m_CallState: 2
-      - m_Target: {fileID: 680745023}
-        m_TargetAssemblyTypeName: UIController, Assembly-CSharp
+      - m_Target: {fileID: 680745025}
+        m_TargetAssemblyTypeName: WordListTabManager, Assembly-CSharp
         m_MethodName: OnDailyTabClicked
         m_Mode: 1
         m_Arguments:
