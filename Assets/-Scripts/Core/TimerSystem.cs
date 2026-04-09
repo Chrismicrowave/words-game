@@ -10,6 +10,7 @@ public class TimerSystem : MonoBehaviour
     public bool IsRunning { get; private set; }
 
     private float phaseStartTime;
+    private float pausedDuration;
 
     public event Action<float, float> OnTimerUpdated; // phaseDuration, totalElapsed
 
@@ -32,8 +33,6 @@ public class TimerSystem : MonoBehaviour
             OnTimerUpdated?.Invoke(CurrentPhaseDuration, TotalElapsedTime + CurrentPhaseDuration);
         }
     }
-
-    private float pausedDuration;
 
     public void StartTimer()
     {

@@ -72,6 +72,7 @@ public class UIController : MonoBehaviour
     [Header("Config")]
     [SerializeField] private GameConfig config;
 
+    private const int    MaxWordLength        = 140;
     private const string ActiveTabPrefKey    = "ActiveTab"; // "mylist" or "daily"
     private const string DailyListPathPrefKey = "DailyListPath";
     private const string WordsPanelPrefKey = "WordsPanelOn";
@@ -360,9 +361,9 @@ public class UIController : MonoBehaviour
         string text = phaseInputField.text.Trim();
         if (string.IsNullOrEmpty(text)) return;
 
-        if (text.Length > 140)
+        if (text.Length > MaxWordLength)
         {
-          text = text.Substring(0, 140);
+            text = text.Substring(0, MaxWordLength);
         }
 
         PhaseManager.Instance.AddPhase(text, 0);

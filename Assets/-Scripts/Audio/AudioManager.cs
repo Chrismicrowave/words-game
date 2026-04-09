@@ -4,8 +4,6 @@ using UnityEngine.Audio;
 
 public class AudioManager : MonoBehaviour
 {
-    //public static AudioManager Instance { get; private set; }
-
     [Header("List")]
     [SerializeField] private List<AudioClip> clipList = new List<AudioClip>();
 
@@ -22,9 +20,6 @@ public class AudioManager : MonoBehaviour
 
     void Awake()
     {
-        //if (Instance == null) Instance = this;
-        //else { Destroy(gameObject); return; }
-
         audioSource = GetComponent<AudioSource>();
         if (audioSource == null)
             Debug.LogError("AudioManager: no AudioSource on " + gameObject.name);

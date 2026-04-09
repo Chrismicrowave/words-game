@@ -26,6 +26,12 @@ public class SettingsManager : MonoBehaviour
     public const string KeyCRTFilter     = "settings_crtFilter";
     public const string KeyScreenShake   = "settings_screenShake";
 
+    // Panel visibility keys (used by UIController + BuildDefaultsApplier)
+    public const string KeyWordsPanelOn = "WordsPanelOn";
+    public const string KeyTimerPanelOn = "TimerPanelOn";
+    public const string KeyInfoPanelOn  = "InfoPanelOn";
+    public const string KeyActiveTab    = "ActiveTab";
+
     public float MasterVolume
     {
         get => PlayerPrefs.GetFloat(KeyMasterVolume, 0.7f);
@@ -91,10 +97,7 @@ public class SettingsManager : MonoBehaviour
         Load();
     }
 
-    void Start()
-    {
-        //Load();
-    }
+    void Start() { }
 
     public void Load()
     {

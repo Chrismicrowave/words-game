@@ -21,27 +21,6 @@ public class DisplaySettingsController : MonoBehaviour
 
     void OnEnable()
     {
-        //_initializing = true;
-
-        //bool fs = SettingsManager.Instance != null
-        //    ? SettingsManager.Instance.Fullscreen
-        //    : PlayerPrefs.GetInt(SettingsManager.KeyFullscreen, 1) == 1;
-        //bool crt = SettingsManager.Instance != null
-        //    ? SettingsManager.Instance.CRTFilter
-        //    : PlayerPrefs.GetInt(SettingsManager.KeyCRTFilter, 1) == 1;
-
-        //_resIndex = SettingsManager.Instance != null
-        //    ? SettingsManager.Instance.ResolutionIndex
-        //    : PlayerPrefs.GetInt(SettingsManager.KeyResolution, 1);
-        //if (_resIndex < 0 || _resIndex >= Resolutions.Length) _resIndex = 1;
-
-        //if (fullscreenToggle != null) fullscreenToggle.SetIsOnWithoutNotify(fs);
-        //if (crtToggle        != null) crtToggle.SetIsOnWithoutNotify(crt);
-        //RefreshResolutionLabel();
-
-        //_initializing = false; 
-        //above script - resolution and crt turning back on not working, fixed by script below by unsbuscribing
-
         _initializing = true;
 
         fullscreenToggle.onValueChanged.RemoveListener(OnFullscreenChanged);

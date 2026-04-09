@@ -8,7 +8,7 @@ public class WordEngine
     private readonly List<Step> steps = new List<Step>();
     private readonly Dictionary<string, int> letterOccurrences = new Dictionary<string, int>();
     private string targetText = "";
-    private static readonly string blockChar = "<size=75%>\u2588</size>";
+    private const string CursorBlockChar = "<size=75%>\u2588</size>";
 
     public int CurrentStep { get; private set; }
     public int TotalSteps => steps.Count;
@@ -119,7 +119,7 @@ public class WordEngine
                 }
                 else if (stepIndex == CurrentStep)
                 {
-                    display += showCursor ? blockChar : " ";
+                    display += showCursor ? CursorBlockChar : " ";
                 }
                 else
                 {
