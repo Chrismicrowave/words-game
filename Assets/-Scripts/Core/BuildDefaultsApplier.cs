@@ -40,10 +40,10 @@ public class BuildDefaultsApplier : MonoBehaviour
         SetFloat(SettingsManager.KeyMasterVolume, defaultMasterVolume);
         SetFloat(SettingsManager.KeySFXVolume,    defaultSFXVolume);
         SetFloat(SettingsManager.KeyBGMVolume,    defaultBGMVolume);
-        SetInt("WordsPanelOn", defaultWordsPanel ? 1 : 0);
-        SetInt("TimerPanelOn", defaultTimerPanel ? 1 : 0);
-        SetInt("InfoPanelOn",  defaultInfoPanel  ? 1 : 0);
-        SetStr("ActiveTab",    defaultTab == DefaultTab.Daily ? "daily" : "mylist");
+        SetInt(SettingsManager.KeyWordsPanelOn, defaultWordsPanel ? 1 : 0);
+        SetInt(SettingsManager.KeyTimerPanelOn, defaultTimerPanel ? 1 : 0);
+        SetInt(SettingsManager.KeyInfoPanelOn,  defaultInfoPanel  ? 1 : 0);
+        SetStr(SettingsManager.KeyActiveTab,    defaultTab == DefaultTab.Daily ? "daily" : "mylist");
     }
 
     private void SetInt(string key, int value)

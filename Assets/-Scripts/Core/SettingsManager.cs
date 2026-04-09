@@ -2,9 +2,8 @@ using System;
 using UnityEngine;
 using UnityEngine.Audio;
 
-public class SettingsManager : MonoBehaviour
+public class SettingsManager : SingletonBehaviour<SettingsManager>
 {
-    public static SettingsManager Instance { get; private set; }
 
     [SerializeField] private AudioMixer mainMixer;
 
@@ -25,6 +24,12 @@ public class SettingsManager : MonoBehaviour
     public const string KeyActionPrompts = "settings_actionPrompts";
     public const string KeyCRTFilter     = "settings_crtFilter";
     public const string KeyScreenShake   = "settings_screenShake";
+
+    // Panel visibility keys (used by UIController + BuildDefaultsApplier)
+    public const string KeyWordsPanelOn = "WordsPanelOn";
+    public const string KeyTimerPanelOn = "TimerPanelOn";
+    public const string KeyInfoPanelOn  = "InfoPanelOn";
+    public const string KeyActiveTab    = "ActiveTab";
 
     public float MasterVolume
     {
@@ -83,18 +88,15 @@ public class SettingsManager : MonoBehaviour
 
     public event Action OnSettingsChanged;
 
-    void Awake()
+    protected override void Awake()
     {
-        if (Instance == null) Instance = this;
-        else { Destroy(gameObject); return; }
+        base.Awake();
+        if (Instance != this) return;
 
         Load();
     }
 
-    void Start()
-    {
-        //Load();
-    }
+    void Start() { }
 
     public void Load()
     {

@@ -1,28 +1,16 @@
 using System;
 using UnityEngine;
 
-public class TimerSystem : MonoBehaviour
+public class TimerSystem : SingletonBehaviour<TimerSystem>
 {
-    public static TimerSystem Instance { get; private set; }
-
     public float CurrentPhaseDuration { get; private set; }
     public float TotalElapsedTime { get; private set; }
     public bool IsRunning { get; private set; }
 
     private float phaseStartTime;
+    private float pausedDuration;
 
     public event Action<float, float> OnTimerUpdated; // phaseDuration, totalElapsed
-
-    void Awake()
-    {
-        if (Instance == null)
-            Instance = this;
-        else
-        {
-            Destroy(gameObject);
-            return;
-        }
-    }
 
     void Update()
     {
@@ -32,8 +20,6 @@ public class TimerSystem : MonoBehaviour
             OnTimerUpdated?.Invoke(CurrentPhaseDuration, TotalElapsedTime + CurrentPhaseDuration);
         }
     }
-
-    private float pausedDuration;
 
     public void StartTimer()
     {

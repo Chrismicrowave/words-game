@@ -1,5 +1,4 @@
 // Assets/-Scripts/UI/UIController.cs
-using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Text;
@@ -22,19 +21,11 @@ public class UIController : MonoBehaviour
     private float blinkTimer;
     private bool showCursor = true;
 
-    [Header("Phase List UI")]
+    [Header("Phase Input")]
     [SerializeField] private TMP_InputField phaseInputField;
     [SerializeField] private Color inputFieldActiveColor = Color.white;
     [SerializeField] private Color inputFieldInactiveColor = new Color(0.75f, 0.75f, 0.75f, 1f);
     [SerializeField] private GameObject phaseInputFocusBorder;
-    [SerializeField] private Transform phaseListContent;
-    [SerializeField] private GameObject phaseButtonPrefab;
-    [SerializeField] private Color phaseSelectedColor = Color.yellow;
-    [SerializeField] private Color phaseUnselectedColor = Color.white;
-
-    [Header("Timer UI")]
-    [SerializeField] private TextMeshProUGUI phaseTimeUI;
-    [SerializeField] private TextMeshProUGUI totalTimeUI;
 
     [Header("Delete Animation")]
     [SerializeField] private float deleteDelayBetweenLetters = 0.05f;
@@ -42,17 +33,6 @@ public class UIController : MonoBehaviour
 
     [Header("Action Prompt")]
     [SerializeField] private bool showActionPrompt = true;
-
-    [Header("Tabs")]
-    [SerializeField] private Button myListTabBtn;
-    [SerializeField] private Button dailyTabBtn;
-
-    [Header("Panel Buttons")]
-    [SerializeField] private GameObject myListPanelBtns;
-    [SerializeField] private GameObject dailyPanelBtns;
-
-    [Header("Daily Picker")]
-    [SerializeField] private DailyPickerPanelController dailyPickerPanel;
 
     [Header("Panel Toggles")]
     [SerializeField] private MenuAnimOnOff wordsPanelAnim;
@@ -72,17 +52,15 @@ public class UIController : MonoBehaviour
     [Header("Config")]
     [SerializeField] private GameConfig config;
 
-    private const string ActiveTabPrefKey    = "ActiveTab"; // "mylist" or "daily"
-    private const string DailyListPathPrefKey = "DailyListPath";
+    [Header("Sub-managers")]
+    [SerializeField] private PhaseListUIManager phaseListUIManager;
+
+    private const int    MaxWordLength    = 140;
     private const string WordsPanelPrefKey = "WordsPanelOn";
     private const string TimerPanelPrefKey = "TimerPanelOn";
     private const string InfoPanelPrefKey  = "InfoPanelOn";
 
-    private IWordListProvider myListProvider;
-    private IWordListProvider dailyProvider;
-
     private WordEngine wordEngine;
-    private int selectedPhaseIndex = -1;
     private Coroutine deleteAnimCoroutine;
     private Color matchedTextOriginalColor;
     private Color phaseInputTextOriginalColor;
@@ -91,20 +69,12 @@ public class UIController : MonoBehaviour
     {
         if (GameStateManager.Instance != null)
         {
-            GameStateManager.Instance.OnStepProcessed += HandleStepProcessed;
-            GameStateManager.Instance.OnPhaseCompleted += HandlePhaseCompleted;
-            GameStateManager.Instance.OnPhaseFailed += HandlePhaseFailed;
-            GameStateManager.Instance.OnPhaseRestarted += HandleRestart;
-            GameStateManager.Instance.OnGameReset += HandleGameReset;
+            GameStateManager.Instance.OnStepProcessed     += HandleStepProcessed;
+            GameStateManager.Instance.OnPhaseCompleted    += HandlePhaseCompleted;
+            GameStateManager.Instance.OnPhaseFailed       += HandlePhaseFailed;
+            GameStateManager.Instance.OnPhaseRestarted    += HandleRestart;
+            GameStateManager.Instance.OnGameReset         += HandleGameReset;
             GameStateManager.Instance.OnAllPhasesCompleted += HandleAllComplete;
-        }
-        if (PhaseManager.Instance != null)
-        {
-            PhaseManager.Instance.OnWordListChanged += RefreshPhaseList;
-        }
-        if (TimerSystem.Instance != null)
-        {
-            TimerSystem.Instance.OnTimerUpdated += UpdateTimerDisplay;
         }
     }
 
@@ -112,20 +82,12 @@ public class UIController : MonoBehaviour
     {
         if (GameStateManager.Instance != null)
         {
-            GameStateManager.Instance.OnStepProcessed -= HandleStepProcessed;
-            GameStateManager.Instance.OnPhaseCompleted -= HandlePhaseCompleted;
-            GameStateManager.Instance.OnPhaseFailed -= HandlePhaseFailed;
-            GameStateManager.Instance.OnPhaseRestarted -= HandleRestart;
-            GameStateManager.Instance.OnGameReset -= HandleGameReset;
+            GameStateManager.Instance.OnStepProcessed     -= HandleStepProcessed;
+            GameStateManager.Instance.OnPhaseCompleted    -= HandlePhaseCompleted;
+            GameStateManager.Instance.OnPhaseFailed       -= HandlePhaseFailed;
+            GameStateManager.Instance.OnPhaseRestarted    -= HandleRestart;
+            GameStateManager.Instance.OnGameReset         -= HandleGameReset;
             GameStateManager.Instance.OnAllPhasesCompleted -= HandleAllComplete;
-        }
-        if (PhaseManager.Instance != null)
-        {
-            PhaseManager.Instance.OnWordListChanged -= RefreshPhaseList;
-        }
-        if (TimerSystem.Instance != null)
-        {
-            TimerSystem.Instance.OnTimerUpdated -= UpdateTimerDisplay;
         }
     }
 
@@ -141,53 +103,21 @@ public class UIController : MonoBehaviour
             if (exportBtn != null) exportBtn.gameObject.SetActive(showImportExport);
         }
 
-        if (PhaseManager.Instance != null)
-        {
-            string myListPath = System.IO.Path.Combine(
-                FileWordListProvider.GetWordListDirectory(), "mylist.json");
-            var fileProvider = new FileWordListProvider(myListPath);
-            if (!System.IO.File.Exists(myListPath))
-            {
-                var defaultWords = PhaseManager.Instance.ActiveProvider?.GetWords()
-                    ?? new System.Collections.Generic.List<string>();
-                fileProvider.SetName("My List");
-                fileProvider.SetWords(defaultWords);
-                fileProvider.Save();
-            }
-            myListProvider = fileProvider;
-        }
-
-        // Restore saved daily list path if any
-        string savedDailyPath = PlayerPrefs.GetString(DailyListPathPrefKey, "");
-        if (!string.IsNullOrEmpty(savedDailyPath) && System.IO.File.Exists(savedDailyPath))
-            dailyProvider = new DailyWordListProvider(savedDailyPath);
-
-        // Load saved tab preference, default to daily
-        string savedTab = PlayerPrefs.GetString(ActiveTabPrefKey, "daily");
-        if (savedTab == "daily")
-        {
-            OnDailyTabClicked();
-        }
-        else
-        {
-            OnMyListTabClicked();
-        }
-
-        // Restore Words panel state (startOn default = false)
+        // Restore Words panel state
         if (wordsPanelAnim != null)
         {
             bool wordsOn = PlayerPrefs.GetInt(WordsPanelPrefKey, 0) == 1;
             if (wordsOn) wordsPanelAnim.On(); else wordsPanelAnim.Off();
         }
 
-        // Restore Timer panel state (startOn default = false)
+        // Restore Timer panel state
         if (timerPanelAnim != null)
         {
             bool timerOn = PlayerPrefs.GetInt(TimerPanelPrefKey, 0) == 1;
             if (timerOn) timerPanelAnim.On(); else timerPanelAnim.Off();
         }
 
-        // Restore Info panel state (starts active in scene, default = 1)
+        // Restore Info panel state
         _infoPanelOn = PlayerPrefs.GetInt(InfoPanelPrefKey, 1) == 1;
         if (instructionPanel != null)
             instructionPanel.SetActive(_infoPanelOn);
@@ -200,7 +130,7 @@ public class UIController : MonoBehaviour
         if (phaseInputField != null)
             phaseInputTextOriginalColor = phaseInputField.textComponent.color;
         UpdateTextDisplay();
-        RefreshPhaseList();
+        phaseListUIManager?.RefreshPhaseList();
     }
 
     void Update()
@@ -209,17 +139,14 @@ public class UIController : MonoBehaviour
             && EventSystem.current != null
             && EventSystem.current.currentSelectedGameObject == phaseInputField.gameObject;
 
-        // Input field visual feedback
         if (phaseInputField != null)
             phaseInputField.GetComponent<Image>().color = phaseFieldFocused
                 ? inputFieldActiveColor
                 : inputFieldInactiveColor;
 
-        // Orange focus border on the add-phase field
         if (phaseInputFocusBorder != null)
             phaseInputFocusBorder.SetActive(phaseFieldFocused);
 
-        // Gameplay text: dim and freeze cursor when add-phase field has focus
         if (phaseFieldFocused)
         {
             matchedTextUI.color = new Color(0.45f, 0.45f, 0.45f, 1f);
@@ -251,7 +178,6 @@ public class UIController : MonoBehaviour
         targetTextUI.text = wordEngine.TargetText;
         matchedTextUI.text = wordEngine.GetDisplayText(showCursor);
 
-        // Action prompt
         if (showActionPrompt && GameStateManager.Instance.CurrentState == GameState.Playing)
         {
             string prompt = wordEngine.GetActionPrompt();
@@ -263,12 +189,8 @@ public class UIController : MonoBehaviour
     private void HandleStepProcessed(StepResult result, Step step)
     {
         UpdateTextDisplay();
-
         if (result == StepResult.Failed)
-        {
-            statusTextUI.text = wordEngine.LastFailureMessage
-                + ". Press Backspace to start again";
-        }
+            statusTextUI.text = wordEngine.LastFailureMessage + ". Press Backspace to start again";
     }
 
     private void HandlePhaseCompleted()
@@ -278,8 +200,7 @@ public class UIController : MonoBehaviour
 
     private void HandlePhaseFailed()
     {
-        statusTextUI.text = wordEngine.LastFailureMessage
-            + ". Press Backspace to start again";
+        statusTextUI.text = wordEngine.LastFailureMessage + ". Press Backspace to start again";
     }
 
     private void HandleRestart()
@@ -296,74 +217,20 @@ public class UIController : MonoBehaviour
 
     private void HandleAllComplete()
     {
-        targetTextUI.text = "";
+        targetTextUI.text  = "";
         matchedTextUI.text = "";
-        statusTextUI.text = "Congratulations! You completed all phases!";
+        statusTextUI.text  = "Congratulations! You completed all phases!";
     }
 
-    // --- Timer Display ---
+    // --- Phase List Button Callbacks ---
 
-    private void UpdateTimerDisplay(float phaseDuration, float total)
-    {
-        TimeSpan phaseTime = TimeSpan.FromSeconds(phaseDuration);
-        phaseTimeUI.text = FormatTime(phaseTime);
-
-        TimeSpan totalTime = TimeSpan.FromSeconds(total);
-        totalTimeUI.text = FormatTime(totalTime);
-    }
-
-    private string FormatTime(TimeSpan t)
-    {
-        return $"{t.Hours:D2}\"{t.Minutes:D2}\'{t.Seconds:D2}.{t.Milliseconds / 10:D2}";
-    }
-
-    // --- Phase List UI ---
-
-    public void RefreshPhaseList()
-    {
-        if (phaseListContent == null || phaseButtonPrefab == null) return;
-
-        foreach (Transform child in phaseListContent)
-            Destroy(child.gameObject);
-
-        var words = PhaseManager.Instance.Words;
-        for (int i = 0; i < words.Count; i++)
-        {
-            int index = i;
-            GameObject btnObj = Instantiate(phaseButtonPrefab, phaseListContent);
-            btnObj.GetComponentInChildren<TextMeshProUGUI>().text = $"{index + 1}. {words[i]}";
-
-            Button btn = btnObj.GetComponent<Button>();
-            btn.onClick.AddListener(() =>
-            {
-                selectedPhaseIndex = index;
-                HighlightSelectedButton(btnObj);
-            });
-        }
-
-        Canvas.ForceUpdateCanvases();
-    }
-
-    private void HighlightSelectedButton(GameObject selected)
-    {
-        foreach (Transform child in phaseListContent)
-        {
-            Image img = child.GetComponent<Image>();
-            if (img != null)
-                img.color = (child.gameObject == selected) ? phaseSelectedColor : phaseUnselectedColor;
-        }
-    }
-
-    // Button callbacks (wire in Inspector)
     public void OnAddPhaseClicked()
     {
         string text = phaseInputField.text.Trim();
         if (string.IsNullOrEmpty(text)) return;
 
-        if (text.Length > 140)
-        {
-          text = text.Substring(0, 140);
-        }
+        if (text.Length > MaxWordLength)
+            text = text.Substring(0, MaxWordLength);
 
         PhaseManager.Instance.AddPhase(text, 0);
         PhaseManager.Instance.SaveCurrentList();
@@ -373,85 +240,36 @@ public class UIController : MonoBehaviour
 
     public void OnDeletePhaseClicked()
     {
-        if (selectedPhaseIndex < 0) return;
-        PhaseManager.Instance.RemovePhase(selectedPhaseIndex);
+        if (phaseListUIManager == null || phaseListUIManager.SelectedPhaseIndex < 0) return;
+        PhaseManager.Instance.RemovePhase(phaseListUIManager.SelectedPhaseIndex);
         PhaseManager.Instance.SaveCurrentList();
-        selectedPhaseIndex = -1;
+        phaseListUIManager.ClearSelection();
     }
 
     public void OnSwapPhaseClicked()
     {
-        if (selectedPhaseIndex < 0) return;
-        PhaseManager.Instance.JumpToPhase(selectedPhaseIndex);
+        if (phaseListUIManager == null || phaseListUIManager.SelectedPhaseIndex < 0) return;
+        PhaseManager.Instance.JumpToPhase(phaseListUIManager.SelectedPhaseIndex);
         GameStateManager.Instance.RaisePhaseRestarted();
         GameStateManager.Instance.TransitionTo(GameState.Playing);
     }
 
     public void OnMovePhaseUpClicked()
     {
-        if (selectedPhaseIndex <= 0) return;
-        PhaseManager.Instance.MovePhase(selectedPhaseIndex, selectedPhaseIndex - 1);
-        selectedPhaseIndex--;
+        if (phaseListUIManager == null || phaseListUIManager.SelectedPhaseIndex <= 0) return;
+        int idx = phaseListUIManager.SelectedPhaseIndex;
+        PhaseManager.Instance.MovePhase(idx, idx - 1);
     }
 
     public void OnMovePhaseDownClicked()
     {
-        if (selectedPhaseIndex < 0 || selectedPhaseIndex >= PhaseManager.Instance.TotalPhases - 1) return;
-        PhaseManager.Instance.MovePhase(selectedPhaseIndex, selectedPhaseIndex + 1);
-        selectedPhaseIndex++;
+        if (phaseListUIManager == null || phaseListUIManager.SelectedPhaseIndex < 0
+            || phaseListUIManager.SelectedPhaseIndex >= PhaseManager.Instance.TotalPhases - 1) return;
+        int idx = phaseListUIManager.SelectedPhaseIndex;
+        PhaseManager.Instance.MovePhase(idx, idx + 1);
     }
 
-    [Header("Tab Colors")]
-    [SerializeField] private Color tabActiveColor   = new Color(1f, 0.5f, 0f, 1f);
-    [SerializeField] private Color tabInactiveColor = Color.white;
-
-    private void SetTabColors(bool myListActive)
-    {
-        if (myListTabBtn != null) myListTabBtn.GetComponent<Image>().color = myListActive ? tabActiveColor : tabInactiveColor;
-        if (dailyTabBtn  != null) dailyTabBtn .GetComponent<Image>().color = myListActive ? tabInactiveColor : tabActiveColor;
-    }
-
-    public void OnMyListTabClicked()
-    {
-        PlayerPrefs.SetString(ActiveTabPrefKey, "mylist");
-        if (myListProvider != null)
-            PhaseManager.Instance.LoadWordList(myListProvider);
-        if (myListPanelBtns != null) myListPanelBtns.SetActive(true);
-        if (dailyPanelBtns != null) dailyPanelBtns.SetActive(false);
-        SetTabColors(myListActive: true);
-    }
-
-    public void OnFetchDailyClicked()
-    {
-        if (dailyPickerPanel == null) return;
-        dailyPickerPanel.OnListSelected = (provider) =>
-        {
-            dailyProvider = provider;
-            PlayerPrefs.SetString(DailyListPathPrefKey, provider.FilePath);
-            PlayerPrefs.SetString(ActiveTabPrefKey, "daily");
-            PlayerPrefs.Save();
-            PhaseManager.Instance.LoadWordList(provider);
-            if (myListPanelBtns != null) myListPanelBtns.SetActive(false);
-            if (dailyPanelBtns != null) dailyPanelBtns.SetActive(true);
-            SetTabColors(myListActive: false);
-        };
-        dailyPickerPanel.gameObject.SetActive(true);
-    }
-
-    public void OnDailyTabClicked()
-    {
-        SetTabColors(myListActive: false);
-        PlayerPrefs.SetString(ActiveTabPrefKey, "daily");
-
-        if (dailyProvider != null)
-        {
-            PhaseManager.Instance.LoadWordList(dailyProvider);
-        }
-        // No daily list selected yet — player should use the picker to choose one
-
-        if (myListPanelBtns != null) myListPanelBtns.SetActive(false);
-        if (dailyPanelBtns != null) dailyPanelBtns.SetActive(true);
-    }
+    // --- Panel Toggles ---
 
     public void OnToggleWordsClicked()
     {

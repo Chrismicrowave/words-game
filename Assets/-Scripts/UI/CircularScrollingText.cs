@@ -3,10 +3,10 @@ using UnityEngine;
 
 public class CircularScrollingText : MonoBehaviour
 {
-    public TextMeshProUGUI textUI;
-    public string baseText = "12345";
-    public float scrollSpeed = 5f;
-    public bool scrollLeft = true;
+    [SerializeField] private TextMeshProUGUI textUI;
+    [SerializeField] private string baseText = "12345";
+    [SerializeField] private float scrollSpeed = 5f;
+    [SerializeField] private bool scrollLeft = true;
 
     private float timer;
     private string currentText;
@@ -35,7 +35,7 @@ public class CircularScrollingText : MonoBehaviour
         if (text.Length <= 1) return text;
 
         return left
-            ? text.Substring(1) + text[0]           // e.g., "12345" ¡ú "23451"
-            : text[^1] + text.Substring(0, text.Length - 1); // e.g., "12345" ¡ú "51234"
+            ? text.Substring(1) + text[0]           // e.g., "12345" ï¿½ï¿½ "23451"
+            : text[^1] + text.Substring(0, text.Length - 1); // e.g., "12345" ï¿½ï¿½ "51234"
     }
 }
