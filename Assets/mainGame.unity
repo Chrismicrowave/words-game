@@ -5722,9 +5722,9 @@ MonoBehaviour:
   mildShakeMagnitude: 0.3
   strongShakeDuration: 0.3
   strongShakeMagnitude: 1
-  deg: 0.2
-  spd: 20
-  degExtra: 1
+  zoomAmount: 1
+  zoomSpeed: 10
+  overshootAmount: 3
 --- !u!1 &334381775
 GameObject:
   m_ObjectHideFlags: 0
@@ -6823,7 +6823,7 @@ MonoBehaviour:
   defaultWordsPanel: 0
   defaultTimerPanel: 0
   defaultInfoPanel: 1
-  defaultTab: daily
+  defaultTab: 0
 --- !u!1 &374566401
 GameObject:
   m_ObjectHideFlags: 0
@@ -11915,6 +11915,9 @@ GameObject:
   - component: {fileID: 680745020}
   - component: {fileID: 680745019}
   - component: {fileID: 680745023}
+  - component: {fileID: 680745026}
+  - component: {fileID: 680745024}
+  - component: {fileID: 680745025}
   m_Layer: 5
   m_Name: --- UI ---
   m_TagString: Untagged
@@ -12031,20 +12034,9 @@ MonoBehaviour:
   inputFieldActiveColor: {r: 1, g: 1, b: 1, a: 1}
   inputFieldInactiveColor: {r: 1, g: 1, b: 1, a: 1}
   phaseInputFocusBorder: {fileID: 741330665}
-  phaseListContent: {fileID: 920743731}
-  phaseButtonPrefab: {fileID: 3288893664048079578, guid: cc04af5ae044edf4f9373674f6e567ec, type: 3}
-  phaseSelectedColor: {r: 0.7516, g: 1, b: 0.9959, a: 0.502}
-  phaseUnselectedColor: {r: 0, g: 0, b: 0, a: 0}
-  phaseTimeUI: {fileID: 1894536267}
-  totalTimeUI: {fileID: 1477368923}
   deleteDelayBetweenLetters: 0.02
   audioKeys: {fileID: 2079988418}
   showActionPrompt: 1
-  myListTabBtn: {fileID: 310920954}
-  dailyTabBtn: {fileID: 2100340857}
-  myListPanelBtns: {fileID: 1878826810}
-  dailyPanelBtns: {fileID: 862221365}
-  dailyPickerPanel: {fileID: 885220076}
   wordsPanelAnim: {fileID: 2124874888}
   timerPanelAnim: {fileID: 308446945}
   instructionPanel: {fileID: 2109820979}
@@ -12052,8 +12044,56 @@ MonoBehaviour:
   importBtn: {fileID: 585433825}
   exportBtn: {fileID: 1362999032}
   config: {fileID: 11400000, guid: 2b556900e3f14c94fb47f46e82546a4f, type: 2}
-  tabActiveColor: {r: 0.99215686, g: 0.8, b: 0.6039216, a: 1}
+  phaseListUIManager: {fileID: 680745024}
+--- !u!114 &680745024
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 680745018}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0e5f4737d129c9b4285852f86a7a8f93, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PhaseListUIManager
+  phaseListContent: {fileID: 334381776}
+  phaseButtonPrefab: {fileID: 3288893664048079578, guid: cc04af5ae044edf4f9373674f6e567ec, type: 3}
+  phaseSelectedColor: {r: 1, g: 1, b: 1, a: 1}
+  phaseUnselectedColor: {r: 1, g: 1, b: 1, a: 1}
+--- !u!114 &680745025
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 680745018}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6c3cd9f05620a2d4c98ac87095426976, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::WordListTabManager
+  myListTabBtn: {fileID: 310920954}
+  dailyTabBtn: {fileID: 2100340857}
+  myListPanelBtns: {fileID: 1878826810}
+  dailyPanelBtns: {fileID: 862221365}
+  dailyPickerPanel: {fileID: 885220076}
+  tabActiveColor: {r: 1, g: 1, b: 1, a: 1}
   tabInactiveColor: {r: 1, g: 1, b: 1, a: 1}
+--- !u!114 &680745026
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 680745018}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5035ffeaa8bbc4746bdacb101dc66179, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::TimerDisplayManager
+  phaseTimeUI: {fileID: 1894536267}
+  totalTimeUI: {fileID: 1477368923}
 --- !u!1 &683000842
 GameObject:
   m_ObjectHideFlags: 0
@@ -19615,7 +19655,7 @@ MonoBehaviour:
   isShaking: 0
   magnitudeStart: 3
   speed: 20
-  increament: 0.5
+  increment: 2
 --- !u!114 &1255161824
 MonoBehaviour:
   m_ObjectHideFlags: 0
