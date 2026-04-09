@@ -13351,7 +13351,7 @@ GameObject:
   m_Component:
   - component: {fileID: 774874139}
   m_Layer: 0
-  m_Name: --- Cam&Ltg ---
+  m_Name: --- Camera & Lighting ---
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -24324,7 +24324,7 @@ GameObject:
   - component: {fileID: 1609586772}
   - component: {fileID: 1609586771}
   m_Layer: 5
-  m_Name: Text-es
+  m_Name: GameplayText
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
