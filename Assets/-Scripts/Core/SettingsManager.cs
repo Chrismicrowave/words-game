@@ -2,9 +2,8 @@ using System;
 using UnityEngine;
 using UnityEngine.Audio;
 
-public class SettingsManager : MonoBehaviour
+public class SettingsManager : SingletonBehaviour<SettingsManager>
 {
-    public static SettingsManager Instance { get; private set; }
 
     [SerializeField] private AudioMixer mainMixer;
 
@@ -89,10 +88,10 @@ public class SettingsManager : MonoBehaviour
 
     public event Action OnSettingsChanged;
 
-    void Awake()
+    protected override void Awake()
     {
-        if (Instance == null) Instance = this;
-        else { Destroy(gameObject); return; }
+        base.Awake();
+        if (Instance != this) return;
 
         Load();
     }

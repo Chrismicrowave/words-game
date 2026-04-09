@@ -1,7 +1,7 @@
 using System.Collections;
 using UnityEngine;
 
-public class KeyboardShake : MonoBehaviour
+public class KeyboardShake : SingletonBehaviour<KeyboardShake>
 {
     [Header("Shake Settings")]
     [SerializeField] private bool isShaking = false;
@@ -15,21 +15,10 @@ public class KeyboardShake : MonoBehaviour
     private Vector3 originalPos;
     private float shakeTimer = 0f;
 
-    public static KeyboardShake Instance { get; private set; }
-
     void Start()
     {
         originalPos = transform.localPosition;
         magnitude = magnitudeStart;
-
-        if (Instance == null)
-        {
-            Instance = this;
-        }
-        else
-        {
-            Destroy(gameObject);
-        }
     }
 
     void Update()

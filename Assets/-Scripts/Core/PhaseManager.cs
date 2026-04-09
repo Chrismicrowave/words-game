@@ -2,10 +2,8 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class PhaseManager : MonoBehaviour
+public class PhaseManager : SingletonBehaviour<PhaseManager>
 {
-    public static PhaseManager Instance { get; private set; }
-
     private IWordListProvider activeProvider;
     private List<string> words = new List<string>();
 
@@ -14,21 +12,10 @@ public class PhaseManager : MonoBehaviour
     public int TotalPhases => words.Count;
     public bool HasMorePhases => CurrentPhaseIndex < words.Count - 1;
     public IWordListProvider ActiveProvider => activeProvider;
-    public List<string> Words => words;
+    public IReadOnlyList<string> Words => words;
 
     public event Action<string> OnPhaseWordChanged;
     public event Action OnWordListChanged;
-
-    void Awake()
-    {
-        if (Instance == null)
-            Instance = this;
-        else
-        {
-            Destroy(gameObject);
-            return;
-        }
-    }
 
     public void LoadWordList(IWordListProvider provider)
     {

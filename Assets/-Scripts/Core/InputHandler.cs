@@ -6,10 +6,8 @@ using UnityEngine.InputSystem;
 using UnityEngine.InputSystem.Controls;
 using UnityEngine.EventSystems;
 
-public class InputHandler : MonoBehaviour
+public class InputHandler : SingletonBehaviour<InputHandler>
 {
-    public static InputHandler Instance { get; private set; }
-
     public event Action<KeyCode, bool> OnKeyAction; // key, isPressed
     public event Action OnBackspacePressed;
     public event Action OnEnterPressed;
@@ -20,15 +18,10 @@ public class InputHandler : MonoBehaviour
     // Map New Input System Key enum to legacy KeyCode for WordEngine compatibility
     private readonly Dictionary<Key, KeyCode> keyToKeyCode = new Dictionary<Key, KeyCode>();
 
-    void Awake()
+    protected override void Awake()
     {
-        if (Instance == null)
-            Instance = this;
-        else
-        {
-            Destroy(gameObject);
-            return;
-        }
+        base.Awake();
+        if (Instance != this) return;
 
         BuildKeyMap();
     }

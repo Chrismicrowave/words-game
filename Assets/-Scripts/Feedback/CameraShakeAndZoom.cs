@@ -2,7 +2,7 @@ using System.Collections;
 using Unity.VisualScripting;
 using UnityEngine;
 
-public class CameraShakeAndZoom : MonoBehaviour
+public class CameraShakeAndZoom : SingletonBehaviour<CameraShakeAndZoom>
 {
     private Vector3 originalPos;
     private Coroutine shakeCoroutine;
@@ -13,8 +13,6 @@ public class CameraShakeAndZoom : MonoBehaviour
     [SerializeField] private float strongShakeDuration = 1f;
     [SerializeField] private float strongShakeMagnitude = 0.2f;
 
-    public static CameraShakeAndZoom Instance { get; private set; }
-
     [Header ("Overzoom")]
 
     private Camera cam;
@@ -23,24 +21,16 @@ public class CameraShakeAndZoom : MonoBehaviour
     [SerializeField] private float zoomSpeed = 10f;
     [SerializeField] private float overshootAmount = 3f;
 
-    void Awake()
+    protected override void Awake()
     {
+        base.Awake();
         originalPos = transform.localPosition;
     }
 
     void Start()
     {
-        if (Instance == null)
-        {
-            Instance = this;
-        }
-        else
-        {
-            Destroy(gameObject);
-        }
-
         cam = GetComponent<Camera>();
-        cam.fieldOfView = startFOV; // Initialize camera FOV
+        cam.fieldOfView = startFOV;
     }
 
 
