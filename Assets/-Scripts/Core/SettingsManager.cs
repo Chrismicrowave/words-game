@@ -31,6 +31,10 @@ public class SettingsManager : SingletonBehaviour<SettingsManager>
     public const string KeyInfoPanelOn  = "InfoPanelOn";
     public const string KeyActiveTab    = "ActiveTab";
 
+    // Chinese language support
+    public const string KeyShowPinyin   = "ShowPinyin";
+    public const string KeyLanguageMode = "LanguageMode";
+
     public float MasterVolume
     {
         get => PlayerPrefs.GetFloat(KeyMasterVolume, 0.7f);
@@ -83,7 +87,22 @@ public class SettingsManager : SingletonBehaviour<SettingsManager>
     {
         get => PlayerPrefs.GetInt(KeyScreenShake, 1) == 1;
         set => PlayerPrefs.SetInt(KeyScreenShake, value ? 1 : 0);
-        
+    }
+
+    public bool ShowPinyin
+    {
+        get => PlayerPrefs.GetInt(KeyShowPinyin, 1) == 1;
+        set => PlayerPrefs.SetInt(KeyShowPinyin, value ? 1 : 0);
+    }
+
+    public LanguageMode ActiveLanguageMode
+    {
+        get
+        {
+            string stored = PlayerPrefs.GetString(KeyLanguageMode, "English");
+            return System.Enum.TryParse<LanguageMode>(stored, out var mode) ? mode : LanguageMode.English;
+        }
+        set => PlayerPrefs.SetString(KeyLanguageMode, value.ToString());
     }
 
     public event Action OnSettingsChanged;

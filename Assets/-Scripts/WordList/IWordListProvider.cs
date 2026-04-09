@@ -6,5 +6,6 @@ public interface IWordListProvider
     LanguageMode LanguageMode { get; }
     List<string> GetWords();
     List<ChineseWordEntry> GetChineseWords();
+    List<MixedWordEntry> GetMixedWords();
     bool IsEditable { get; }
 }

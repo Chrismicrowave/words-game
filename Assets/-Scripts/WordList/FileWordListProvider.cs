@@ -12,6 +12,7 @@ public class FileWordListProvider : IWordListProvider
 
     private List<string> words = new List<string>();
     private List<ChineseWordEntry> chineseWords = new List<ChineseWordEntry>();
+    private List<MixedWordEntry> mixedWords = new List<MixedWordEntry>();
 
     [Serializable]
     private class WordListData
@@ -20,6 +21,7 @@ public class FileWordListProvider : IWordListProvider
         public string languageMode;
         public List<string> words;
         public List<ChineseWordEntry> chineseWords;
+        public List<MixedWordEntry> mixedWords;
         public string createdAt;
     }
 
@@ -37,6 +39,11 @@ public class FileWordListProvider : IWordListProvider
     public List<ChineseWordEntry> GetChineseWords()
     {
         return chineseWords != null ? new List<ChineseWordEntry>(chineseWords) : null;
+    }
+
+    public List<MixedWordEntry> GetMixedWords()
+    {
+        return mixedWords != null ? new List<MixedWordEntry>(mixedWords) : null;
     }
 
     public void SetWords(List<string> newWords)
@@ -80,6 +87,7 @@ public class FileWordListProvider : IWordListProvider
         DisplayName = data.name ?? "Untitled";
         words = data.words ?? new List<string>();
         chineseWords = data.chineseWords ?? new List<ChineseWordEntry>();
+        mixedWords = data.mixedWords ?? new List<MixedWordEntry>();
 
         if (!string.IsNullOrEmpty(data.languageMode) &&
             System.Enum.TryParse<LanguageMode>(data.languageMode, out var mode))

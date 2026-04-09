@@ -55,6 +55,10 @@ public class UIController : MonoBehaviour
     [Header("Sub-managers")]
     [SerializeField] private PhaseListUIManager phaseListUIManager;
 
+    [Header("Chinese Language")]
+    [SerializeField] private ChineseMatchedDisplay chineseMatchedDisplay;
+    [SerializeField] private ChineseTargetDisplay chineseTargetDisplay;
+
     private const int    MaxWordLength    = 140;
     private const string WordsPanelPrefKey = "WordsPanelOn";
     private const string TimerPanelPrefKey = "TimerPanelOn";
@@ -129,8 +133,20 @@ public class UIController : MonoBehaviour
         matchedTextOriginalColor = matchedTextUI.color;
         if (phaseInputField != null)
             phaseInputTextOriginalColor = phaseInputField.textComponent.color;
-        UpdateTextDisplay();
         phaseListUIManager?.RefreshPhaseList();
+    }
+
+    /// <summary>
+    /// Called by GameCoordinator when a Chinese phase is loaded.
+    /// Rebuilds both the matched and target cell layouts.
+    /// </summary>
+    public void RebuildChineseDisplays(ChinesePhaseData data)
+    {
+        chineseMatchedDisplay?.BuildCells(data);
+        chineseTargetDisplay?.BuildCells(data);
+
+        if (chineseTargetDisplay != null && SettingsManager.Instance != null)
+            chineseTargetDisplay.SetPinyinVisible(SettingsManager.Instance.ShowPinyin);
     }
 
     void Update()
@@ -175,8 +191,25 @@ public class UIController : MonoBehaviour
     {
         if (wordEngine == null) return;
 
-        targetTextUI.text = wordEngine.TargetText;
-        matchedTextUI.text = wordEngine.GetDisplayText(showCursor);
+        if (wordEngine.IsChinesePhase)
+        {
+            // Chinese mode: hide plain TMP displays, use Chinese display components
+            targetTextUI.gameObject.SetActive(false);
+            matchedTextUI.gameObject.SetActive(false);
+            if (chineseMatchedDisplay != null) chineseMatchedDisplay.gameObject.SetActive(true);
+            if (chineseTargetDisplay != null) chineseTargetDisplay.gameObject.SetActive(true);
+            chineseMatchedDisplay?.UpdateProgress(wordEngine.MatchedLength);
+        }
+        else
+        {
+            targetTextUI.gameObject.SetActive(true);
+            matchedTextUI.gameObject.SetActive(true);
+            if (chineseMatchedDisplay != null) chineseMatchedDisplay.gameObject.SetActive(false);
+            if (chineseTargetDisplay != null) chineseTargetDisplay.gameObject.SetActive(false);
+
+            targetTextUI.text = wordEngine.TargetText;
+            matchedTextUI.text = wordEngine.GetDisplayText(showCursor);
+        }
 
         if (showActionPrompt && GameStateManager.Instance.CurrentState == GameState.Playing)
         {

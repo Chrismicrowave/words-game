@@ -28,6 +28,7 @@ public class DailyWordListProvider : IWordListProvider
 
     public List<string> GetWords() => new List<string>(words);
     public List<ChineseWordEntry> GetChineseWords() => null;
+    public List<MixedWordEntry> GetMixedWords() => null;
 
     private void Load()
     {

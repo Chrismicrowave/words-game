@@ -7,6 +7,7 @@ public class PhaseManager : SingletonBehaviour<PhaseManager>
     private IWordListProvider activeProvider;
     private List<string> words = new List<string>();
     private List<ChineseWordEntry> chineseWords = new List<ChineseWordEntry>();
+    private List<MixedWordEntry> mixedWords = new List<MixedWordEntry>();
 
     public int CurrentPhaseIndex { get; private set; }
     public string CurrentWord => (CurrentPhaseIndex < words.Count) ? words[CurrentPhaseIndex] : "";
@@ -24,13 +25,30 @@ public class PhaseManager : SingletonBehaviour<PhaseManager>
         activeProvider = provider;
         words = provider.GetWords();
         chineseWords = provider.GetChineseWords() ?? new List<ChineseWordEntry>();
+        mixedWords = provider.GetMixedWords() ?? new List<MixedWordEntry>();
 
-        // For Chinese lists, populate words from display strings so TotalPhases is correct
+        // For Chinese/Mixed lists, populate words from display strings so TotalPhases is correct
         if (provider.LanguageMode == LanguageMode.Chinese && chineseWords.Count > 0)
         {
             words = new List<string>();
             foreach (var cw in chineseWords)
                 words.Add(cw.display);
+        }
+        else if (provider.LanguageMode == LanguageMode.Mixed && mixedWords.Count > 0)
+        {
+            words = new List<string>();
+            foreach (var mw in mixedWords)
+            {
+                // Build a display string from segments for the phase list
+                var sb = new System.Text.StringBuilder();
+                foreach (var seg in mw.segments)
+                {
+                    if (seg.type == "english") sb.Append(seg.text);
+                    else if (seg.entries != null)
+                        foreach (var e in seg.entries) sb.Append(e.character);
+                }
+                words.Add(sb.ToString());
+            }
         }
 
         CurrentPhaseIndex = 0;
@@ -44,6 +62,14 @@ public class PhaseManager : SingletonBehaviour<PhaseManager>
         if (CurrentLanguageMode != LanguageMode.Chinese) return null;
         if (index < 0 || index >= chineseWords.Count) return null;
         return chineseWords[index];
+    }
+
+    // Returns the MixedWordEntry for the given index (null if not a Mixed list or out of range)
+    public MixedWordEntry GetMixedWord(int index)
+    {
+        if (CurrentLanguageMode != LanguageMode.Mixed) return null;
+        if (index < 0 || index >= mixedWords.Count) return null;
+        return mixedWords[index];
     }
 
     public bool AdvancePhase()

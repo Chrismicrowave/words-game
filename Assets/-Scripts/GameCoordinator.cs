@@ -43,9 +43,9 @@ public class GameCoordinator : MonoBehaviour
         PhaseManager.Instance.OnWordListChanged  += HandleWordListChanged;
 
         // Start the first phase
-        wordEngine.LoadWord(PhaseManager.Instance.CurrentWord);
-        GameStateManager.Instance.TransitionTo(GameState.Playing);
         uiController.Initialize(wordEngine);
+        LoadCurrentPhase();
+        GameStateManager.Instance.TransitionTo(GameState.Playing);
     }
 
     void OnDestroy()
@@ -105,14 +105,13 @@ public class GameCoordinator : MonoBehaviour
         if (state == GameState.Playing || state == GameState.PhaseFailed)
         {
             wordEngine.Reset();
-            wordEngine.LoadWord(PhaseManager.Instance.CurrentWord);
+            LoadCurrentPhase();
             TimerSystem.Instance.ResetPhaseTimer();
 
             GameStateManager.Instance.RaisePhaseRestarted();
             GameStateManager.Instance.TransitionTo(GameState.Playing);
 
             keyboardVisual.FlashKey(KeyCode.Backspace, Color.yellow);
-            uiController.UpdateTextDisplay();
         }
     }
 
@@ -123,10 +122,9 @@ public class GameCoordinator : MonoBehaviour
 
         if (PhaseManager.Instance.AdvancePhase())
         {
-            wordEngine.LoadWord(PhaseManager.Instance.CurrentWord);
+            LoadCurrentPhase();
             GameStateManager.Instance.TransitionTo(GameState.Playing);
             keyboardVisual.FlashKey(KeyCode.Return, Color.yellow);
-            uiController.UpdateTextDisplay();
         }
         else
         {
@@ -140,10 +138,42 @@ public class GameCoordinator : MonoBehaviour
         }
     }
 
+    // Loads the current phase into the WordEngine, handling Chinese and English modes.
+    private void LoadCurrentPhase()
+    {
+        int index = PhaseManager.Instance.CurrentPhaseIndex;
+        var lang = PhaseManager.Instance.CurrentLanguageMode;
+
+        if (lang == LanguageMode.Chinese)
+        {
+            var chineseWord = PhaseManager.Instance.GetChineseWord(index);
+            if (chineseWord != null)
+            {
+                wordEngine.LoadChineseWord(chineseWord);
+                uiController.RebuildChineseDisplays(wordEngine.CurrentChineseData);
+                uiController.UpdateTextDisplay();
+                return;
+            }
+        }
+        else if (lang == LanguageMode.Mixed)
+        {
+            var mixedWord = PhaseManager.Instance.GetMixedWord(index);
+            if (mixedWord != null)
+            {
+                var parsed = MixedPhaseParser.Parse(mixedWord);
+                wordEngine.LoadWord(parsed.typeTarget);
+                uiController.UpdateTextDisplay();
+                return;
+            }
+        }
+
+        wordEngine.LoadWord(PhaseManager.Instance.CurrentWord);
+        uiController.UpdateTextDisplay();
+    }
+
     private void HandlePhaseWordChanged(string word)
     {
-        wordEngine.LoadWord(word);
-        uiController.UpdateTextDisplay();
+        LoadCurrentPhase();
     }
 
     private void HandleWordListChanged()
@@ -156,11 +186,10 @@ public class GameCoordinator : MonoBehaviour
     public void ResetGame()
     {
         PhaseManager.Instance.ResetToBeginning();
-        wordEngine.LoadWord(PhaseManager.Instance.CurrentWord);
+        LoadCurrentPhase();
         TimerSystem.Instance.ResetAll();
         GameStateManager.Instance.RaiseGameReset();
         GameStateManager.Instance.TransitionTo(GameState.Playing);
-        uiController.UpdateTextDisplay();
     }
 
     public void CloseGame()

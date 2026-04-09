@@ -8,6 +8,7 @@ public class PhaseListUIManager : MonoBehaviour
     [SerializeField] private GameObject phaseButtonPrefab;
     [SerializeField] private Color phaseSelectedColor = Color.yellow;
     [SerializeField] private Color phaseUnselectedColor = Color.white;
+    [SerializeField] private TMP_FontAsset chineseFontAsset;  // Noto Sans SC, assigned in Inspector
 
     private int selectedPhaseIndex = -1;
     public int SelectedPhaseIndex => selectedPhaseIndex;
@@ -31,12 +32,17 @@ public class PhaseListUIManager : MonoBehaviour
         foreach (Transform child in phaseListContent)
             Destroy(child.gameObject);
 
+        bool isChinese = PhaseManager.Instance.CurrentLanguageMode == LanguageMode.Chinese;
         var words = PhaseManager.Instance.Words;
         for (int i = 0; i < words.Count; i++)
         {
             int index = i;
             GameObject btnObj = Instantiate(phaseButtonPrefab, phaseListContent);
-            btnObj.GetComponentInChildren<TextMeshProUGUI>().text = $"{index + 1}. {words[i]}";
+            var tmp = btnObj.GetComponentInChildren<TextMeshProUGUI>();
+            // Chinese lists show characters only (display already set by PhaseManager); English shows numbered
+            tmp.text = isChinese ? words[i] : $"{index + 1}. {words[i]}";
+            if (isChinese && chineseFontAsset != null)
+                tmp.font = chineseFontAsset;
 
             Button btn = btnObj.GetComponent<Button>();
             btn.onClick.AddListener(() =>

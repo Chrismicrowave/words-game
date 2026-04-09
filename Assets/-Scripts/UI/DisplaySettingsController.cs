@@ -8,6 +8,8 @@ public class DisplaySettingsController : MonoBehaviour
     [SerializeField] private Toggle crtToggle;
     [SerializeField] private TextMeshProUGUI resolutionLabel;
     [SerializeField] private Toggle screenshakeToggle;
+    [SerializeField] private Toggle showPinyinToggle;   // optional — hidden if null
+    [SerializeField] private ChineseTargetDisplay chineseTargetDisplay; // optional
 
     private static readonly (int w, int h)[] Resolutions =
     {
@@ -46,6 +48,16 @@ public class DisplaySettingsController : MonoBehaviour
         crtToggle.isOn = crt;
         screenshakeToggle.isOn = ss;
 
+        if (showPinyinToggle != null)
+        {
+            showPinyinToggle.onValueChanged.RemoveListener(OnShowPinyinChanged);
+            bool pinyin = SettingsManager.Instance != null
+                ? SettingsManager.Instance.ShowPinyin
+                : PlayerPrefs.GetInt(SettingsManager.KeyShowPinyin, 1) == 1;
+            showPinyinToggle.isOn = pinyin;
+            showPinyinToggle.onValueChanged.AddListener(OnShowPinyinChanged);
+        }
+
         RefreshResolutionLabel();
 
         fullscreenToggle.onValueChanged.AddListener(OnFullscreenChanged);
@@ -80,6 +92,17 @@ public class DisplaySettingsController : MonoBehaviour
 
         if (SettingsManager.Instance != null) SettingsManager.Instance.ScreenShake = value;
         else PlayerPrefs.SetInt(SettingsManager.KeyScreenShake, value ? 1 : 0);
+        PlayerPrefs.Save();
+    }
+
+    public void OnShowPinyinChanged(bool value)
+    {
+        if (_initializing) return;
+
+        if (SettingsManager.Instance != null) SettingsManager.Instance.ShowPinyin = value;
+        else PlayerPrefs.SetInt(SettingsManager.KeyShowPinyin, value ? 1 : 0);
+
+        chineseTargetDisplay?.SetPinyinVisible(value);
         PlayerPrefs.Save();
     }
 
