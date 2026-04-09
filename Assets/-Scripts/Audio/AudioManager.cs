@@ -7,7 +7,7 @@ public class AudioManager : MonoBehaviour
     //public static AudioManager Instance { get; private set; }
 
     [Header("List")]
-    public List<AudioClip> clipList = new List<AudioClip>();
+    [SerializeField] private List<AudioClip> clipList = new List<AudioClip>();
 
     [Header("Clicks")]
     public AudioClip pressed;

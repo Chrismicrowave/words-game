@@ -4,13 +4,13 @@ using UnityEngine;
 public class KeyboardShake : MonoBehaviour
 {
     [Header("Shake Settings")]
-    public bool isShaking = false;
-    public float magnitudeStart = 3f;
+    [SerializeField] private bool isShaking = false;
+    [SerializeField] private float magnitudeStart = 3f;
 
     private float magnitude;
 
-    public float speed = 20f;
-    public float increament = 2f;
+    [SerializeField] private float speed = 20f;
+    [SerializeField] private float increment = 2f;
 
     private Vector3 originalPos;
     private float shakeTimer = 0f;
@@ -62,7 +62,7 @@ public class KeyboardShake : MonoBehaviour
     {
         if (isShaking)
         {
-            magnitude += increament;
+            magnitude += increment;
             StartCoroutine(SuddenShake());
         }
     }
@@ -70,7 +70,7 @@ public class KeyboardShake : MonoBehaviour
     public void DownMagnitude()
     {
         if (isShaking)
-        magnitude -= increament;
+        magnitude -= increment;
     }
 
     public void ResetMagnitude()

@@ -7,11 +7,11 @@ public class CameraShakeAndZoom : MonoBehaviour
     private Vector3 originalPos;
     private Coroutine shakeCoroutine;
 
-    public float mildShakeDuration = 0.5f;
-    public float mildShakeMagnitude = 0.1f;
+    [SerializeField] private float mildShakeDuration = 0.5f;
+    [SerializeField] private float mildShakeMagnitude = 0.1f;
 
-    public float strongShakeDuration = 1f;
-    public float strongShakeMagnitude = 0.2f;
+    [SerializeField] private float strongShakeDuration = 1f;
+    [SerializeField] private float strongShakeMagnitude = 0.2f;
 
     public static CameraShakeAndZoom Instance { get; private set; }
 
@@ -19,9 +19,9 @@ public class CameraShakeAndZoom : MonoBehaviour
 
     private Camera cam;
     private float startFOV = 60f;
-    public float deg = 1f;
-    public float spd = 10f;
-    public float degExtra = 3f;
+    [SerializeField] private float zoomAmount = 1f;
+    [SerializeField] private float zoomSpeed = 10f;
+    [SerializeField] private float overshootAmount = 3f;
 
     void Awake()
     {
@@ -46,7 +46,7 @@ public class CameraShakeAndZoom : MonoBehaviour
 
     public void OverZoomCam()
     {
-        StartCoroutine(ZoomInAnim(deg, spd, degExtra));
+        StartCoroutine(ZoomInAnim(zoomAmount, zoomSpeed, overshootAmount));
     }
 
 
