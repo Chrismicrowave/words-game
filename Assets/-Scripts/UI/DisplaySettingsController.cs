@@ -100,7 +100,7 @@ public class DisplaySettingsController : MonoBehaviour
         if (_initializing) return;
 
         if (SettingsManager.Instance != null) SettingsManager.Instance.ScreenShake = value;
-        else PlayerPrefs.SetInt(SettingsManager.KeyCRTFilter, value ? 1 : 0);
+        else PlayerPrefs.SetInt(SettingsManager.KeyScreenShake, value ? 1 : 0);
         PlayerPrefs.Save();
     }
 
