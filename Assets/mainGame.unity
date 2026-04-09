@@ -9001,7 +9001,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0e5f4737d129c9b4285852f86a7a8f93, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PhaseListUIManager
-  phaseListContent: {fileID: 334381776}
+  phaseListContent: {fileID: 920743731}
   phaseButtonPrefab: {fileID: 3288893664048079578, guid: cc04af5ae044edf4f9373674f6e567ec, type: 3}
   phaseSelectedColor: {r: 1, g: 1, b: 1, a: 1}
   phaseUnselectedColor: {r: 1, g: 1, b: 1, a: 1}
