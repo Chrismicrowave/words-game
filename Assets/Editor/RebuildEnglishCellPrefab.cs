@@ -35,9 +35,9 @@ public class RebuildEnglishCellPrefab
             var existingCell = root.GetComponent<TargetCell>();
             if (existingCell != null) GameObject.DestroyImmediate(existingCell);
 
-            // Root rect: matches TargetCell height (200px); width expands via flexibleWidth
+            // Root rect: matches CharacterCell height (60px); width expands via flexibleWidth
             var rootRT = root.GetComponent<RectTransform>();
-            rootRT.sizeDelta = new Vector2(120f, 200f);
+            rootRT.sizeDelta = new Vector2(120f, 60f);
 
             // Remove any existing layout group
             var hlg = root.GetComponent<HorizontalLayoutGroup>();
@@ -45,10 +45,10 @@ public class RebuildEnglishCellPrefab
             var vlg = root.GetComponent<VerticalLayoutGroup>();
             if (vlg != null) GameObject.DestroyImmediate(vlg);
 
-            // Root LayoutElement: fixed height matching TargetCell, flexible width to expand
+            // Root LayoutElement: fixed height matching CharacterCell, flexible width to expand
             var le = root.GetComponent<LayoutElement>() ?? root.AddComponent<LayoutElement>();
-            le.minHeight = 200f;
-            le.preferredHeight = 200f;
+            le.minHeight = 60f;
+            le.preferredHeight = 60f;
             le.flexibleWidth = 1f;
 
             // ── Label ────────────────────────────────────────────────────────────
