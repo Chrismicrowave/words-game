@@ -170,25 +170,12 @@ public class UIController : MonoBehaviour
         else
             chineseMatchedDisplay?.Clear();
 
-        // Show target display only when there is exactly one Chinese segment (pure Chinese phase)
-        bool isSingleChinese = parsed.segments != null
-            && parsed.segments.Length == 1
-            && parsed.segments[0].type == MixedPhaseParser.SegmentType.Chinese;
-
+        // Show target display for any phase that has Chinese content
         if (chineseTargetDisplay != null)
         {
-            if (isSingleChinese)
+            if (!IsPurelyEnglish(parsed))
             {
-                // Build a ChinesePhaseData from the single segment for the target display
-                var seg = parsed.segments[0];
-                var data = new ChinesePhaseData
-                {
-                    typeTarget  = parsed.typeTarget,
-                    boundaries  = seg.boundaries,
-                    characters  = seg.characters,
-                    entries     = seg.entries
-                };
-                chineseTargetDisplay.BuildCells(data);
+                chineseTargetDisplay.BuildMixedCells(parsed);
                 if (SettingsManager.Instance != null)
                     chineseTargetDisplay.SetPinyinVisible(SettingsManager.Instance.ShowPinyin);
                 chineseTargetDisplay.gameObject.SetActive(true);
@@ -253,21 +240,8 @@ public class UIController : MonoBehaviour
             if (chineseMatchedDisplay != null) chineseMatchedDisplay.gameObject.SetActive(true);
             chineseMatchedDisplay?.UpdateProgress(wordEngine.MatchedLength);
 
-            // Pure Chinese (single segment): chineseTargetDisplay handles target
-            // Mixed with Chinese: use targetTextUI for the target
-            var segs = wordEngine.CurrentMixedData.segments;
-            bool isSingleChinese = segs != null && segs.Length == 1
-                && segs[0].type == MixedPhaseParser.SegmentType.Chinese;
-            if (isSingleChinese)
-            {
-                targetTextUI.gameObject.SetActive(false);
-                // ChineseTargetDisplay visibility managed per-phase in RebuildMixedDisplays
-            }
-            else
-            {
-                targetTextUI.gameObject.SetActive(true);
-                targetTextUI.text = wordEngine.TargetText;
-            }
+            // ChineseTargetDisplay handles target for all phases with Chinese content
+            targetTextUI.gameObject.SetActive(false);
         }
         else
         {
