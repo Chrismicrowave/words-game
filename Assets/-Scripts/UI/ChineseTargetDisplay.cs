@@ -14,7 +14,7 @@ public class ChineseTargetDisplay : MonoBehaviour
     [SerializeField] private bool showPinyin = true;
 
     private readonly List<TargetCell> cells = new List<TargetCell>();
-    private readonly List<TextMeshProUGUI> englishLabels = new List<TextMeshProUGUI>();
+    private readonly List<EnglishCell> englishCells = new List<EnglishCell>();
 
     public void BuildCells(ChinesePhaseData data)
     {
@@ -61,7 +61,7 @@ public class ChineseTargetDisplay : MonoBehaviour
                 if (cell != null)
                 {
                     cell.SetText(seg.text);
-                    if (cell.Label != null) englishLabels.Add(cell.Label);
+                    englishCells.Add(cell);
                 }
             }
         }
@@ -75,15 +75,24 @@ public class ChineseTargetDisplay : MonoBehaviour
     }
 
     /// <summary>
-    /// Copies the live auto-sized font size from the first Chinese cell to all English labels.
+    /// Syncs English cell font size to the Chinese cells' live auto-sized font,
+    /// then resizes each cell's width so the word fits on one line.
     /// Call after Canvas.ForceUpdateCanvases() so TMP has resolved its font size.
     /// </summary>
     public void SyncEnglishFontSize()
     {
-        if (cells.Count == 0 || englishLabels.Count == 0) return;
+        if (cells.Count == 0 || englishCells.Count == 0) return;
         float size = cells[0].CharFontSize;
-        foreach (var lbl in englishLabels)
-            lbl.fontSize = size;
+        foreach (var ec in englishCells)
+        {
+            if (ec.Label == null) continue;
+            ec.Label.fontSize = size;
+            ec.Label.ForceMeshUpdate();
+            // Measure preferred width for one line at this font size
+            float w = ec.Label.GetPreferredValues(ec.Label.text, float.MaxValue, 200f).x;
+            var rt = ec.GetComponent<RectTransform>();
+            if (rt != null) rt.sizeDelta = new Vector2(w, rt.sizeDelta.y);
+        }
     }
 
     public void Clear()
@@ -91,6 +100,6 @@ public class ChineseTargetDisplay : MonoBehaviour
         foreach (Transform child in cellContainer)
             Destroy(child.gameObject);
         cells.Clear();
-        englishLabels.Clear();
+        englishCells.Clear();
     }
 }
