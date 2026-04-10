@@ -1,0 +1,34 @@
+{
+  "name": "Mixed Test — 2026-04-10",
+  "languageMode": "Mixed",
+  "words": [],
+  "mixedWords": [
+    {
+      "segments": [
+        {"type": "english", "text": "hello"},
+        {"type": "chinese", "entries": [
+          {"character": "你", "pinyin": "ni"},
+          {"character": "好", "pinyin": "hao"}
+        ]}
+      ]
+    },
+    {
+      "segments": [
+        {"type": "chinese", "entries": [
+          {"character": "谢", "pinyin": "xie"},
+          {"character": "谢", "pinyin": "xie"}
+        ]},
+        {"type": "english", "text": "you"}
+      ]
+    },
+    {
+      "segments": [
+        {"type": "english", "text": "learn"},
+        {"type": "chinese", "entries": [
+          {"character": "中", "pinyin": "zhong"},
+          {"character": "文", "pinyin": "wen"}
+        ]}
+      ]
+    }
+  ]
+}

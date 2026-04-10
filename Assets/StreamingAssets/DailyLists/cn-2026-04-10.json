@@ -1,0 +1,42 @@
+{
+  "name": "Chinese Test — 2026-04-10",
+  "languageMode": "Chinese",
+  "words": [],
+  "chineseWords": [
+    {
+      "display": "你好",
+      "entries": [
+        {"character": "你", "pinyin": "ni"},
+        {"character": "好", "pinyin": "hao"}
+      ]
+    },
+    {
+      "display": "谢谢",
+      "entries": [
+        {"character": "谢", "pinyin": "xie"},
+        {"character": "谢", "pinyin": "xie"}
+      ]
+    },
+    {
+      "display": "再见",
+      "entries": [
+        {"character": "再", "pinyin": "zai"},
+        {"character": "见", "pinyin": "jian"}
+      ]
+    },
+    {
+      "display": "中文",
+      "entries": [
+        {"character": "中", "pinyin": "zhong"},
+        {"character": "文", "pinyin": "wen"}
+      ]
+    },
+    {
+      "display": "学习",
+      "entries": [
+        {"character": "学", "pinyin": "xue"},
+        {"character": "习", "pinyin": "xi"}
+      ]
+    }
+  ]
+}
