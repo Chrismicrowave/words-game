@@ -9,7 +9,7 @@ using TMPro;
 public class ChineseTargetDisplay : MonoBehaviour
 {
     [SerializeField] private GameObject targetCellPrefab;
-    [SerializeField] private GameObject englishCellPrefab;
+    [SerializeField] private GameObject englishTargetCellPrefab;
     [SerializeField] private Transform cellContainer;
     [SerializeField] private bool showPinyin = true;
 
@@ -55,8 +55,8 @@ public class ChineseTargetDisplay : MonoBehaviour
             }
             else // English
             {
-                if (englishCellPrefab == null) continue;
-                GameObject go = Instantiate(englishCellPrefab, cellContainer);
+                if (englishTargetCellPrefab == null) continue;
+                GameObject go = Instantiate(englishTargetCellPrefab, cellContainer);
                 var cell = go.GetComponent<EnglishCell>();
                 if (cell != null)
                 {

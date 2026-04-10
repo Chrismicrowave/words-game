@@ -21970,7 +21970,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ChineseTargetDisplay
   targetCellPrefab: {fileID: 8127532070943617958, guid: e7007cd209004d54eb10ad52124d34ca, type: 3}
-  englishCellPrefab: {fileID: 8127532070943617958, guid: 94841ea4311e109489bb169d091b4d2d, type: 3}
+  englishTargetCellPrefab: {fileID: 8127532070943617958, guid: 47d83646fd164664bbd7d8e3d7af04fb, type: 3}
   cellContainer: {fileID: 78683134}
   showPinyin: 1
 --- !u!224 &1504769737
