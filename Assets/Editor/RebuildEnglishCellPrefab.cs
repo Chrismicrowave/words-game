@@ -35,23 +35,19 @@ public class RebuildEnglishCellPrefab
             var existingCell = root.GetComponent<TargetCell>();
             if (existingCell != null) GameObject.DestroyImmediate(existingCell);
 
-            // Root rect: matches TargetCell height (200px); width expands via flexibleWidth
+            // Root rect: matches TargetCell (120x200); no LayoutElement — parent layout controls sizing
             var rootRT = root.GetComponent<RectTransform>();
             rootRT.sizeDelta = new Vector2(120f, 200f);
 
-            // Remove any existing layout group
+            // Remove any layout groups and LayoutElement — no layout control on this prefab
             var hlg = root.GetComponent<HorizontalLayoutGroup>();
             if (hlg != null) GameObject.DestroyImmediate(hlg);
             var vlg = root.GetComponent<VerticalLayoutGroup>();
             if (vlg != null) GameObject.DestroyImmediate(vlg);
+            var le = root.GetComponent<LayoutElement>();
+            if (le != null) GameObject.DestroyImmediate(le);
 
-            // Root LayoutElement: fixed height matching TargetCell, flexible width to expand
-            var le = root.GetComponent<LayoutElement>() ?? root.AddComponent<LayoutElement>();
-            le.minHeight = 200f;
-            le.preferredHeight = 200f;
-            le.flexibleWidth = 1f;
-
-            // ── Label ────────────────────────────────────────────────────────────
+            // ── Label (full-rect, no auto-sizing — font size set live to match Chinese cells) ──
             var labelGO = new GameObject("Label", typeof(RectTransform), typeof(CanvasRenderer), typeof(TextMeshProUGUI));
             labelGO.transform.SetParent(root.transform, false);
             var labelRT = labelGO.GetComponent<RectTransform>();
@@ -60,9 +56,8 @@ public class RebuildEnglishCellPrefab
             labelRT.offsetMin = Vector2.zero;
             labelRT.offsetMax = Vector2.zero;
             var tmp = labelGO.GetComponent<TextMeshProUGUI>();
-            tmp.enableAutoSizing = true;
-            tmp.fontSizeMin = 18f;
-            tmp.fontSizeMax = 108f;
+            tmp.enableAutoSizing = false;
+            tmp.fontSize = 36f;
             tmp.color = Color.white;
             tmp.alignment = TextAlignmentOptions.Center;
             tmp.text = "";

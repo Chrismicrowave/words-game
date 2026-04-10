@@ -17,6 +17,8 @@ public class TargetCell : MonoBehaviour
         SetPinyinVisible(pinyinVisible);
     }
 
+    public float CharFontSize => charLabel != null ? charLabel.fontSize : 36f;
+
     public void SetPinyinVisible(bool visible)
     {
         if (pinyinLabel != null) pinyinLabel.gameObject.SetActive(visible);

@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.UI;
+using TMPro;
 
 /// <summary>
 /// Displays the target Chinese phrase, one TargetCell per character.
@@ -14,6 +14,7 @@ public class ChineseTargetDisplay : MonoBehaviour
     [SerializeField] private bool showPinyin = true;
 
     private readonly List<TargetCell> cells = new List<TargetCell>();
+    private readonly List<TextMeshProUGUI> englishLabels = new List<TextMeshProUGUI>();
 
     public void BuildCells(ChinesePhaseData data)
     {
@@ -57,7 +58,11 @@ public class ChineseTargetDisplay : MonoBehaviour
                 if (englishCellPrefab == null) continue;
                 GameObject go = Instantiate(englishCellPrefab, cellContainer);
                 var cell = go.GetComponent<EnglishCell>();
-                if (cell != null) cell.SetText(seg.text);
+                if (cell != null)
+                {
+                    cell.SetText(seg.text);
+                    if (cell.Label != null) englishLabels.Add(cell.Label);
+                }
             }
         }
     }
@@ -69,10 +74,23 @@ public class ChineseTargetDisplay : MonoBehaviour
             cell.SetPinyinVisible(visible);
     }
 
+    /// <summary>
+    /// Copies the live auto-sized font size from the first Chinese cell to all English labels.
+    /// Call after Canvas.ForceUpdateCanvases() so TMP has resolved its font size.
+    /// </summary>
+    public void SyncEnglishFontSize()
+    {
+        if (cells.Count == 0 || englishLabels.Count == 0) return;
+        float size = cells[0].CharFontSize;
+        foreach (var lbl in englishLabels)
+            lbl.fontSize = size;
+    }
+
     public void Clear()
     {
         foreach (Transform child in cellContainer)
             Destroy(child.gameObject);
         cells.Clear();
+        englishLabels.Clear();
     }
 }

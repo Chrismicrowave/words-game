@@ -179,6 +179,7 @@ public class UIController : MonoBehaviour
                 if (SettingsManager.Instance != null)
                     chineseTargetDisplay.SetPinyinVisible(SettingsManager.Instance.ShowPinyin);
                 chineseTargetDisplay.gameObject.SetActive(true);
+                StartCoroutine(SyncEnglishFontSizeNextFrame());
             }
             else
             {
@@ -479,5 +480,12 @@ public class UIController : MonoBehaviour
         }
 
         return result.ToString();
+    }
+
+    private IEnumerator SyncEnglishFontSizeNextFrame()
+    {
+        yield return null; // wait one frame for TMP auto-sizing to resolve
+        Canvas.ForceUpdateCanvases();
+        chineseTargetDisplay?.SyncEnglishFontSize();
     }
 }
