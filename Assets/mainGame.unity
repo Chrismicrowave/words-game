@@ -10610,7 +10610,7 @@ MonoBehaviour:
   phaseListContent: {fileID: 920743731}
   phaseButtonPrefab: {fileID: 3288893664048079578, guid: cc04af5ae044edf4f9373674f6e567ec, type: 3}
   phaseSelectedColor: {r: 0.9685534, g: 0.75201255, b: 0.68529713, a: 1}
-  phaseUnselectedColor: {r: 1, g: 1, b: 1, a: 1}
+  phaseUnselectedColor: {r: 1, g: 1, b: 1, a: 0}
   chineseFontAsset: {fileID: 11400000, guid: 428be41dc6b96d74cb9084b697519d27, type: 2}
 --- !u!114 &680745025
 MonoBehaviour:
@@ -13735,6 +13735,7 @@ GameObject:
   m_Component:
   - component: {fileID: 920743731}
   - component: {fileID: 920743732}
+  - component: {fileID: 920743733}
   m_Layer: 5
   m_Name: Content
   m_TagString: Untagged
@@ -13782,12 +13783,26 @@ MonoBehaviour:
   m_ChildAlignment: 0
   m_Spacing: 0
   m_ChildForceExpandWidth: 1
-  m_ChildForceExpandHeight: 1
+  m_ChildForceExpandHeight: 0
   m_ChildControlWidth: 1
   m_ChildControlHeight: 1
   m_ChildScaleWidth: 0
   m_ChildScaleHeight: 0
   m_ReverseArrangement: 0
+--- !u!114 &920743733
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 920743730}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3245ec927659c4140ac4f8d17403cc18, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.ContentSizeFitter
+  m_HorizontalFit: 0
+  m_VerticalFit: 2
 --- !u!1001 &922019952
 PrefabInstance:
   m_ObjectHideFlags: 0
