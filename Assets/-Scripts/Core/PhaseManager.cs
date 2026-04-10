@@ -108,6 +108,46 @@ public class PhaseManager : SingletonBehaviour<PhaseManager>
         OnWordListChanged?.Invoke();
     }
 
+    /// <summary>
+    /// Adds a mixed/Chinese phase at the front of the list.
+    /// If the current list is English-only, converts it to Mixed mode by wrapping
+    /// existing entries as single-segment English MixedWordEntry objects.
+    /// </summary>
+    public void AddMixedPhase(MixedWordEntry entry)
+    {
+        // Build display string for the phase list
+        var sb = new System.Text.StringBuilder();
+        foreach (var seg in entry.segments)
+        {
+            if (seg.type == "english") sb.Append(seg.text);
+            else if (seg.entries != null)
+                foreach (var e in seg.entries) sb.Append(e.character);
+        }
+        string display = sb.ToString();
+
+        // If not already Mixed, convert existing words to Mixed entries
+        if (CurrentLanguageMode != LanguageMode.Mixed)
+        {
+            mixedWords = new List<MixedWordEntry>();
+            foreach (var w in words)
+            {
+                mixedWords.Add(new MixedWordEntry
+                {
+                    segments = new List<MixedSegmentData>
+                    {
+                        new MixedSegmentData { type = "english", text = w }
+                    }
+                });
+            }
+            if (activeProvider is FileWordListProvider fp)
+                fp.SetLanguageMode(LanguageMode.Mixed);
+        }
+
+        mixedWords.Insert(0, entry);
+        words.Insert(0, display);
+        OnWordListChanged?.Invoke();
+    }
+
     public void RemovePhase(int index)
     {
         if (index < 0 || index >= words.Count) return;
@@ -134,6 +174,8 @@ public class PhaseManager : SingletonBehaviour<PhaseManager>
         if (activeProvider is FileWordListProvider fileProvider)
         {
             fileProvider.SetWords(words);
+            if (CurrentLanguageMode == LanguageMode.Mixed)
+                fileProvider.SetMixedWords(mixedWords);
             fileProvider.Save();
         }
     }

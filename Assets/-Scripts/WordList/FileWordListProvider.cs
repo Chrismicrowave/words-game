@@ -51,6 +51,16 @@ public class FileWordListProvider : IWordListProvider
         words = new List<string>(newWords);
     }
 
+    public void SetMixedWords(List<MixedWordEntry> mixed)
+    {
+        mixedWords = new List<MixedWordEntry>(mixed);
+    }
+
+    public void SetLanguageMode(LanguageMode mode)
+    {
+        LanguageMode = mode;
+    }
+
     public void SetName(string name)
     {
         DisplayName = name;

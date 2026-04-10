@@ -58,6 +58,7 @@ public class UIController : MonoBehaviour
     [Header("Chinese Language")]
     [SerializeField] private ChineseMatchedDisplay chineseMatchedDisplay;
     [SerializeField] private ChineseTargetDisplay chineseTargetDisplay;
+    [SerializeField] private ChinesePinyinPopup chinesePinyinPopup;
 
     private const int    MaxWordLength    = 140;
     private const string WordsPanelPrefKey = "WordsPanelOn";
@@ -303,10 +304,24 @@ public class UIController : MonoBehaviour
         if (text.Length > MaxWordLength)
             text = text.Substring(0, MaxWordLength);
 
-        PhaseManager.Instance.AddPhase(text, 0);
-        PhaseManager.Instance.SaveCurrentList();
-        phaseInputField.text = "";
-        EventSystem.current.SetSelectedGameObject(null);
+        if (PinyinLookup.ContainsChinese(text))
+        {
+            // Open pinyin confirmation popup for any text containing Chinese characters
+            chinesePinyinPopup?.Show(text, entry =>
+            {
+                PhaseManager.Instance.AddMixedPhase(entry);
+                PhaseManager.Instance.SaveCurrentList();
+                phaseInputField.text = "";
+                EventSystem.current.SetSelectedGameObject(null);
+            }, () => { /* cancelled — leave input as-is */ });
+        }
+        else
+        {
+            PhaseManager.Instance.AddPhase(text, 0);
+            PhaseManager.Instance.SaveCurrentList();
+            phaseInputField.text = "";
+            EventSystem.current.SetSelectedGameObject(null);
+        }
     }
 
     public void OnDeletePhaseClicked()
