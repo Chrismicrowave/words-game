@@ -249,12 +249,25 @@ public class UIController : MonoBehaviour
 
         if (useCellDisplay)
         {
-            // Chinese / Mixed: hide plain TMP, use cell-based display
-            targetTextUI.gameObject.SetActive(false);
             matchedTextUI.gameObject.SetActive(false);
             if (chineseMatchedDisplay != null) chineseMatchedDisplay.gameObject.SetActive(true);
             chineseMatchedDisplay?.UpdateProgress(wordEngine.MatchedLength);
-            // ChineseTargetDisplay visibility managed per-phase in RebuildMixedDisplays
+
+            // Pure Chinese (single segment): chineseTargetDisplay handles target
+            // Mixed with Chinese: use targetTextUI for the target
+            var segs = wordEngine.CurrentMixedData.segments;
+            bool isSingleChinese = segs != null && segs.Length == 1
+                && segs[0].type == MixedPhaseParser.SegmentType.Chinese;
+            if (isSingleChinese)
+            {
+                targetTextUI.gameObject.SetActive(false);
+                // ChineseTargetDisplay visibility managed per-phase in RebuildMixedDisplays
+            }
+            else
+            {
+                targetTextUI.gameObject.SetActive(true);
+                targetTextUI.text = wordEngine.TargetText;
+            }
         }
         else
         {

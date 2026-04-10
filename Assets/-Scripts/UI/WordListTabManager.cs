@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 public class WordListTabManager : MonoBehaviour
@@ -70,6 +71,7 @@ public class WordListTabManager : MonoBehaviour
         if (myListPanelBtns != null) myListPanelBtns.SetActive(true);
         if (dailyPanelBtns  != null) dailyPanelBtns .SetActive(false);
         SetTabColors(myListActive: true);
+        EventSystem.current?.SetSelectedGameObject(null);
     }
 
     public void OnDailyTabClicked()
@@ -80,6 +82,7 @@ public class WordListTabManager : MonoBehaviour
             PhaseManager.Instance.LoadWordList(dailyProvider);
         if (myListPanelBtns != null) myListPanelBtns.SetActive(false);
         if (dailyPanelBtns  != null) dailyPanelBtns .SetActive(true);
+        EventSystem.current?.SetSelectedGameObject(null);
     }
 
     public void OnFetchDailyClicked()

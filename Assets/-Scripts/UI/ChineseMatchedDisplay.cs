@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.UI;
 using TMPro;
 
 /// <summary>
@@ -68,10 +69,18 @@ public class ChineseMatchedDisplay : MonoBehaviour
                 // Create a plain TMP label for the English segment
                 GameObject labelGO = new GameObject("EnglishSeg");
                 labelGO.transform.SetParent(cellContainer, false);
-                labelGO.AddComponent<RectTransform>();
+                var rt = labelGO.AddComponent<RectTransform>();
+                rt.sizeDelta = new Vector2(seg.text.Length * 22f, 70f);
                 var tmp = labelGO.AddComponent<TextMeshProUGUI>();
-                tmp.fontSize = 36;
+                tmp.fontSize = 32f;
+                tmp.color = Color.white;
+                tmp.alignment = TextAlignmentOptions.Center;
                 tmp.text = "";
+                var le = labelGO.AddComponent<LayoutElement>();
+                le.minWidth = seg.text.Length * 22f;
+                le.preferredWidth = seg.text.Length * 22f;
+                le.minHeight = 70f;
+                le.preferredHeight = 70f;
                 englishLabels.Add(new EnglishSegmentLabel
                 {
                     label    = tmp,
