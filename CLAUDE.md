@@ -29,7 +29,9 @@ Architecture details: `docs/architecture.md`
 ## Prefab / Scene Safety Rules (STRICT — never violate)
 - **Rebuild scripts are one-time only.** Once a prefab has been manually tweaked in the Editor, NEVER re-run its rebuild script. Rebuild scripts wipe all children and recreate from scratch, destroying Inspector changes.
 - **Targeted edits only on existing prefabs.** Use MCP `set_property` for individual field changes. Never use `EditPrefabContentsScope` with child destruction on a prefab that has user editor changes.
-- **Check before reverting.** Before any `git revert`, `git reset`, or destructive git operation, run `git diff --stat -- Assets/` and warn the user if `.prefab` or `.unity` files are affected. Get explicit confirmation before proceeding.
+- **Commit immediately after every MCP prefab/scene edit.** Any MCP change to a `.prefab` or `.unity` file must be committed before the user can make Inspector tweaks on top. This keeps my changes and the user's changes in separate, distinguishable commits.
+- **Revert by specific commit hash, never HEAD.** When undoing an MCP edit, use `git revert <hash>` targeting only that commit. Never revert HEAD if there may be uncommitted user changes in the working tree.
+- **Check before any destructive git op.** Before `git revert`, `git reset`, or similar, run `git diff --stat -- Assets/` and warn the user if `.prefab` or `.unity` files are affected. Get explicit confirmation.
 - **Prompt to commit editor changes first.** If the user has made Inspector tweaks and I need to touch the same prefab/scene file, ask them to commit their changes before I proceed.
 
 ## Conventions
