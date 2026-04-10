@@ -4534,6 +4534,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ChineseMatchedDisplay
   characterCellPrefab: {fileID: 4297585409971575013, guid: 221e66e2e39b93d4c976a8a0aafd26f5, type: 3}
+  englishCellPrefab: {fileID: 8127532070943617958, guid: 9c75b6d62bf51f446b99abc48eac64f0, type: 3}
   cellContainer: {fileID: 308885397}
 --- !u!224 &258928774
 RectTransform:
@@ -21969,6 +21970,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ChineseTargetDisplay
   targetCellPrefab: {fileID: 8127532070943617958, guid: e7007cd209004d54eb10ad52124d34ca, type: 3}
+  englishCellPrefab: {fileID: 8127532070943617958, guid: 9c75b6d62bf51f446b99abc48eac64f0, type: 3}
   cellContainer: {fileID: 78683134}
   showPinyin: 1
 --- !u!224 &1504769737
