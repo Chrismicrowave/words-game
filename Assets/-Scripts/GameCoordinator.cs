@@ -142,33 +142,31 @@ public class GameCoordinator : MonoBehaviour
     private void LoadCurrentPhase()
     {
         int index = PhaseManager.Instance.CurrentPhaseIndex;
-        var lang = PhaseManager.Instance.CurrentLanguageMode;
+        var lang  = PhaseManager.Instance.CurrentLanguageMode;
+
+        MixedPhaseParser.MixedPhaseResult parsed;
 
         if (lang == LanguageMode.Chinese)
         {
-            var chineseWord = PhaseManager.Instance.GetChineseWord(index);
-            if (chineseWord != null)
-            {
-                wordEngine.LoadChineseWord(chineseWord);
-                uiController.RebuildChineseDisplays(wordEngine.CurrentChineseData);
-                uiController.UpdateTextDisplay();
-                return;
-            }
+            var cw = PhaseManager.Instance.GetChineseWord(index);
+            parsed = cw != null
+                ? MixedPhaseParser.FromChinese(cw)
+                : MixedPhaseParser.FromEnglish(PhaseManager.Instance.CurrentWord);
         }
         else if (lang == LanguageMode.Mixed)
         {
-            var mixedWord = PhaseManager.Instance.GetMixedWord(index);
-            if (mixedWord != null)
-            {
-                var parsed = MixedPhaseParser.Parse(mixedWord);
-                wordEngine.LoadMixedWord(parsed);
-                uiController.RebuildMixedDisplays(wordEngine.CurrentMixedData);
-                uiController.UpdateTextDisplay();
-                return;
-            }
+            var mw = PhaseManager.Instance.GetMixedWord(index);
+            parsed = mw != null
+                ? MixedPhaseParser.Parse(mw)
+                : MixedPhaseParser.FromEnglish(PhaseManager.Instance.CurrentWord);
+        }
+        else
+        {
+            parsed = MixedPhaseParser.FromEnglish(PhaseManager.Instance.CurrentWord);
         }
 
-        wordEngine.LoadWord(PhaseManager.Instance.CurrentWord);
+        wordEngine.LoadMixedWord(parsed);
+        uiController.RebuildMixedDisplays(wordEngine.CurrentMixedData);
         uiController.UpdateTextDisplay();
     }
 

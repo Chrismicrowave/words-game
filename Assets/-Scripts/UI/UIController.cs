@@ -150,13 +150,41 @@ public class UIController : MonoBehaviour
     }
 
     /// <summary>
-    /// Called by GameCoordinator when a Mixed phase is loaded.
+    /// Called by GameCoordinator for every phase (English, Chinese, or Mixed).
     /// </summary>
     public void RebuildMixedDisplays(MixedPhaseParser.MixedPhaseResult parsed)
     {
         chineseMatchedDisplay?.BuildMixedCells(parsed);
-        // Target display for mixed: hide it (no simple character-only view for mixed)
-        if (chineseTargetDisplay != null) chineseTargetDisplay.gameObject.SetActive(false);
+
+        // Show target display only when there is exactly one Chinese segment (pure Chinese phase)
+        bool isSingleChinese = parsed.segments != null
+            && parsed.segments.Length == 1
+            && parsed.segments[0].type == MixedPhaseParser.SegmentType.Chinese;
+
+        if (chineseTargetDisplay != null)
+        {
+            if (isSingleChinese)
+            {
+                // Build a ChinesePhaseData from the single segment for the target display
+                var seg = parsed.segments[0];
+                var data = new ChinesePhaseData
+                {
+                    typeTarget  = parsed.typeTarget,
+                    boundaries  = seg.boundaries,
+                    characters  = seg.characters,
+                    entries     = seg.entries
+                };
+                chineseTargetDisplay.BuildCells(data);
+                if (SettingsManager.Instance != null)
+                    chineseTargetDisplay.SetPinyinVisible(SettingsManager.Instance.ShowPinyin);
+                chineseTargetDisplay.gameObject.SetActive(true);
+            }
+            else
+            {
+                chineseTargetDisplay.Clear();
+                chineseTargetDisplay.gameObject.SetActive(false);
+            }
+        }
     }
 
     void Update()
