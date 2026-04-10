@@ -161,7 +161,8 @@ public class GameCoordinator : MonoBehaviour
             if (mixedWord != null)
             {
                 var parsed = MixedPhaseParser.Parse(mixedWord);
-                wordEngine.LoadWord(parsed.typeTarget);
+                wordEngine.LoadMixedWord(parsed);
+                uiController.RebuildMixedDisplays(wordEngine.CurrentMixedData);
                 uiController.UpdateTextDisplay();
                 return;
             }

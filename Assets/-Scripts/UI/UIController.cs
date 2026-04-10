@@ -149,6 +149,16 @@ public class UIController : MonoBehaviour
             chineseTargetDisplay.SetPinyinVisible(SettingsManager.Instance.ShowPinyin);
     }
 
+    /// <summary>
+    /// Called by GameCoordinator when a Mixed phase is loaded.
+    /// </summary>
+    public void RebuildMixedDisplays(MixedPhaseParser.MixedPhaseResult parsed)
+    {
+        chineseMatchedDisplay?.BuildMixedCells(parsed);
+        // Target display for mixed: hide it (no simple character-only view for mixed)
+        if (chineseTargetDisplay != null) chineseTargetDisplay.gameObject.SetActive(false);
+    }
+
     void Update()
     {
         bool phaseFieldFocused = phaseInputField != null
@@ -191,14 +201,14 @@ public class UIController : MonoBehaviour
     {
         if (wordEngine == null) return;
 
-        if (wordEngine.IsChinesePhase)
+        if (wordEngine.IsChinesePhase || wordEngine.IsMixedPhase)
         {
-            // Chinese mode: hide plain TMP displays, use Chinese display components
+            // Chinese / Mixed: hide plain TMP, use cell-based display
             targetTextUI.gameObject.SetActive(false);
             matchedTextUI.gameObject.SetActive(false);
             if (chineseMatchedDisplay != null) chineseMatchedDisplay.gameObject.SetActive(true);
-            if (chineseTargetDisplay != null) chineseTargetDisplay.gameObject.SetActive(true);
             chineseMatchedDisplay?.UpdateProgress(wordEngine.MatchedLength);
+            // ChineseTargetDisplay visibility managed per-phase in RebuildChineseDisplays/RebuildMixedDisplays
         }
         else
         {

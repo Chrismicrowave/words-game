@@ -27,7 +27,9 @@ public class WordEngine
 
     // Chinese mode
     public bool IsChinesePhase { get; private set; }
+    public bool IsMixedPhase { get; private set; }
     public ChinesePhaseData CurrentChineseData { get; private set; }
+    public MixedPhaseParser.MixedPhaseResult CurrentMixedData { get; private set; }
 
     // Number of pinyin letters correctly typed so far (equals CurrentStep for plain phases)
     public int MatchedLength => CurrentStep;
@@ -51,7 +53,9 @@ public class WordEngine
     public void LoadWord(string word)
     {
         IsChinesePhase = false;
+        IsMixedPhase = false;
         CurrentChineseData = default;
+        CurrentMixedData = default;
         targetText = word;
         CurrentStep = 0;
         LastFailureMessage = "";
@@ -77,7 +81,7 @@ public class WordEngine
             entryArr[i] = entries[i];
         }
 
-        CurrentChineseData = new ChinesePhaseData
+        var data = new ChinesePhaseData
         {
             typeTarget = pinyinBuilder.ToString(),
             boundaries = boundaries,
@@ -85,8 +89,18 @@ public class WordEngine
             entries = entryArr
         };
 
+        // LoadWord resets flags — set them AFTER
+        LoadWord(data.typeTarget);
+        CurrentChineseData = data;
         IsChinesePhase = true;
-        LoadWord(CurrentChineseData.typeTarget);
+    }
+
+    public void LoadMixedWord(MixedPhaseParser.MixedPhaseResult parsed)
+    {
+        // LoadWord resets flags — set them AFTER
+        LoadWord(parsed.typeTarget);
+        CurrentMixedData = parsed;
+        IsMixedPhase = true;
     }
 
     public void Reset()

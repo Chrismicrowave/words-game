@@ -3,8 +3,9 @@ using UnityEngine;
 using TMPro;
 
 /// <summary>
-/// Displays the matched progress of a Chinese phase.
-/// Each character gets a CharacterCell: letters shown while typing, Chinese char snaps in on syllable completion.
+/// Displays the matched progress of a Chinese or Mixed phase.
+/// Chinese segments: each character gets a CharacterCell (snap-in on syllable complete).
+/// English segments: plain TMP label, letters revealed one-by-one.
 /// </summary>
 public class ChineseMatchedDisplay : MonoBehaviour
 {
@@ -12,13 +13,22 @@ public class ChineseMatchedDisplay : MonoBehaviour
     [SerializeField] private Transform cellContainer;
 
     private readonly List<CharacterCell> cells = new List<CharacterCell>();
-    private ChinesePhaseData currentData;
+
+    // English segment tracking: label + the range of typeTarget indices it covers
+    private struct EnglishSegmentLabel
+    {
+        public TextMeshProUGUI label;
+        public int typeStart;
+        public int typeEnd;
+        public string fullText;
+    }
+    private readonly List<EnglishSegmentLabel> englishLabels = new List<EnglishSegmentLabel>();
+
+    // ── Chinese-only phase ─────────────────────────────────────────────────────
 
     public void BuildCells(ChinesePhaseData data)
     {
         Clear();
-        currentData = data;
-
         for (int i = 0; i < data.characters.Length; i++)
         {
             GameObject go = Instantiate(characterCellPrefab, cellContainer);
@@ -32,13 +42,60 @@ public class ChineseMatchedDisplay : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// Call each time the typed letter count changes.
-    /// </summary>
+    // ── Mixed phase ────────────────────────────────────────────────────────────
+
+    public void BuildMixedCells(MixedPhaseParser.MixedPhaseResult parsed)
+    {
+        Clear();
+        foreach (var seg in parsed.segments)
+        {
+            if (seg.type == MixedPhaseParser.SegmentType.Chinese)
+            {
+                for (int i = 0; i < seg.characters.Length; i++)
+                {
+                    GameObject go = Instantiate(characterCellPrefab, cellContainer);
+                    var cell = go.GetComponent<CharacterCell>();
+                    if (cell != null)
+                    {
+                        int prevBoundary = i == 0 ? seg.typeStart : seg.boundaries[i - 1];
+                        cell.Init(seg.characters[i], parsed.typeTarget, prevBoundary, seg.boundaries[i]);
+                        cells.Add(cell);
+                    }
+                }
+            }
+            else // English
+            {
+                // Create a plain TMP label for the English segment
+                GameObject labelGO = new GameObject("EnglishSeg");
+                labelGO.transform.SetParent(cellContainer, false);
+                labelGO.AddComponent<RectTransform>();
+                var tmp = labelGO.AddComponent<TextMeshProUGUI>();
+                tmp.fontSize = 36;
+                tmp.text = "";
+                englishLabels.Add(new EnglishSegmentLabel
+                {
+                    label    = tmp,
+                    typeStart = seg.typeStart,
+                    typeEnd   = seg.typeEnd,
+                    fullText  = seg.text
+                });
+            }
+        }
+    }
+
+    // ── Progress update (works for both Chinese and Mixed) ────────────────────
+
     public void UpdateProgress(int typedLetterCount)
     {
-        for (int i = 0; i < cells.Count; i++)
-            cells[i].UpdateState(typedLetterCount);
+        foreach (var cell in cells)
+            cell.UpdateState(typedLetterCount);
+
+        foreach (var el in englishLabels)
+        {
+            int revealed = Mathf.Clamp(typedLetterCount - el.typeStart, 0, el.fullText.Length);
+            el.label.text = el.fullText.Substring(0, revealed)
+                          + new string('_', el.fullText.Length - revealed);
+        }
     }
 
     public void Clear()
@@ -46,5 +103,6 @@ public class ChineseMatchedDisplay : MonoBehaviour
         foreach (Transform child in cellContainer)
             Destroy(child.gameObject);
         cells.Clear();
+        englishLabels.Clear();
     }
 }
