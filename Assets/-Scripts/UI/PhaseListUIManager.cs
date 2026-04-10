@@ -39,9 +39,10 @@ public class PhaseListUIManager : MonoBehaviour
             int index = i;
             GameObject btnObj = Instantiate(phaseButtonPrefab, phaseListContent);
             var tmp = btnObj.GetComponentInChildren<TextMeshProUGUI>();
-            // Chinese lists show characters only (display already set by PhaseManager); English shows numbered
+            // Chinese lists show characters only; English/Mixed shows numbered
             tmp.text = isChinese ? words[i] : $"{index + 1}. {words[i]}";
-            if (isChinese && chineseFontAsset != null)
+            // Apply Chinese font whenever the word contains Chinese characters (covers Mixed mode too)
+            if (chineseFontAsset != null && PinyinLookup.ContainsChinese(words[i]))
                 tmp.font = chineseFontAsset;
 
             Button btn = btnObj.GetComponent<Button>();

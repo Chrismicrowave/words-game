@@ -40,12 +40,13 @@ public class CharacterCell : MonoBehaviour
             letterLabel.gameObject.SetActive(!complete);
             if (!complete)
             {
-                // Show letters typed so far within this syllable
+                // Show typed letters followed by underscores for remaining
                 int start = prevBoundary;
                 int end = Mathf.Min(typedCount, boundary);
-                letterLabel.text = end > start
-                    ? fullTypeTarget.Substring(start, end - start)
-                    : "";
+                int syllableLen = boundary - prevBoundary;
+                int typed = Mathf.Max(0, end - start);
+                string typedPart = typed > 0 ? fullTypeTarget.Substring(start, typed) : "";
+                letterLabel.text = typedPart + new string('_', syllableLen - typed);
             }
         }
     }

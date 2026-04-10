@@ -150,12 +150,25 @@ public class UIController : MonoBehaviour
             chineseTargetDisplay.SetPinyinVisible(SettingsManager.Instance.ShowPinyin);
     }
 
+    // Returns true if all segments are English (no Chinese content).
+    private static bool IsPurelyEnglish(MixedPhaseParser.MixedPhaseResult data)
+    {
+        if (data.segments == null || data.segments.Length == 0) return true;
+        foreach (var seg in data.segments)
+            if (seg.type == MixedPhaseParser.SegmentType.Chinese) return false;
+        return true;
+    }
+
     /// <summary>
     /// Called by GameCoordinator for every phase (English, Chinese, or Mixed).
     /// </summary>
     public void RebuildMixedDisplays(MixedPhaseParser.MixedPhaseResult parsed)
     {
-        chineseMatchedDisplay?.BuildMixedCells(parsed);
+        // Only build cell display when there is actual Chinese content
+        if (!IsPurelyEnglish(parsed))
+            chineseMatchedDisplay?.BuildMixedCells(parsed);
+        else
+            chineseMatchedDisplay?.Clear();
 
         // Show target display only when there is exactly one Chinese segment (pure Chinese phase)
         bool isSingleChinese = parsed.segments != null
@@ -230,14 +243,18 @@ public class UIController : MonoBehaviour
     {
         if (wordEngine == null) return;
 
-        if (wordEngine.IsChinesePhase || wordEngine.IsMixedPhase)
+        // Use cell-based display only when there is actual Chinese content
+        bool useCellDisplay = wordEngine.IsChinesePhase ||
+            (wordEngine.IsMixedPhase && !IsPurelyEnglish(wordEngine.CurrentMixedData));
+
+        if (useCellDisplay)
         {
             // Chinese / Mixed: hide plain TMP, use cell-based display
             targetTextUI.gameObject.SetActive(false);
             matchedTextUI.gameObject.SetActive(false);
             if (chineseMatchedDisplay != null) chineseMatchedDisplay.gameObject.SetActive(true);
             chineseMatchedDisplay?.UpdateProgress(wordEngine.MatchedLength);
-            // ChineseTargetDisplay visibility managed per-phase in RebuildChineseDisplays/RebuildMixedDisplays
+            // ChineseTargetDisplay visibility managed per-phase in RebuildMixedDisplays
         }
         else
         {
