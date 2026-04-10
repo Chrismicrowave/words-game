@@ -61,7 +61,10 @@ public class FileWordListProvider : IWordListProvider
         var data = new WordListData
         {
             name = DisplayName,
+            languageMode = LanguageMode.ToString(),
             words = words,
+            chineseWords = chineseWords.Count > 0 ? chineseWords : null,
+            mixedWords = mixedWords.Count > 0 ? mixedWords : null,
             createdAt = DateTime.UtcNow.ToString("o")
         };
 
