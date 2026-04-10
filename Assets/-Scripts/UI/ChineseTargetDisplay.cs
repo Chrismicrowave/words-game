@@ -75,6 +75,21 @@ public class ChineseTargetDisplay : MonoBehaviour
     }
 
     /// <summary>
+    /// Locks all pinyin labels to the smallest auto-sized pinyin font in this phase,
+    /// so they stay visually consistent across cells.
+    /// Call after Canvas.ForceUpdateCanvases() so TMP has resolved its font sizes.
+    /// </summary>
+    public void SyncPinyinFontSize()
+    {
+        if (cells.Count == 0) return;
+        float min = float.MaxValue;
+        foreach (var c in cells)
+            min = Mathf.Min(min, c.PinyinFontSize);
+        foreach (var c in cells)
+            c.SetPinyinFontSize(min);
+    }
+
+    /// <summary>
     /// Syncs English cell font size to the Chinese cells' live auto-sized font,
     /// then resizes each cell's width so the word fits on one line.
     /// Call after Canvas.ForceUpdateCanvases() so TMP has resolved its font size.

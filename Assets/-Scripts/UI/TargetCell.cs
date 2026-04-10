@@ -17,7 +17,17 @@ public class TargetCell : MonoBehaviour
         SetPinyinVisible(pinyinVisible);
     }
 
-    public float CharFontSize => charLabel != null ? charLabel.fontSize : 36f;
+    public float CharFontSize  => charLabel  != null ? charLabel.fontSize  : 36f;
+    public float PinyinFontSize => pinyinLabel != null ? pinyinLabel.fontSize : 18f;
+
+    public void SetPinyinFontSize(float size)
+    {
+        if (pinyinLabel != null)
+        {
+            pinyinLabel.enableAutoSizing = false;
+            pinyinLabel.fontSize = size;
+        }
+    }
 
     public void SetPinyinVisible(bool visible)
     {
