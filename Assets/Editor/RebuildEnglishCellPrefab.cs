@@ -35,9 +35,9 @@ public class RebuildEnglishCellPrefab
             var existingCell = root.GetComponent<TargetCell>();
             if (existingCell != null) GameObject.DestroyImmediate(existingCell);
 
-            // Root rect: default 100x70; layout handles actual width at runtime
+            // Root rect: matches TargetCell height (200px); width expands via flexibleWidth
             var rootRT = root.GetComponent<RectTransform>();
-            rootRT.sizeDelta = new Vector2(100f, 70f);
+            rootRT.sizeDelta = new Vector2(120f, 200f);
 
             // Remove any existing layout group
             var hlg = root.GetComponent<HorizontalLayoutGroup>();
@@ -45,10 +45,11 @@ public class RebuildEnglishCellPrefab
             var vlg = root.GetComponent<VerticalLayoutGroup>();
             if (vlg != null) GameObject.DestroyImmediate(vlg);
 
-            // Root LayoutElement: width set at runtime by BuildMixedCells
+            // Root LayoutElement: fixed height matching TargetCell, flexible width to expand
             var le = root.GetComponent<LayoutElement>() ?? root.AddComponent<LayoutElement>();
-            le.minHeight = 70f;
-            le.preferredHeight = 70f;
+            le.minHeight = 200f;
+            le.preferredHeight = 200f;
+            le.flexibleWidth = 1f;
 
             // ── Label ────────────────────────────────────────────────────────────
             var labelGO = new GameObject("Label", typeof(RectTransform), typeof(CanvasRenderer), typeof(TextMeshProUGUI));
@@ -59,7 +60,9 @@ public class RebuildEnglishCellPrefab
             labelRT.offsetMin = Vector2.zero;
             labelRT.offsetMax = Vector2.zero;
             var tmp = labelGO.GetComponent<TextMeshProUGUI>();
-            tmp.fontSize = 32f;
+            tmp.enableAutoSizing = true;
+            tmp.fontSizeMin = 18f;
+            tmp.fontSizeMax = 108f;
             tmp.color = Color.white;
             tmp.alignment = TextAlignmentOptions.Center;
             tmp.text = "";

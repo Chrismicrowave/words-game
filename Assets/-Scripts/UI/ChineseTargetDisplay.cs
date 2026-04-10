@@ -58,11 +58,6 @@ public class ChineseTargetDisplay : MonoBehaviour
                 GameObject go = Instantiate(englishCellPrefab, cellContainer);
                 var cell = go.GetComponent<EnglishCell>();
                 if (cell != null) cell.SetText(seg.text);
-                // Size the root LayoutElement to match text length
-                var le = go.GetComponent<LayoutElement>();
-                if (le != null) { le.minWidth = seg.text.Length * 22f; le.preferredWidth = seg.text.Length * 22f; }
-                var rt = go.GetComponent<RectTransform>();
-                if (rt != null) rt.sizeDelta = new Vector2(seg.text.Length * 22f, 70f);
             }
         }
     }
