@@ -1,7 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
-using TMPro;
 
 /// <summary>
 /// Displays the target Chinese phrase, one TargetCell per character.
@@ -10,6 +9,7 @@ using TMPro;
 public class ChineseTargetDisplay : MonoBehaviour
 {
     [SerializeField] private GameObject targetCellPrefab;
+    [SerializeField] private GameObject englishCellPrefab;
     [SerializeField] private Transform cellContainer;
     [SerializeField] private bool showPinyin = true;
 
@@ -54,20 +54,15 @@ public class ChineseTargetDisplay : MonoBehaviour
             }
             else // English
             {
-                GameObject labelGO = new GameObject("EnglishTargetSeg");
-                labelGO.transform.SetParent(cellContainer, false);
-                var rt = labelGO.AddComponent<RectTransform>();
-                rt.sizeDelta = new Vector2(seg.text.Length * 22f, 70f);
-                var tmp = labelGO.AddComponent<TextMeshProUGUI>();
-                tmp.fontSize = 32f;
-                tmp.color = Color.white;
-                tmp.alignment = TextAlignmentOptions.Center;
-                tmp.text = seg.text;
-                var le = labelGO.AddComponent<LayoutElement>();
-                le.minWidth = seg.text.Length * 22f;
-                le.preferredWidth = seg.text.Length * 22f;
-                le.minHeight = 70f;
-                le.preferredHeight = 70f;
+                if (englishCellPrefab == null) continue;
+                GameObject go = Instantiate(englishCellPrefab, cellContainer);
+                var cell = go.GetComponent<EnglishCell>();
+                if (cell != null) cell.SetText(seg.text);
+                // Size the root LayoutElement to match text length
+                var le = go.GetComponent<LayoutElement>();
+                if (le != null) { le.minWidth = seg.text.Length * 22f; le.preferredWidth = seg.text.Length * 22f; }
+                var rt = go.GetComponent<RectTransform>();
+                if (rt != null) rt.sizeDelta = new Vector2(seg.text.Length * 22f, 70f);
             }
         }
     }

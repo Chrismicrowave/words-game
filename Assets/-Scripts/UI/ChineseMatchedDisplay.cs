@@ -11,6 +11,7 @@ using TMPro;
 public class ChineseMatchedDisplay : MonoBehaviour
 {
     [SerializeField] private GameObject characterCellPrefab;
+    [SerializeField] private GameObject englishCellPrefab;
     [SerializeField] private Transform cellContainer;
 
     private readonly List<CharacterCell> cells = new List<CharacterCell>();
@@ -66,28 +67,25 @@ public class ChineseMatchedDisplay : MonoBehaviour
             }
             else // English
             {
-                // Create a plain TMP label for the English segment
-                GameObject labelGO = new GameObject("EnglishSeg");
-                labelGO.transform.SetParent(cellContainer, false);
-                var rt = labelGO.AddComponent<RectTransform>();
-                rt.sizeDelta = new Vector2(seg.text.Length * 22f, 70f);
-                var tmp = labelGO.AddComponent<TextMeshProUGUI>();
-                tmp.fontSize = 32f;
-                tmp.color = Color.white;
-                tmp.alignment = TextAlignmentOptions.Center;
-                tmp.text = "";
-                var le = labelGO.AddComponent<LayoutElement>();
-                le.minWidth = seg.text.Length * 22f;
-                le.preferredWidth = seg.text.Length * 22f;
-                le.minHeight = 70f;
-                le.preferredHeight = 70f;
-                englishLabels.Add(new EnglishSegmentLabel
+                if (englishCellPrefab == null) continue;
+                GameObject go = Instantiate(englishCellPrefab, cellContainer);
+                var cell = go.GetComponent<EnglishCell>();
+                // Size the root LayoutElement to match text length
+                var le = go.GetComponent<LayoutElement>();
+                if (le != null) { le.minWidth = seg.text.Length * 22f; le.preferredWidth = seg.text.Length * 22f; }
+                var rt = go.GetComponent<RectTransform>();
+                if (rt != null) rt.sizeDelta = new Vector2(seg.text.Length * 22f, 70f);
+                if (cell?.Label != null)
                 {
-                    label    = tmp,
-                    typeStart = seg.typeStart,
-                    typeEnd   = seg.typeEnd,
-                    fullText  = seg.text
-                });
+                    cell.SetText("");
+                    englishLabels.Add(new EnglishSegmentLabel
+                    {
+                        label    = cell.Label,
+                        typeStart = seg.typeStart,
+                        typeEnd   = seg.typeEnd,
+                        fullText  = seg.text
+                    });
+                }
             }
         }
     }
