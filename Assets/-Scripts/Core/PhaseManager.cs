@@ -105,6 +105,17 @@ public class PhaseManager : SingletonBehaviour<PhaseManager>
     public void AddPhase(string word, int index = 0)
     {
         words.Insert(index, word);
+        // In Mixed mode, keep mixedWords in sync so the entry persists after save/reload
+        if (CurrentLanguageMode == LanguageMode.Mixed)
+        {
+            mixedWords.Insert(index, new MixedWordEntry
+            {
+                segments = new List<MixedSegmentData>
+                {
+                    new MixedSegmentData { type = "english", text = word }
+                }
+            });
+        }
         OnWordListChanged?.Invoke();
     }
 

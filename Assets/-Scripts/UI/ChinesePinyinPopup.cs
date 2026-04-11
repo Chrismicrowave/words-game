@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
@@ -15,6 +16,7 @@ public class ChinesePinyinPopup : MonoBehaviour
     [Header("Prefab")]
     [SerializeField] private GameObject targetCellPrefab;
     [SerializeField] private GameObject englishTargetCellPrefab;  // same prefab as ChineseTargetDisplay uses
+    [SerializeField] private TMP_FontAsset chineseFontAsset;      // NotoSansSC — for non-ASCII segments (Chinese punctuation)
 
     [Header("UI References")]
     [SerializeField] private Transform previewContainer;      // HorizontalLayoutGroup row
@@ -31,6 +33,10 @@ public class ChinesePinyinPopup : MonoBehaviour
 
     private Action<MixedWordEntry> _onConfirm;
     private Action _onCancel;
+
+    // Spawned preview cells — refreshed each BuildPreview() call
+    private readonly List<TargetCell>  _previewChineseCells  = new List<TargetCell>();
+    private readonly List<EnglishCell> _previewEnglishCells  = new List<EnglishCell>();
 
     void Awake()
     {
@@ -70,9 +76,11 @@ public class ChinesePinyinPopup : MonoBehaviour
             }
             else
             {
-                // English segment — show in both char and pinyin fields for reference
+                // English segment — show in char field always; only add to pinyin field
+                // if it contains actual letters/digits (skip pure Chinese punctuation/whitespace)
                 charParts.Add(text);
-                pinyinParts.Add(text); // Bug 2: show English words in pinyin field too
+                if (HasLetterOrDigit(text))
+                    pinyinParts.Add(text);
             }
         }
 
@@ -86,6 +94,7 @@ public class ChinesePinyinPopup : MonoBehaviour
         BuildPreview();
 
         gameObject.SetActive(true);
+        StartCoroutine(SyncPreviewFontNextFrame());
         pinyinField.Select();
     }
 
@@ -94,8 +103,12 @@ public class ChinesePinyinPopup : MonoBehaviour
         foreach (Transform child in previewContainer)
             Destroy(child.gameObject);
 
+        _previewChineseCells.Clear();
+        _previewEnglishCells.Clear();
+
         // Walk all segments: English segments get an EnglishCell, Chinese chars get a TargetCell.
-        // pinyinField tokens are ordered: [english_tokens...] [pinyin_per_char...] interspersed.
+        // pinyinField tokens correspond only to segments that HasLetterOrDigit (pure punctuation
+        // is never added to pinyinParts and therefore has no token to skip).
         var pinyinTokens = pinyinField.text.Split(new[] {' '}, StringSplitOptions.RemoveEmptyEntries);
         int tokenIdx = 0;
 
@@ -103,16 +116,26 @@ public class ChinesePinyinPopup : MonoBehaviour
         {
             if (!isChinese)
             {
-                // Bug 1: show English segment as an EnglishCell in the preview row
+                // Show English / punctuation segment as an EnglishCell in the preview row
                 if (englishTargetCellPrefab != null)
                 {
                     GameObject go = Instantiate(englishTargetCellPrefab, previewContainer);
                     var cell = go.GetComponent<EnglishCell>();
-                    cell?.SetText(text.Trim());
+                    if (cell != null)
+                    {
+                        cell.SetText(text.Trim());
+                        // Apply Chinese font for non-ASCII characters (Chinese punctuation, fullwidth)
+                        if (chineseFontAsset != null && HasNonAscii(text) && cell.Label != null)
+                            cell.Label.font = chineseFontAsset;
+                        _previewEnglishCells.Add(cell);
+                    }
                 }
-                // Skip the corresponding token(s) that represent this English segment
-                int skipCount = text.Trim().Split(new[] {' '}, StringSplitOptions.RemoveEmptyEntries).Length;
-                tokenIdx += skipCount;
+                // Only skip tokens for segments that were added to pinyinParts (have letters/digits)
+                if (HasLetterOrDigit(text))
+                {
+                    int skipCount = text.Trim().Split(new[] {' '}, StringSplitOptions.RemoveEmptyEntries).Length;
+                    tokenIdx += skipCount;
+                }
             }
             else
             {
@@ -123,16 +146,57 @@ public class ChinesePinyinPopup : MonoBehaviour
                     tokenIdx++;
                     GameObject go = Instantiate(targetCellPrefab, previewContainer);
                     var cell = go.GetComponent<TargetCell>();
-                    cell?.Init(c.ToString(), pinyin, true);
+                    if (cell != null)
+                    {
+                        cell.Init(c.ToString(), pinyin, true);
+                        _previewChineseCells.Add(cell);
+                    }
                 }
             }
         }
     }
 
-    // Called when pinyin field changes — refresh preview
+    // Called when pinyin field changes — refresh preview and re-sync font size
     public void OnPinyinFieldChanged(string _)
     {
         BuildPreview();
+        if (gameObject.activeInHierarchy)
+            StartCoroutine(SyncPreviewFontNextFrame());
+    }
+
+    /// <summary>
+    /// After one frame (TMP auto-size resolves), sync English cell font size to the Chinese
+    /// TargetCell char size and resize the cell width so text fits on one line.
+    /// </summary>
+    private IEnumerator SyncPreviewFontNextFrame()
+    {
+        yield return null;
+        Canvas.ForceUpdateCanvases();
+        if (_previewChineseCells.Count == 0 || _previewEnglishCells.Count == 0) yield break;
+
+        float size = _previewChineseCells[0].CharFontSize;
+        foreach (var ec in _previewEnglishCells)
+        {
+            if (ec == null || ec.Label == null) continue;
+            ec.Label.enableAutoSizing = false;
+            ec.Label.fontSize = size;
+            ec.Label.ForceMeshUpdate();
+            float w = ec.Label.GetPreferredValues(ec.Label.text, float.MaxValue, 200f).x;
+            var rt = ec.GetComponent<RectTransform>();
+            if (rt != null) rt.sizeDelta = new Vector2(w + 4f, rt.sizeDelta.y);
+        }
+    }
+
+    private static bool HasLetterOrDigit(string text)
+    {
+        foreach (char c in text) if (char.IsLetterOrDigit(c)) return true;
+        return false;
+    }
+
+    private static bool HasNonAscii(string text)
+    {
+        foreach (char c in text) if (c > 127) return true;
+        return false;
     }
 
     private void OnOK()
@@ -151,9 +215,12 @@ public class ChinesePinyinPopup : MonoBehaviour
         {
             if (!isChinese)
             {
-                // Skip the token(s) representing this English segment
-                int skipCount = text.Trim().Split(new[] {' '}, StringSplitOptions.RemoveEmptyEntries).Length;
-                tokenIdx += skipCount;
+                // Only skip tokens for segments that were added to pinyinParts (have letters/digits)
+                if (HasLetterOrDigit(text))
+                {
+                    int skipCount = text.Trim().Split(new[] {' '}, StringSplitOptions.RemoveEmptyEntries).Length;
+                    tokenIdx += skipCount;
+                }
             }
             else
             {

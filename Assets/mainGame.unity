@@ -14406,7 +14406,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &962959356
 RectTransform:
   m_ObjectHideFlags: 0
@@ -14442,6 +14442,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::ChinesePinyinPopup
   targetCellPrefab: {fileID: 8127532070943617958, guid: 39ec6ca2f37937245b684baa96b60ac2, type: 3}
   englishTargetCellPrefab: {fileID: 8127532070943617958, guid: 47d83646fd164664bbd7d8e3d7af04fb, type: 3}
+  chineseFontAsset: {fileID: 11400000, guid: 428be41dc6b96d74cb9084b697519d27, type: 2}
   previewContainer: {fileID: 878441045}
   charField: {fileID: 1492226731}
   pinyinField: {fileID: 22464147}
