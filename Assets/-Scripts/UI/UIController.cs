@@ -409,6 +409,8 @@ public class UIController : MonoBehaviour
             PhaseManager.Instance.LoadWordList(provider);
             // Keep WordListTabManager in sync so switching tabs restores this list, not mylist.json
             wordListTabManager?.SetMyListProvider(provider);
+            // Persist the imported path so it survives a restart
+            wordListTabManager?.SaveMyListPath(provider.FilePath);
         });
     }
 

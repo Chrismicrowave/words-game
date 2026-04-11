@@ -21,19 +21,29 @@ public class WordListTabManager : MonoBehaviour
 
     private const string ActiveTabPrefKey    = "ActiveTab";
     private const string DailyListPathPrefKey = "DailyListPath";
+    private const string MyListPathPrefKey    = "MyListPath";
 
     private IWordListProvider myListProvider;
     private IWordListProvider dailyProvider;
 
     void Start()
     {
-        // Init my list provider
-        if (PhaseManager.Instance != null)
+        // Init my list provider — restore last imported path if it still exists,
+        // otherwise fall back to mylist.json (creating it with defaults if missing).
+        string defaultPath = System.IO.Path.Combine(
+            FileWordListProvider.GetWordListDirectory(), "mylist.json");
+        string savedMyListPath = PlayerPrefs.GetString(MyListPathPrefKey, defaultPath);
+
+        if (!string.IsNullOrEmpty(savedMyListPath) && System.IO.File.Exists(savedMyListPath)
+            && savedMyListPath != defaultPath)
         {
-            string myListPath = System.IO.Path.Combine(
-                FileWordListProvider.GetWordListDirectory(), "mylist.json");
-            var fileProvider = new FileWordListProvider(myListPath);
-            if (!System.IO.File.Exists(myListPath))
+            // Restore a previously imported list
+            myListProvider = new FileWordListProvider(savedMyListPath);
+        }
+        else if (PhaseManager.Instance != null)
+        {
+            var fileProvider = new FileWordListProvider(defaultPath);
+            if (!System.IO.File.Exists(defaultPath))
             {
                 var defaultWords = PhaseManager.Instance.ActiveProvider?.GetWords()
                     ?? new System.Collections.Generic.List<string>();
@@ -91,6 +101,15 @@ public class WordListTabManager : MonoBehaviour
     public void SetMyListProvider(IWordListProvider provider)
     {
         myListProvider = provider;
+    }
+
+    /// <summary>
+    /// Persists the imported list path to PlayerPrefs so it survives a restart.
+    /// </summary>
+    public void SaveMyListPath(string filePath)
+    {
+        PlayerPrefs.SetString(MyListPathPrefKey, filePath);
+        PlayerPrefs.Save();
     }
 
     public void OnFetchDailyClicked()
