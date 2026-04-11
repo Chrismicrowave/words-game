@@ -14,6 +14,7 @@ public class DailyPickerPanelController : MonoBehaviour
     [SerializeField] private Button loadBtn;
     [SerializeField] private Color dateSelectedColor   = new Color(1f, 0.5f, 0f, 1f);
     [SerializeField] private Color dateUnselectedColor = Color.white;
+    [SerializeField] private TMP_FontAsset chineseFontAsset; // NotoSansSC — for Chinese/Mixed word labels
 
     public System.Action<DailyWordListProvider> OnListSelected;
 
@@ -95,11 +96,17 @@ public class DailyPickerPanelController : MonoBehaviour
 
         // Populate word preview
         ClearWordPreview();
+        bool needsChineseFont = chineseFontAsset != null &&
+            (provider.LanguageMode == LanguageMode.Chinese || provider.LanguageMode == LanguageMode.Mixed);
         foreach (var word in provider.GetWords())
         {
             var item = Instantiate(listItemPrefab, wordContent);
             var label = item.GetComponentInChildren<TextMeshProUGUI>();
-            if (label != null) label.text = word;
+            if (label != null)
+            {
+                label.text = word;
+                if (needsChineseFont) label.font = chineseFontAsset;
+            }
 
             // Word items are display-only — remove button interaction
             var btn = item.GetComponent<Button>();

@@ -56,6 +56,41 @@ public class DailyWordListProvider : IWordListProvider
             LanguageMode = mode;
         else
             LanguageMode = LanguageMode.English;
+
+        // Rebuild display words from structured data when the JSON omits the words array
+        if (words.Count == 0)
+        {
+            if (chineseWords.Count > 0)
+            {
+                foreach (var cw in chineseWords)
+                {
+                    if (!string.IsNullOrEmpty(cw.display))
+                        words.Add(cw.display);
+                    else if (cw.entries != null)
+                    {
+                        var sb = new System.Text.StringBuilder();
+                        foreach (var e in cw.entries) sb.Append(e.character);
+                        words.Add(sb.ToString());
+                    }
+                }
+            }
+            else if (mixedWords.Count > 0)
+            {
+                foreach (var mw in mixedWords)
+                {
+                    if (mw.segments == null) continue;
+                    var sb = new System.Text.StringBuilder();
+                    foreach (var seg in mw.segments)
+                    {
+                        if (seg.type == "english")
+                            sb.Append(seg.text);
+                        else if (seg.entries != null)
+                            foreach (var e in seg.entries) sb.Append(e.character);
+                    }
+                    words.Add(sb.ToString());
+                }
+            }
+        }
     }
 
     public static string GetDailyListDirectory() =>
