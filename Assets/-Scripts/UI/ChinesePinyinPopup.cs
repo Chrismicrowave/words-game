@@ -167,26 +167,40 @@ public class ChinesePinyinPopup : MonoBehaviour
     }
 
     /// <summary>
-    /// After one frame (TMP auto-size resolves), sync English cell font size to the Chinese
-    /// TargetCell char size and resize the cell width so text fits on one line.
+    /// After end-of-frame (TMP auto-size fully resolves), sync English cell font size to the
+    /// Chinese TargetCell char size and resize each cell so text fits on one line.
+    /// Uses LayoutElement.preferredWidth so HorizontalLayoutGroup respects the width,
+    /// then force-rebuilds the layout so cells reflow immediately.
     /// </summary>
     private IEnumerator SyncPreviewFontNextFrame()
     {
-        yield return null;
+        yield return new WaitForEndOfFrame();
         Canvas.ForceUpdateCanvases();
-        if (_previewChineseCells.Count == 0 || _previewEnglishCells.Count == 0) yield break;
+        if (_previewEnglishCells.Count == 0) yield break;
 
-        float size = _previewChineseCells[0].CharFontSize;
+        // Read resolved auto-size from first Chinese cell; fall back if no Chinese cells present
+        float size = _previewChineseCells.Count > 0 ? _previewChineseCells[0].CharFontSize : 36f;
+
         foreach (var ec in _previewEnglishCells)
         {
             if (ec == null || ec.Label == null) continue;
-            ec.Label.enableAutoSizing = false;
+            ec.Label.enableAutoSizing   = false;
+            ec.Label.enableWordWrapping = false;   // never wrap — English cells must be one line
             ec.Label.fontSize = size;
             ec.Label.ForceMeshUpdate();
             float w = ec.Label.GetPreferredValues(ec.Label.text, float.MaxValue, 200f).x;
+
+            // LayoutElement.preferredWidth is respected by HorizontalLayoutGroup;
+            // sizeDelta alone gets overridden when childControlWidth is true.
+            var le = ec.GetComponent<LayoutElement>() ?? ec.gameObject.AddComponent<LayoutElement>();
+            le.preferredWidth = w + 4f;
+
             var rt = ec.GetComponent<RectTransform>();
             if (rt != null) rt.sizeDelta = new Vector2(w + 4f, rt.sizeDelta.y);
         }
+
+        // Force the container to reflow so new widths take effect immediately
+        LayoutRebuilder.ForceRebuildLayoutImmediate(previewContainer as RectTransform);
     }
 
     /// <summary>
