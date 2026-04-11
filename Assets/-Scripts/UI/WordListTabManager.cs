@@ -119,6 +119,16 @@ public class WordListTabManager : MonoBehaviour
         PlayerPrefs.Save();
     }
 
+    /// <summary>
+    /// Persists the active tab name ("mylist" or "daily") to PlayerPrefs.
+    /// Called from import so the tab is restored correctly on next session.
+    /// </summary>
+    public void SaveActiveTab(string tabName)
+    {
+        PlayerPrefs.SetString(ActiveTabPrefKey, tabName);
+        PlayerPrefs.Save();
+    }
+
     public void OnFetchDailyClicked()
     {
         if (dailyPickerPanel == null) return;

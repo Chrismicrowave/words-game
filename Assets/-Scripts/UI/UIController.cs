@@ -406,26 +406,30 @@ public class UIController : MonoBehaviour
         {
             if (paths.Length == 0 || string.IsNullOrEmpty(paths[0])) return;
             var provider = TxtWordListImporter.ImportFromTxt(paths[0]);
-            // Set provider first, then switch tab — OnMyListTabClicked loads the provider,
-            // sets ActiveTab = "mylist" in PlayerPrefs, and updates tab colors/buttons.
+            // Update tab manager state: set provider + persist path + mark active tab as mylist.
+            // Call these directly rather than through OnMyListTabClicked — the StandaloneFileBrowser
+            // async callback is not guaranteed to be on Unity's main thread on all platforms, so
+            // we keep the Unity API surface minimal and explicit.
             wordListTabManager?.SetMyListProvider(provider);
             wordListTabManager?.SaveMyListPath(provider.FilePath);
-            if (wordListTabManager != null)
-                wordListTabManager.OnMyListTabClicked();
-            else
-                PhaseManager.Instance.LoadWordList(provider);
+            wordListTabManager?.SaveActiveTab("mylist");
+            PhaseManager.Instance.LoadWordList(provider);
         });
     }
 
     public void OnExportClicked()
     {
         var provider = PhaseManager.Instance.ActiveProvider;
-        string defaultName = provider.DisplayName.Replace(" ", "_");
+        string defaultName = (provider?.DisplayName ?? "wordlist").Replace(" ", "_");
+        // Snapshot the display words from PhaseManager — provider.GetWords() may be empty for
+        // Chinese/Mixed lists where the provider stores chineseWords/mixedWords, not words[].
+        // PhaseManager.Words is always the rebuilt display list populated by LoadWordList().
+        var words = new System.Collections.Generic.List<string>(PhaseManager.Instance.Words);
         var ext = new[] { new ExtensionFilter("Text Files", "txt") };
         StandaloneFileBrowser.SaveFilePanelAsync("Export Word List", "", defaultName, ext, path =>
         {
             if (string.IsNullOrEmpty(path)) return;
-            TxtWordListImporter.ExportToTxt(provider, path);
+            System.IO.File.WriteAllLines(path, words);
         });
     }
 
