@@ -4536,6 +4536,7 @@ MonoBehaviour:
   characterCellPrefab: {fileID: 4297585409971575013, guid: 221e66e2e39b93d4c976a8a0aafd26f5, type: 3}
   englishCellPrefab: {fileID: 8127532070943617958, guid: c51e0c1828f4c3846869360da83f0dfc, type: 3}
   cellContainer: {fileID: 308885397}
+  chineseFontAsset: {fileID: 11400000, guid: 428be41dc6b96d74cb9084b697519d27, type: 2}
 --- !u!224 &258928774
 RectTransform:
   m_ObjectHideFlags: 0
@@ -10627,6 +10628,7 @@ MonoBehaviour:
   exportBtn: {fileID: 1362999032}
   config: {fileID: 11400000, guid: 2b556900e3f14c94fb47f46e82546a4f, type: 2}
   phaseListUIManager: {fileID: 680745024}
+  wordListTabManager: {fileID: 680745025}
   chineseMatchedDisplay: {fileID: 258928773}
   chineseTargetDisplay: {fileID: 1504769736}
   chinesePinyinPopup: {fileID: 962959357}
@@ -22025,6 +22027,7 @@ MonoBehaviour:
   englishTargetCellPrefab: {fileID: 8127532070943617958, guid: 47d83646fd164664bbd7d8e3d7af04fb, type: 3}
   cellContainer: {fileID: 78683134}
   showPinyin: 1
+  chineseFontAsset: {fileID: 11400000, guid: 428be41dc6b96d74cb9084b697519d27, type: 2}
 --- !u!224 &1504769737
 RectTransform:
   m_ObjectHideFlags: 0

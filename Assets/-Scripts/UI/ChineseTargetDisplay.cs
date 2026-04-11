@@ -12,6 +12,7 @@ public class ChineseTargetDisplay : MonoBehaviour
     [SerializeField] private GameObject englishTargetCellPrefab;
     [SerializeField] private Transform cellContainer;
     [SerializeField] private bool showPinyin = true;
+    [SerializeField] private TMPro.TMP_FontAsset chineseFontAsset; // NotoSansSC — for non-ASCII English segments
 
     private readonly List<TargetCell> cells = new List<TargetCell>();
     private readonly List<EnglishCell> englishCells = new List<EnglishCell>();
@@ -61,6 +62,9 @@ public class ChineseTargetDisplay : MonoBehaviour
                 if (cell != null)
                 {
                     cell.SetText(seg.text);
+                    // Apply Chinese font when segment contains non-ASCII characters (e.g. 。，、)
+                    if (chineseFontAsset != null && HasNonAscii(seg.text) && cell.Label != null)
+                        cell.Label.font = chineseFontAsset;
                     englishCells.Add(cell);
                 }
             }
@@ -116,5 +120,11 @@ public class ChineseTargetDisplay : MonoBehaviour
             Destroy(child.gameObject);
         cells.Clear();
         englishCells.Clear();
+    }
+
+    private static bool HasNonAscii(string text)
+    {
+        foreach (char c in text) if (c > 127) return true;
+        return false;
     }
 }

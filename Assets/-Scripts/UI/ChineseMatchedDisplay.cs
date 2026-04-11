@@ -13,6 +13,7 @@ public class ChineseMatchedDisplay : MonoBehaviour
     [SerializeField] private GameObject characterCellPrefab;
     [SerializeField] private GameObject englishCellPrefab;
     [SerializeField] private Transform cellContainer;
+    [SerializeField] private TMPro.TMP_FontAsset chineseFontAsset; // NotoSansSC — for non-ASCII English segments
 
     private readonly List<CharacterCell> cells = new List<CharacterCell>();
 
@@ -73,6 +74,9 @@ public class ChineseMatchedDisplay : MonoBehaviour
                 if (cell?.Label != null)
                 {
                     cell.SetText("");
+                    // Apply Chinese font when segment contains non-ASCII characters (e.g. 。，、)
+                    if (chineseFontAsset != null && HasNonAscii(seg.text))
+                        cell.Label.font = chineseFontAsset;
                     englishLabels.Add(new EnglishSegmentLabel
                     {
                         label    = cell.Label,
@@ -118,5 +122,11 @@ public class ChineseMatchedDisplay : MonoBehaviour
             Destroy(child.gameObject);
         cells.Clear();
         englishLabels.Clear();
+    }
+
+    private static bool HasNonAscii(string text)
+    {
+        foreach (char c in text) if (c > 127) return true;
+        return false;
     }
 }

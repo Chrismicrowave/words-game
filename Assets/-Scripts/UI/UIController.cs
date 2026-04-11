@@ -54,6 +54,7 @@ public class UIController : MonoBehaviour
 
     [Header("Sub-managers")]
     [SerializeField] private PhaseListUIManager phaseListUIManager;
+    [SerializeField] private WordListTabManager wordListTabManager;
 
     [Header("Chinese Language")]
     [SerializeField] private ChineseMatchedDisplay chineseMatchedDisplay;
@@ -406,6 +407,8 @@ public class UIController : MonoBehaviour
             if (paths.Length == 0 || string.IsNullOrEmpty(paths[0])) return;
             var provider = TxtWordListImporter.ImportFromTxt(paths[0]);
             PhaseManager.Instance.LoadWordList(provider);
+            // Keep WordListTabManager in sync so switching tabs restores this list, not mylist.json
+            wordListTabManager?.SetMyListProvider(provider);
         });
     }
 

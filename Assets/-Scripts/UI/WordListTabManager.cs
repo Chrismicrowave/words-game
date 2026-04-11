@@ -85,6 +85,14 @@ public class WordListTabManager : MonoBehaviour
         EventSystem.current?.SetSelectedGameObject(null);
     }
 
+    /// <summary>
+    /// Called after import so switching tabs reloads the imported list, not the original mylist.json.
+    /// </summary>
+    public void SetMyListProvider(IWordListProvider provider)
+    {
+        myListProvider = provider;
+    }
+
     public void OnFetchDailyClicked()
     {
         if (dailyPickerPanel == null) return;

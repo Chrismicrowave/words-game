@@ -156,9 +156,26 @@ public class GameCoordinator : MonoBehaviour
         else if (lang == LanguageMode.Mixed)
         {
             var mw = PhaseManager.Instance.GetMixedWord(index);
-            parsed = mw != null
-                ? MixedPhaseParser.Parse(mw)
-                : MixedPhaseParser.FromEnglish(PhaseManager.Instance.CurrentWord);
+            if (mw != null)
+            {
+                if (MixedPhaseParser.IsPurelyEnglish(mw))
+                {
+                    // Rebuild original text (preserves commas, spaces, punctuation) and use
+                    // FromEnglish so typeTarget keeps those chars for the plain-text display path.
+                    var sb = new System.Text.StringBuilder();
+                    foreach (var seg in mw.segments)
+                        if (seg.type == "english") sb.Append(seg.text);
+                    parsed = MixedPhaseParser.FromEnglish(sb.ToString());
+                }
+                else
+                {
+                    parsed = MixedPhaseParser.Parse(mw);
+                }
+            }
+            else
+            {
+                parsed = MixedPhaseParser.FromEnglish(PhaseManager.Instance.CurrentWord);
+            }
         }
         else
         {

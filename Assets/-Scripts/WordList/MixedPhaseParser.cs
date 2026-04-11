@@ -27,6 +27,18 @@ public static class MixedPhaseParser
         public MixedSegment[] segments;
     }
 
+    /// <summary>
+    /// Returns true if every segment in the entry is English (no Chinese content).
+    /// Used to decide whether Parse() or FromEnglish() should handle a MixedWordEntry.
+    /// </summary>
+    public static bool IsPurelyEnglish(MixedWordEntry mw)
+    {
+        if (mw?.segments == null) return true;
+        foreach (var seg in mw.segments)
+            if (seg.type == "chinese") return false;
+        return true;
+    }
+
     /// <summary>Wraps a plain English word as a single-segment MixedPhaseResult.</summary>
     public static MixedPhaseResult FromEnglish(string word)
     {
