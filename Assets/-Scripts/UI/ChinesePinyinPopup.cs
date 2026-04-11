@@ -45,6 +45,10 @@ public class ChinesePinyinPopup : MonoBehaviour
         // Bug 5: do NOT call SetActive(false) here — if the GO starts disabled in the Editor,
         // Awake fires on first activation (triggered by Show()), and SetActive(false) would
         // immediately re-hide the popup before it is ever displayed.
+
+        // Set Chinese font on pinyinField so Chinese punctuation (，。、etc.) renders correctly
+        if (chineseFontAsset != null && pinyinField != null && pinyinField.textComponent != null)
+            pinyinField.textComponent.font = chineseFontAsset;
     }
 
     /// <summary>
@@ -56,7 +60,9 @@ public class ChinesePinyinPopup : MonoBehaviour
     {
         _onConfirm = onConfirm;
         _onCancel  = onCancel;
-        _segments  = PinyinLookup.Segment(inputText);
+        // ExpandSegments splits non-Chinese runs at letter/non-letter boundaries,
+        // so "，good?" becomes ["，", "good", "?"] — each gets its own preview cell.
+        _segments  = ExpandSegments(PinyinLookup.Segment(inputText));
         _chineseChars = new List<char>();
 
         // Build character display and auto-pinyin
@@ -76,11 +82,10 @@ public class ChinesePinyinPopup : MonoBehaviour
             }
             else
             {
-                // English segment — show in char field always; only add to pinyin field
-                // if it contains actual letters/digits (skip pure Chinese punctuation/whitespace)
+                // All non-Chinese segments go into both char field and pinyin field
+                // (punctuation like ， renders via chineseFontAsset set on pinyinField)
                 charParts.Add(text);
-                if (HasLetterOrDigit(text))
-                    pinyinParts.Add(text);
+                pinyinParts.Add(text);
             }
         }
 
@@ -107,8 +112,8 @@ public class ChinesePinyinPopup : MonoBehaviour
         _previewEnglishCells.Clear();
 
         // Walk all segments: English segments get an EnglishCell, Chinese chars get a TargetCell.
-        // pinyinField tokens correspond only to segments that HasLetterOrDigit (pure punctuation
-        // is never added to pinyinParts and therefore has no token to skip).
+        // Every non-Chinese segment now has exactly one token in pinyinField (ExpandSegments
+        // split them at letter/non-letter boundaries, no spaces within a segment).
         var pinyinTokens = pinyinField.text.Split(new[] {' '}, StringSplitOptions.RemoveEmptyEntries);
         int tokenIdx = 0;
 
@@ -130,12 +135,9 @@ public class ChinesePinyinPopup : MonoBehaviour
                         _previewEnglishCells.Add(cell);
                     }
                 }
-                // Only skip tokens for segments that were added to pinyinParts (have letters/digits)
-                if (HasLetterOrDigit(text))
-                {
-                    int skipCount = text.Trim().Split(new[] {' '}, StringSplitOptions.RemoveEmptyEntries).Length;
-                    tokenIdx += skipCount;
-                }
+                // Every non-Chinese segment has exactly one token in pinyinField
+                int skipCount = text.Trim().Split(new[] {' '}, StringSplitOptions.RemoveEmptyEntries).Length;
+                tokenIdx += skipCount;
             }
             else
             {
@@ -187,6 +189,38 @@ public class ChinesePinyinPopup : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Splits non-Chinese runs at letter/non-letter boundaries, dropping pure-whitespace chunks.
+    /// "，good?" → [(false,"，"), (false,"good"), (false,"?")]
+    /// Each expanded segment maps 1:1 to a pinyinField token and a preview EnglishCell.
+    /// </summary>
+    private static List<(bool isChinese, string text)> ExpandSegments(List<(bool isChinese, string text)> raw)
+    {
+        var result = new List<(bool, string)>();
+        foreach (var (isChinese, text) in raw)
+        {
+            if (isChinese) { result.Add((true, text)); continue; }
+            if (string.IsNullOrEmpty(text)) continue;
+            var sb = new System.Text.StringBuilder();
+            bool curIsLetter = char.IsLetterOrDigit(text[0]);
+            foreach (char c in text)
+            {
+                bool isLetter = char.IsLetterOrDigit(c);
+                if (isLetter != curIsLetter)
+                {
+                    string chunk = sb.ToString();
+                    if (!string.IsNullOrWhiteSpace(chunk)) result.Add((false, chunk));
+                    sb.Clear();
+                    curIsLetter = isLetter;
+                }
+                sb.Append(c);
+            }
+            string last = sb.ToString();
+            if (!string.IsNullOrWhiteSpace(last)) result.Add((false, last));
+        }
+        return result;
+    }
+
     private static bool HasLetterOrDigit(string text)
     {
         foreach (char c in text) if (char.IsLetterOrDigit(c)) return true;
@@ -215,12 +249,9 @@ public class ChinesePinyinPopup : MonoBehaviour
         {
             if (!isChinese)
             {
-                // Only skip tokens for segments that were added to pinyinParts (have letters/digits)
-                if (HasLetterOrDigit(text))
-                {
-                    int skipCount = text.Trim().Split(new[] {' '}, StringSplitOptions.RemoveEmptyEntries).Length;
-                    tokenIdx += skipCount;
-                }
+                // Every non-Chinese segment has exactly one token in pinyinField — always skip it
+                int skipCount = text.Trim().Split(new[] {' '}, StringSplitOptions.RemoveEmptyEntries).Length;
+                tokenIdx += skipCount;
             }
             else
             {
