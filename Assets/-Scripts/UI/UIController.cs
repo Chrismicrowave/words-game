@@ -406,11 +406,14 @@ public class UIController : MonoBehaviour
         {
             if (paths.Length == 0 || string.IsNullOrEmpty(paths[0])) return;
             var provider = TxtWordListImporter.ImportFromTxt(paths[0]);
-            PhaseManager.Instance.LoadWordList(provider);
-            // Keep WordListTabManager in sync so switching tabs restores this list, not mylist.json
+            // Set provider first, then switch tab — OnMyListTabClicked loads the provider,
+            // sets ActiveTab = "mylist" in PlayerPrefs, and updates tab colors/buttons.
             wordListTabManager?.SetMyListProvider(provider);
-            // Persist the imported path so it survives a restart
             wordListTabManager?.SaveMyListPath(provider.FilePath);
+            if (wordListTabManager != null)
+                wordListTabManager.OnMyListTabClicked();
+            else
+                PhaseManager.Instance.LoadWordList(provider);
         });
     }
 
