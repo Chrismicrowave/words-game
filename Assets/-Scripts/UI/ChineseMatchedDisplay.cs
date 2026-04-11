@@ -94,9 +94,21 @@ public class ChineseMatchedDisplay : MonoBehaviour
 
         foreach (var el in englishLabels)
         {
-            int revealed = Mathf.Clamp(typedLetterCount - el.typeStart, 0, el.fullText.Length);
-            el.label.text = el.fullText.Substring(0, revealed)
-                          + new string('_', el.fullText.Length - revealed);
+            // typeStart/typeEnd are step-based (letter counts, spaces excluded).
+            // Reveal letters one-by-one while preserving spaces in the display string.
+            int lettersTyped = Mathf.Clamp(typedLetterCount - el.typeStart, 0, el.typeEnd - el.typeStart);
+            char[] chars = el.fullText.ToCharArray();
+            int seen = 0;
+            for (int i = 0; i < chars.Length; i++)
+            {
+                if (char.IsLetterOrDigit(chars[i]))
+                {
+                    if (seen >= lettersTyped) chars[i] = '_';
+                    seen++;
+                }
+                // spaces / punctuation are left as-is
+            }
+            el.label.text = new string(chars);
         }
     }
 

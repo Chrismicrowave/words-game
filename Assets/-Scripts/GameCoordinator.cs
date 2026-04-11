@@ -178,6 +178,7 @@ public class GameCoordinator : MonoBehaviour
     private void HandleWordListChanged()
     {
         TimerSystem.Instance.ResetAll();
+        LoadCurrentPhase();   // refresh display target to match the new word at CurrentPhaseIndex
         GameStateManager.Instance.TransitionTo(GameState.Playing);
     }
 

@@ -61,6 +61,23 @@ public class PhaseListUIManager : MonoBehaviour
         selectedPhaseIndex = -1;
     }
 
+    /// <summary>
+    /// Updates the tracked selection index and re-highlights the matching button.
+    /// Call after a move operation so Set still targets the correct word.
+    /// </summary>
+    public void SetSelectedPhaseIndex(int idx)
+    {
+        selectedPhaseIndex = idx;
+        int i = 0;
+        foreach (Transform child in phaseListContent)
+        {
+            Image img = child.GetComponent<Image>();
+            if (img != null)
+                img.color = (i == idx) ? phaseSelectedColor : phaseUnselectedColor;
+            i++;
+        }
+    }
+
     private void HighlightSelectedButton(GameObject selected)
     {
         foreach (Transform child in phaseListContent)

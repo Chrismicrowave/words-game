@@ -350,6 +350,8 @@ public class UIController : MonoBehaviour
         if (phaseListUIManager == null || phaseListUIManager.SelectedPhaseIndex <= 0) return;
         int idx = phaseListUIManager.SelectedPhaseIndex;
         PhaseManager.Instance.MovePhase(idx, idx - 1);
+        // RefreshPhaseList has already run (via OnWordListChanged); re-highlight at new position
+        phaseListUIManager.SetSelectedPhaseIndex(idx - 1);
     }
 
     public void OnMovePhaseDownClicked()
@@ -358,6 +360,8 @@ public class UIController : MonoBehaviour
             || phaseListUIManager.SelectedPhaseIndex >= PhaseManager.Instance.TotalPhases - 1) return;
         int idx = phaseListUIManager.SelectedPhaseIndex;
         PhaseManager.Instance.MovePhase(idx, idx + 1);
+        // RefreshPhaseList has already run (via OnWordListChanged); re-highlight at new position
+        phaseListUIManager.SetSelectedPhaseIndex(idx + 1);
     }
 
     // --- Panel Toggles ---

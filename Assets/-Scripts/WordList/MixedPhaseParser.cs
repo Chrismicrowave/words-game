@@ -88,48 +88,59 @@ public static class MixedPhaseParser
     public static MixedPhaseResult Parse(MixedWordEntry mixedWord)
     {
         var segments = new List<MixedSegment>();
+        // typeBuilder contains only letter/digit characters (spaces stripped from English).
+        // This keeps typeTarget indices == WordEngine.CurrentStep (letter-count-based).
         var typeBuilder = new System.Text.StringBuilder();
+        int stepCount = 0;
 
         foreach (var seg in mixedWord.segments)
         {
-            int start = typeBuilder.Length;
-
             if (seg.type == "english")
             {
-                typeBuilder.Append(seg.text);
+                int startStep = stepCount;
+                foreach (char c in seg.text)
+                {
+                    if (char.IsLetterOrDigit(c))
+                    {
+                        typeBuilder.Append(c);
+                        stepCount++;
+                    }
+                }
                 segments.Add(new MixedSegment
                 {
-                    type = SegmentType.English,
-                    text = seg.text,
-                    typeStart = start,
-                    typeEnd = typeBuilder.Length
+                    type      = SegmentType.English,
+                    text      = seg.text,   // original text (may contain spaces) for display
+                    typeStart = startStep,
+                    typeEnd   = stepCount
                 });
             }
             else if (seg.type == "chinese" && seg.entries != null)
             {
-                int cumulative = 0;
-                var boundaries = new int[seg.entries.Count];
-                var characters = new string[seg.entries.Count];
-                var entryArr = new ChinesePhaseEntry[seg.entries.Count];
+                int startStep   = stepCount;
+                int localCumul  = 0;
+                var boundaries  = new int[seg.entries.Count];
+                var characters  = new string[seg.entries.Count];
+                var entryArr    = new ChinesePhaseEntry[seg.entries.Count];
 
                 for (int i = 0; i < seg.entries.Count; i++)
                 {
                     typeBuilder.Append(seg.entries[i].pinyin);
-                    cumulative += seg.entries[i].pinyin.Length;
-                    boundaries[i] = start + cumulative;
-                    characters[i] = seg.entries[i].character;
-                    entryArr[i] = seg.entries[i];
+                    localCumul    += seg.entries[i].pinyin.Length;
+                    stepCount     += seg.entries[i].pinyin.Length;
+                    boundaries[i]  = startStep + localCumul;
+                    characters[i]  = seg.entries[i].character;
+                    entryArr[i]    = seg.entries[i];
                 }
 
                 segments.Add(new MixedSegment
                 {
-                    type = SegmentType.Chinese,
-                    text = typeBuilder.ToString().Substring(start),
-                    typeStart = start,
-                    typeEnd = typeBuilder.Length,
+                    type       = SegmentType.Chinese,
+                    text       = typeBuilder.ToString().Substring(startStep),
+                    typeStart  = startStep,
+                    typeEnd    = stepCount,
                     boundaries = boundaries,
                     characters = characters,
-                    entries = entryArr
+                    entries    = entryArr
                 });
             }
         }
@@ -137,7 +148,7 @@ public static class MixedPhaseParser
         return new MixedPhaseResult
         {
             typeTarget = typeBuilder.ToString(),
-            segments = segments.ToArray()
+            segments   = segments.ToArray()
         };
     }
 }

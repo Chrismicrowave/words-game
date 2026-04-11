@@ -153,6 +153,10 @@ public class PhaseManager : SingletonBehaviour<PhaseManager>
         if (index < 0 || index >= words.Count) return;
 
         words.RemoveAt(index);
+        // Keep mixedWords/chineseWords in sync so SaveCurrentList doesn't restore the deleted entry
+        if (index < mixedWords.Count)  mixedWords.RemoveAt(index);
+        if (index < chineseWords.Count) chineseWords.RemoveAt(index);
+
         if (CurrentPhaseIndex >= words.Count)
             CurrentPhaseIndex = Mathf.Max(0, words.Count - 1);
         OnWordListChanged?.Invoke();
@@ -166,6 +170,21 @@ public class PhaseManager : SingletonBehaviour<PhaseManager>
         string word = words[fromIndex];
         words.RemoveAt(fromIndex);
         words.Insert(toIndex, word);
+
+        // Keep mixedWords/chineseWords in sync so the move persists after save/reload
+        if (fromIndex < mixedWords.Count && toIndex <= mixedWords.Count)
+        {
+            var mw = mixedWords[fromIndex];
+            mixedWords.RemoveAt(fromIndex);
+            mixedWords.Insert(toIndex, mw);
+        }
+        if (fromIndex < chineseWords.Count && toIndex <= chineseWords.Count)
+        {
+            var cw = chineseWords[fromIndex];
+            chineseWords.RemoveAt(fromIndex);
+            chineseWords.Insert(toIndex, cw);
+        }
+
         OnWordListChanged?.Invoke();
     }
 
