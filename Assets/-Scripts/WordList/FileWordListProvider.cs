@@ -61,6 +61,17 @@ public class FileWordListProvider : IWordListProvider
         LanguageMode = mode;
     }
 
+    /// <summary>
+    /// Clears any stale Chinese/Mixed data so a plain-text import never inherits
+    /// a previous list's structured word data or language mode.
+    /// </summary>
+    public void ResetToEnglish()
+    {
+        LanguageMode = LanguageMode.English;
+        chineseWords = new List<ChineseWordEntry>();
+        mixedWords   = new List<MixedWordEntry>();
+    }
+
     public void SetName(string name)
     {
         DisplayName = name;

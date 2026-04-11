@@ -22,6 +22,7 @@ public static class TxtWordListImporter
         );
 
         var provider = new FileWordListProvider(jsonPath);
+        provider.ResetToEnglish(); // clear stale Chinese/Mixed data from any previous import at this path
         provider.SetName(displayName);
         provider.SetWords(words);
         provider.Save();
