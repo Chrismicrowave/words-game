@@ -1,3 +1,4 @@
+using System.Collections;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
@@ -26,7 +27,7 @@ public class WordListTabManager : MonoBehaviour
     private IWordListProvider myListProvider;
     private IWordListProvider dailyProvider;
 
-    void Start()
+    IEnumerator Start()
     {
         // Init my list provider — restore last imported path if it still exists,
         // otherwise fall back to mylist.json (creating it with defaults if missing).
@@ -58,6 +59,12 @@ public class WordListTabManager : MonoBehaviour
         string savedDailyPath = PlayerPrefs.GetString(DailyListPathPrefKey, "");
         if (!string.IsNullOrEmpty(savedDailyPath) && System.IO.File.Exists(savedDailyPath))
             dailyProvider = new DailyWordListProvider(savedDailyPath);
+
+        // Yield one frame so GameCoordinator.Start() completes first — it loads
+        // defaultWordList and subscribes to OnWordListChanged. Without this yield,
+        // if WordListTabManager runs first, its LoadWordList call fires before the
+        // subscription exists and gets overridden by GameCoordinator's defaultWordList.
+        yield return null;
 
         // Restore tab
         string savedTab = PlayerPrefs.GetString(ActiveTabPrefKey, "daily");
