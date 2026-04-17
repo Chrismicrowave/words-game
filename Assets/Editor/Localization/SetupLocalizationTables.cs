@@ -73,7 +73,7 @@ public class SetupLocalizationTables
         return col;
     }
 
-    static void E(StringTableCollection col, string key, string en, string zh)
+    static void E(StringTableCollection col, string key, string en, string zh, bool smart = false)
     {
         var enId = new LocaleIdentifier("en");
         var zhId = new LocaleIdentifier("zh-Hans");
@@ -81,8 +81,8 @@ public class SetupLocalizationTables
         var enTable = col.GetTable(enId) as StringTable;
         var zhTable = col.GetTable(zhId) as StringTable;
 
-        if (enTable != null) { var entry = enTable.AddEntry(key, en); EditorUtility.SetDirty(enTable); }
-        if (zhTable != null) { var entry = zhTable.AddEntry(key, zh); EditorUtility.SetDirty(zhTable); }
+        if (enTable != null) { var entry = enTable.AddEntry(key, en); if (smart) entry.IsSmart = true; EditorUtility.SetDirty(enTable); }
+        if (zhTable != null) { var entry = zhTable.AddEntry(key, zh); if (smart) entry.IsSmart = true; EditorUtility.SetDirty(zhTable); }
     }
 
     // ── UI string table ───────────────────────────────────────────────────────
@@ -177,11 +177,13 @@ public class SetupLocalizationTables
         // Smart strings — {action}, {key}, {got} are Smartformat.NET placeholders
         E(col, "Gameplay.ExpectedTo",
             "Expected to {action} '{key}', but got '{got}'",
-            "期望{action}\u201c{key}\u201d，但你按了\u201c{got}\u201d");
+            "期望{action}\u201c{key}\u201d，但你按了\u201c{got}\u201d",
+            smart: true);
 
         E(col, "Gameplay.ActionPrompt",
             "{action} '{key}'",
-            "{action}\u201c{key}\u201d");
+            "{action}\u201c{key}\u201d",
+            smart: true);
 
         // Verb forms
         E(col, "Gameplay.VerbHold",        "Hold",    "按住");

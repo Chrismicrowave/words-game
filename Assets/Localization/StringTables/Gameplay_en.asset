@@ -16,7 +16,8 @@ MonoBehaviour:
     m_Code: en
   m_SharedData: {fileID: 11400000, guid: 1c10f7571c6fc0d489e392886116c4ee, type: 2}
   m_Metadata:
-    m_Items: []
+    m_Items:
+    - rid: 1019856799222989085
   m_TableData:
   - m_Id: 214200320
     m_Localized: Phase complete! Hit Return to continue...
@@ -33,11 +34,13 @@ MonoBehaviour:
   - m_Id: 264531970
     m_Localized: Expected to {action} '{key}', but got '{got}'
     m_Metadata:
-      m_Items: []
+      m_Items:
+      - rid: 1019856799222989085
   - m_Id: 264531971
     m_Localized: '{action} ''{key}'''
     m_Metadata:
-      m_Items: []
+      m_Items:
+      - rid: 1019856799222989085
   - m_Id: 264531972
     m_Localized: Hold
     m_Metadata:
@@ -56,4 +59,11 @@ MonoBehaviour:
       m_Items: []
   references:
     version: 2
-    RefIds: []
+    RefIds:
+    - rid: 1019856799222989085
+      type: {class: SmartFormatTag, ns: UnityEngine.Localization.Metadata, asm: Unity.Localization}
+      data:
+        m_Entries: 
+        m_SharedEntries:
+        - id: 264531970
+        - id: 264531971
