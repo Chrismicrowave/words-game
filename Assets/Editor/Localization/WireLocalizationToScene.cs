@@ -7,8 +7,7 @@ using UnityEngine.SceneManagement;
 
 /// <summary>
 /// Bulk-wires LocalizeText components to all TMP scene objects,
-/// adds LocalizationBootstrapper to GameSystems,
-/// and adds FontLocalizationManager to --- UI ---.
+/// and adds LocalizationBootstrapper to GameSystems.
 /// Run via Tools > Words > Wire Localization To Scene.
 /// Safe to re-run — removes and re-adds LocalizeText on each object.
 /// </summary>
@@ -112,18 +111,6 @@ public class WireLocalizationToScene
             Debug.Log("[LocalizeWire] Added LocalizationBootstrapper to GameSystems.");
         }
         else Debug.LogWarning("[LocalizeWire] GameSystems not found.");
-
-        // ── FontLocalizationManager on --- UI --- ─────────────────────────────
-
-        var uiRoot = FindInScene("--- UI ---");
-        if (uiRoot != null)
-        {
-            if (uiRoot.GetComponent<FontLocalizationManager>() == null)
-                uiRoot.AddComponent<FontLocalizationManager>();
-            EditorUtility.SetDirty(uiRoot);
-            Debug.Log("[LocalizeWire] Added FontLocalizationManager to --- UI ---.");
-        }
-        else Debug.LogWarning("[LocalizeWire] --- UI --- not found.");
 
         // ── Save scene ────────────────────────────────────────────────────────
 
