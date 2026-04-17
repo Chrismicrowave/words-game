@@ -151,22 +151,13 @@ public class UIController : MonoBehaviour
             chineseTargetDisplay.SetPinyinVisible(SettingsManager.Instance.ShowPinyin);
     }
 
-    // Returns true if all segments are English (no Chinese content).
-    private static bool IsPurelyEnglish(MixedPhaseParser.MixedPhaseResult data)
-    {
-        if (data.segments == null || data.segments.Length == 0) return true;
-        foreach (var seg in data.segments)
-            if (seg.type == MixedPhaseParser.SegmentType.Chinese) return false;
-        return true;
-    }
-
     /// <summary>
     /// Called by GameCoordinator for every phase (English, Chinese, or Mixed).
     /// </summary>
     public void RebuildMixedDisplays(MixedPhaseParser.MixedPhaseResult parsed)
     {
         // Only build cell display when there is actual Chinese content
-        if (!IsPurelyEnglish(parsed))
+        if (!MixedPhaseParser.IsPurelyEnglish(parsed))
             chineseMatchedDisplay?.BuildMixedCells(parsed);
         else
             chineseMatchedDisplay?.Clear();
@@ -174,13 +165,13 @@ public class UIController : MonoBehaviour
         // Show target display for any phase that has Chinese content
         if (chineseTargetDisplay != null)
         {
-            if (!IsPurelyEnglish(parsed))
+            if (!MixedPhaseParser.IsPurelyEnglish(parsed))
             {
                 chineseTargetDisplay.BuildMixedCells(parsed);
                 if (SettingsManager.Instance != null)
                     chineseTargetDisplay.SetPinyinVisible(SettingsManager.Instance.ShowPinyin);
                 chineseTargetDisplay.gameObject.SetActive(true);
-                StartCoroutine(SyncEnglishFontSizeNextFrame());
+                chineseTargetDisplay?.SyncFontSizesNextFrame();
             }
             else
             {
@@ -234,7 +225,7 @@ public class UIController : MonoBehaviour
 
         // Use cell-based display only when there is actual Chinese content
         bool useCellDisplay = wordEngine.IsChinesePhase ||
-            (wordEngine.IsMixedPhase && !IsPurelyEnglish(wordEngine.CurrentMixedData));
+            (wordEngine.IsMixedPhase && !MixedPhaseParser.IsPurelyEnglish(wordEngine.CurrentMixedData));
 
         if (useCellDisplay)
         {
@@ -498,11 +489,4 @@ public class UIController : MonoBehaviour
         return result.ToString();
     }
 
-    private IEnumerator SyncEnglishFontSizeNextFrame()
-    {
-        yield return null; // wait one frame for TMP auto-sizing to resolve
-        Canvas.ForceUpdateCanvases();
-        chineseTargetDisplay?.SyncPinyinFontSize();
-        chineseTargetDisplay?.SyncEnglishFontSize();
-    }
 }

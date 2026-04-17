@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using TMPro;
@@ -63,7 +64,7 @@ public class ChineseTargetDisplay : MonoBehaviour
                 {
                     cell.SetText(seg.text);
                     // Apply Chinese font when segment contains non-ASCII characters (e.g. 。，、)
-                    if (chineseFontAsset != null && HasNonAscii(seg.text) && cell.Label != null)
+                    if (chineseFontAsset != null && PinyinLookup.HasNonAscii(seg.text) && cell.Label != null)
                         cell.Label.font = chineseFontAsset;
                     englishCells.Add(cell);
                 }
@@ -122,9 +123,17 @@ public class ChineseTargetDisplay : MonoBehaviour
         englishCells.Clear();
     }
 
-    private static bool HasNonAscii(string text)
+    public void SyncFontSizesNextFrame()
     {
-        foreach (char c in text) if (c > 127) return true;
-        return false;
+        StartCoroutine(SyncFontSizesCoroutine());
     }
+
+    private IEnumerator SyncFontSizesCoroutine()
+    {
+        yield return null;
+        Canvas.ForceUpdateCanvases();
+        SyncPinyinFontSize();
+        SyncEnglishFontSize();
+    }
+
 }

@@ -163,4 +163,12 @@ public static class MixedPhaseParser
             segments   = segments.ToArray()
         };
     }
+
+    public static bool IsPurelyEnglish(MixedPhaseResult result)
+    {
+        if (result.segments == null || result.segments.Length == 0) return true;
+        foreach (var seg in result.segments)
+            if (seg.type == SegmentType.Chinese) return false;
+        return true;
+    }
 }

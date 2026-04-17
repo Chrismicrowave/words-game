@@ -75,7 +75,7 @@ public class ChineseMatchedDisplay : MonoBehaviour
                 {
                     cell.SetText("");
                     // Apply Chinese font when segment contains non-ASCII characters (e.g. 。，、)
-                    if (chineseFontAsset != null && HasNonAscii(seg.text))
+                    if (chineseFontAsset != null && PinyinLookup.HasNonAscii(seg.text))
                         cell.Label.font = chineseFontAsset;
                     englishLabels.Add(new EnglishSegmentLabel
                     {
@@ -124,9 +124,4 @@ public class ChineseMatchedDisplay : MonoBehaviour
         englishLabels.Clear();
     }
 
-    private static bool HasNonAscii(string text)
-    {
-        foreach (char c in text) if (c > 127) return true;
-        return false;
-    }
 }

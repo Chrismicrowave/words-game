@@ -79,4 +79,10 @@ public static class PinyinLookup
         if (sb.Length > 0) result.Add((curChinese, sb.ToString()));
         return result;
     }
+
+    public static bool HasNonAscii(string text)
+    {
+        foreach (char c in text) if (c > 127) return true;
+        return false;
+    }
 }
