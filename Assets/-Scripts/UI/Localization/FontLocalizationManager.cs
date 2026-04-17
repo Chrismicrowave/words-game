@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
@@ -8,6 +9,8 @@ using UnityEngine.Localization.Settings;
 /// Swaps TMP font assets when the UI locale changes.
 /// Assign chineseFont (NotoSansSC) and populate targets in the Inspector.
 /// On zh-Hans: applies chineseFont. On any other locale: restores original fonts.
+/// Font swap is deferred one frame to avoid triggering 42 simultaneous mesh
+/// rebuilds inside the SelectedLocaleChanged callback (which crashes Unity).
 /// </summary>
 public class FontLocalizationManager : MonoBehaviour
 {
@@ -15,6 +18,7 @@ public class FontLocalizationManager : MonoBehaviour
     [SerializeField] private List<TextMeshProUGUI> targets = new List<TextMeshProUGUI>();
 
     private TMP_FontAsset[] _originalFonts;
+    private Coroutine _pendingSwap;
 
     void Awake()
     {
@@ -24,7 +28,11 @@ public class FontLocalizationManager : MonoBehaviour
     }
 
     void OnEnable() => LocalizationSettings.SelectedLocaleChanged += OnLocaleChanged;
-    void OnDisable() => LocalizationSettings.SelectedLocaleChanged -= OnLocaleChanged;
+    void OnDisable()
+    {
+        LocalizationSettings.SelectedLocaleChanged -= OnLocaleChanged;
+        if (_pendingSwap != null) StopCoroutine(_pendingSwap);
+    }
 
     void Start()
     {
@@ -34,11 +42,18 @@ public class FontLocalizationManager : MonoBehaviour
 
     void OnLocaleChanged(Locale locale)
     {
-        bool isChinese = locale?.Identifier.Code == "zh-Hans";
+        if (_pendingSwap != null) StopCoroutine(_pendingSwap);
+        _pendingSwap = StartCoroutine(ApplyFontsNextFrame(locale?.Identifier.Code == "zh-Hans"));
+    }
+
+    IEnumerator ApplyFontsNextFrame(bool isChinese)
+    {
+        yield return null; // defer one frame — avoids mass rebuild crash
         for (int i = 0; i < targets.Count; i++)
         {
             if (targets[i] == null) continue;
             targets[i].font = isChinese && chineseFont != null ? chineseFont : _originalFonts[i];
         }
+        _pendingSwap = null;
     }
 }
