@@ -1,0 +1,59 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e9620f8c34305754d8cc9a7e49e852d9, type: 3}
+  m_Name: Gameplay_en
+  m_EditorClassIdentifier: Unity.Localization::UnityEngine.Localization.Tables.StringTable
+  m_LocaleId:
+    m_Code: en
+  m_SharedData: {fileID: 11400000, guid: 1c10f7571c6fc0d489e392886116c4ee, type: 2}
+  m_Metadata:
+    m_Items: []
+  m_TableData:
+  - m_Id: 214200320
+    m_Localized: Phase complete! Hit Return to continue...
+    m_Metadata:
+      m_Items: []
+  - m_Id: 264531968
+    m_Localized: Congratulations! You completed all phases!
+    m_Metadata:
+      m_Items: []
+  - m_Id: 264531969
+    m_Localized: . Press Backspace to start again
+    m_Metadata:
+      m_Items: []
+  - m_Id: 264531970
+    m_Localized: Expected to {action} '{key}', but got '{got}'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 264531971
+    m_Localized: '{action} ''{key}'''
+    m_Metadata:
+      m_Items: []
+  - m_Id: 264531972
+    m_Localized: Hold
+    m_Metadata:
+      m_Items: []
+  - m_Id: 264531973
+    m_Localized: Release
+    m_Metadata:
+      m_Items: []
+  - m_Id: 264531974
+    m_Localized: hold
+    m_Metadata:
+      m_Items: []
+  - m_Id: 264531975
+    m_Localized: release
+    m_Metadata:
+      m_Items: []
+  references:
+    version: 2
+    RefIds: []

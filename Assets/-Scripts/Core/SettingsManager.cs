@@ -34,6 +34,7 @@ public class SettingsManager : SingletonBehaviour<SettingsManager>
     // Chinese language support
     public const string KeyShowPinyin   = "ShowPinyin";
     public const string KeyLanguageMode = "LanguageMode";
+    public const string KeyUILanguage   = "settings_uiLanguage";
 
     public float MasterVolume
     {
@@ -103,6 +104,16 @@ public class SettingsManager : SingletonBehaviour<SettingsManager>
             return System.Enum.TryParse<LanguageMode>(stored, out var mode) ? mode : LanguageMode.English;
         }
         set => PlayerPrefs.SetString(KeyLanguageMode, value.ToString());
+    }
+
+    public string UILanguageCode
+    {
+        get => PlayerPrefs.GetString(KeyUILanguage, "en");
+        set
+        {
+            PlayerPrefs.SetString(KeyUILanguage, value);
+            PlayerPrefs.Save();
+        }
     }
 
     public event Action OnSettingsChanged;

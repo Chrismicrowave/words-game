@@ -17,6 +17,15 @@ public class WordEngine
     public string LastFailureMessage { get; private set; } = "";
     public bool IsComplete => CurrentStep >= TotalSteps;
 
+    // Structured failure data — used by UIController to compose localized failure messages
+    public string FailedExpectedAction { get; private set; } = "";
+    public string FailedExpectedKey { get; private set; } = "";
+    public string FailedGotKey { get; private set; } = "";
+
+    // Current step data — used by UIController to compose localized action prompts
+    public StepAction CurrentStepAction => (CurrentStep < steps.Count) ? steps[CurrentStep].Action : StepAction.Hold;
+    public string CurrentStepLetter => (CurrentStep < steps.Count) ? targetText[steps[CurrentStep].TargetTextIndex].ToString() : "";
+
     // Chinese mode
     public bool IsChinesePhase { get; private set; }
     public bool IsMixedPhase { get; private set; }
@@ -99,6 +108,9 @@ public class WordEngine
     {
         CurrentStep = 0;
         LastFailureMessage = "";
+        FailedExpectedAction = "";
+        FailedExpectedKey = "";
+        FailedGotKey = "";
     }
 
     private void ParseSteps()
@@ -171,6 +183,9 @@ public class WordEngine
 
         string expectedAction = step.Action == StepAction.Hold ? "hold" : "release";
         LastFailureMessage = $"Expected to {expectedAction} '{step.Letter}', but got '{key}'";
+        FailedExpectedAction = expectedAction;
+        FailedExpectedKey = step.Letter;
+        FailedGotKey = key.ToString();
         return StepResult.Failed;
     }
 

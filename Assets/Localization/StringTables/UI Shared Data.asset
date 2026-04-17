@@ -1,0 +1,200 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5b11a58205ec3474ca216360e9fa74a8, type: 3}
+  m_Name: UI Shared Data
+  m_EditorClassIdentifier: Unity.Localization::UnityEngine.Localization.Tables.SharedTableData
+  m_TableCollectionName: UI
+  m_TableCollectionNameGuidString: b0610b34cc9b175479751017d50609a0
+  m_Entries:
+  - m_Id: 683962368
+    m_Key: UI.HUD.WordsBtn
+    m_Metadata:
+      m_Items: []
+  - m_Id: 734294016
+    m_Key: UI.HUD.TimerBtn
+    m_Metadata:
+      m_Items: []
+  - m_Id: 734294017
+    m_Key: UI.HUD.InfoBtn
+    m_Metadata:
+      m_Items: []
+  - m_Id: 734294018
+    m_Key: UI.HUD.ResetBtn
+    m_Metadata:
+      m_Items: []
+  - m_Id: 734294019
+    m_Key: UI.HUD.SettingsBtn
+    m_Metadata:
+      m_Items: []
+  - m_Id: 734294020
+    m_Key: UI.HUD.CloseBtn
+    m_Metadata:
+      m_Items: []
+  - m_Id: 734294021
+    m_Key: UI.Settings.Title
+    m_Metadata:
+      m_Items: []
+  - m_Id: 734294022
+    m_Key: UI.Settings.TabAudio
+    m_Metadata:
+      m_Items: []
+  - m_Id: 734294023
+    m_Key: UI.Settings.TabDisplay
+    m_Metadata:
+      m_Items: []
+  - m_Id: 734294024
+    m_Key: UI.Settings.TabGameplay
+    m_Metadata:
+      m_Items: []
+  - m_Id: 734294025
+    m_Key: UI.Settings.TabCustom
+    m_Metadata:
+      m_Items: []
+  - m_Id: 734294026
+    m_Key: UI.Settings.ResetDefaultsBtn
+    m_Metadata:
+      m_Items: []
+  - m_Id: 734294027
+    m_Key: UI.Settings.CloseBtn
+    m_Metadata:
+      m_Items: []
+  - m_Id: 734294028
+    m_Key: UI.Settings.Audio.Master
+    m_Metadata:
+      m_Items: []
+  - m_Id: 734294029
+    m_Key: UI.Settings.Audio.SFX
+    m_Metadata:
+      m_Items: []
+  - m_Id: 734294030
+    m_Key: UI.Settings.Audio.BGM
+    m_Metadata:
+      m_Items: []
+  - m_Id: 734294031
+    m_Key: UI.Settings.Display.Fullscreen
+    m_Metadata:
+      m_Items: []
+  - m_Id: 734294032
+    m_Key: UI.Settings.Display.CRTFilter
+    m_Metadata:
+      m_Items: []
+  - m_Id: 734294033
+    m_Key: UI.Settings.Display.Resolution
+    m_Metadata:
+      m_Items: []
+  - m_Id: 734294034
+    m_Key: UI.Settings.Display.ScreenShake
+    m_Metadata:
+      m_Items: []
+  - m_Id: 734294035
+    m_Key: UI.Settings.Display.ShowPinyin
+    m_Metadata:
+      m_Items: []
+  - m_Id: 734294036
+    m_Key: UI.Settings.Display.Language
+    m_Metadata:
+      m_Items: []
+  - m_Id: 734294037
+    m_Key: UI.WordList.TabMyList
+    m_Metadata:
+      m_Items: []
+  - m_Id: 734294038
+    m_Key: UI.WordList.TabDaily
+    m_Metadata:
+      m_Items: []
+  - m_Id: 734294039
+    m_Key: UI.WordList.SwapBtn
+    m_Metadata:
+      m_Items: []
+  - m_Id: 734294040
+    m_Key: UI.WordList.UpBtn
+    m_Metadata:
+      m_Items: []
+  - m_Id: 734294041
+    m_Key: UI.WordList.DownBtn
+    m_Metadata:
+      m_Items: []
+  - m_Id: 734294042
+    m_Key: UI.WordList.DeleteBtn
+    m_Metadata:
+      m_Items: []
+  - m_Id: 734294043
+    m_Key: UI.WordList.AddBtn
+    m_Metadata:
+      m_Items: []
+  - m_Id: 734294044
+    m_Key: UI.WordList.ImportBtn
+    m_Metadata:
+      m_Items: []
+  - m_Id: 734294045
+    m_Key: UI.WordList.ExportBtn
+    m_Metadata:
+      m_Items: []
+  - m_Id: 734294046
+    m_Key: UI.WordList.FetchDailyBtn
+    m_Metadata:
+      m_Items: []
+  - m_Id: 734294047
+    m_Key: UI.WordList.PhasePlaceholder
+    m_Metadata:
+      m_Items: []
+  - m_Id: 734294048
+    m_Key: UI.DailyPicker.Title
+    m_Metadata:
+      m_Items: []
+  - m_Id: 734294049
+    m_Key: UI.DailyPicker.LabelDates
+    m_Metadata:
+      m_Items: []
+  - m_Id: 734294050
+    m_Key: UI.DailyPicker.LabelWords
+    m_Metadata:
+      m_Items: []
+  - m_Id: 734294051
+    m_Key: UI.DailyPicker.LoadBtn
+    m_Metadata:
+      m_Items: []
+  - m_Id: 734294052
+    m_Key: UI.DailyPicker.CloseBtn
+    m_Metadata:
+      m_Items: []
+  - m_Id: 734294053
+    m_Key: UI.DailyPicker.SearchPlaceholder
+    m_Metadata:
+      m_Items: []
+  - m_Id: 734294054
+    m_Key: UI.PinyinPopup.Title
+    m_Metadata:
+      m_Items: []
+  - m_Id: 734294055
+    m_Key: UI.PinyinPopup.CancelBtn
+    m_Metadata:
+      m_Items: []
+  - m_Id: 734294056
+    m_Key: UI.PinyinPopup.OKBtn
+    m_Metadata:
+      m_Items: []
+  - m_Id: 734294057
+    m_Key: UI.Instructions.Body
+    m_Metadata:
+      m_Items: []
+  m_Metadata:
+    m_Items: []
+  m_KeyGenerator:
+    rid: 1019856799222989073
+  references:
+    version: 2
+    RefIds:
+    - rid: 1019856799222989073
+      type: {class: DistributedUIDGenerator, ns: UnityEngine.Localization.Tables, asm: Unity.Localization}
+      data:
+        m_CustomEpoch: 1776408133119

@@ -10,6 +10,7 @@ public class DisplaySettingsController : MonoBehaviour
     [SerializeField] private Toggle screenshakeToggle;
     [SerializeField] private Toggle showPinyinToggle;   // optional — hidden if null
     [SerializeField] private ChineseDisplayController chineseDisplay; // optional
+    [SerializeField] private Dropdown languageDropdown;
 
     private static readonly (int w, int h)[] Resolutions =
     {
@@ -63,6 +64,16 @@ public class DisplaySettingsController : MonoBehaviour
         fullscreenToggle.onValueChanged.AddListener(OnFullscreenChanged);
         crtToggle.onValueChanged.AddListener(OnCRTChanged);
         screenshakeToggle.onValueChanged.AddListener(OnScreenShakeChanged);
+
+        if (languageDropdown != null)
+        {
+            languageDropdown.onValueChanged.RemoveListener(OnLanguageChanged);
+            string currentCode = SettingsManager.Instance != null
+                ? SettingsManager.Instance.UILanguageCode
+                : PlayerPrefs.GetString(SettingsManager.KeyUILanguage, "en");
+            languageDropdown.SetValueWithoutNotify(currentCode == "zh-Hans" ? 1 : 0);
+            languageDropdown.onValueChanged.AddListener(OnLanguageChanged);
+        }
 
         _initializing = false;
     }
@@ -136,5 +147,18 @@ public class DisplaySettingsController : MonoBehaviour
         if (resolutionLabel == null) return;
         var (w, h) = Resolutions[Mathf.Clamp(_resIndex, 0, Resolutions.Length - 1)];
         resolutionLabel.text = $"{w} x {h}";
+    }
+
+    public void OnLanguageChanged(int index)
+    {
+        string code = index == 1 ? "zh-Hans" : "en";
+        if (SettingsManager.Instance != null)
+            SettingsManager.Instance.UILanguageCode = code;
+        else
+            PlayerPrefs.SetString(SettingsManager.KeyUILanguage, code);
+
+        var locale = UnityEngine.Localization.Settings.LocalizationSettings.AvailableLocales.GetLocale(code);
+        if (locale != null)
+            UnityEngine.Localization.Settings.LocalizationSettings.SelectedLocale = locale;
     }
 }

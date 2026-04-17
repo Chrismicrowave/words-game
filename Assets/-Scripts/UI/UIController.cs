@@ -7,6 +7,7 @@ using SFB;
 using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
+using UnityEngine.Localization.Settings;
 using UnityEngine.UI;
 
 public class UIController : MonoBehaviour
@@ -215,7 +216,7 @@ public class UIController : MonoBehaviour
 
         if (showActionPrompt && GameStateManager.Instance.CurrentState == GameState.Playing)
         {
-            string prompt = wordEngine.GetActionPrompt();
+            string prompt = BuildActionPrompt();
             if (!string.IsNullOrEmpty(prompt))
                 statusTextUI.text = prompt;
         }
@@ -225,17 +226,17 @@ public class UIController : MonoBehaviour
     {
         UpdateTextDisplay();
         if (result == StepResult.Failed)
-            statusTextUI.text = wordEngine.LastFailureMessage + ". Press Backspace to start again";
+            statusTextUI.text = BuildFailureMessage();
     }
 
     private void HandlePhaseCompleted()
     {
-        statusTextUI.text = "Phase complete! Hit Return to continue...";
+        statusTextUI.text = LocalizationService.Get("Gameplay", "Gameplay.PhaseComplete");
     }
 
     private void HandlePhaseFailed()
     {
-        statusTextUI.text = wordEngine.LastFailureMessage + ". Press Backspace to start again";
+        statusTextUI.text = BuildFailureMessage();
     }
 
     private void HandleRestart()
@@ -254,7 +255,7 @@ public class UIController : MonoBehaviour
     {
         targetTextUI.text  = "";
         matchedTextUI.text = "";
-        statusTextUI.text  = "Congratulations! You completed all phases!";
+        statusTextUI.text  = LocalizationService.Get("Gameplay", "Gameplay.AllPhasesComplete");
     }
 
     // --- Phase List Button Callbacks ---
@@ -453,6 +454,35 @@ public class UIController : MonoBehaviour
         }
 
         return result.ToString();
+    }
+
+    private string BuildFailureMessage()
+    {
+        string verbKey = wordEngine.FailedExpectedAction == "hold"
+            ? "Gameplay.VerbHoldLower" : "Gameplay.VerbReleaseLower";
+        string verb = LocalizationService.Get("Gameplay", verbKey);
+        var args = new Dictionary<string, object>
+        {
+            { "action", verb },
+            { "key",    wordEngine.FailedExpectedKey },
+            { "got",    wordEngine.FailedGotKey }
+        };
+        return LocalizationService.GetSmart("Gameplay", "Gameplay.ExpectedTo", args)
+             + LocalizationService.Get("Gameplay", "Gameplay.FailureSuffix");
+    }
+
+    private string BuildActionPrompt()
+    {
+        if (wordEngine == null || wordEngine.IsComplete) return "";
+        string verbKey = wordEngine.CurrentStepAction == StepAction.Hold
+            ? "Gameplay.VerbHold" : "Gameplay.VerbRelease";
+        string verb = LocalizationService.Get("Gameplay", verbKey);
+        var args = new Dictionary<string, object>
+        {
+            { "action", verb },
+            { "key",    wordEngine.CurrentStepLetter }
+        };
+        return LocalizationService.GetSmart("Gameplay", "Gameplay.ActionPrompt", args);
     }
 
 }
