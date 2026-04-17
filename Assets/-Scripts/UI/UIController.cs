@@ -57,9 +57,7 @@ public class UIController : MonoBehaviour
     [SerializeField] private WordListTabManager wordListTabManager;
 
     [Header("Chinese Language")]
-    [SerializeField] private ChineseMatchedDisplay chineseMatchedDisplay;
-    [SerializeField] private ChineseTargetDisplay chineseTargetDisplay;
-    [SerializeField] private ChinesePinyinPopup chinesePinyinPopup;
+    [SerializeField] private ChineseDisplayController chineseDisplay;
 
     private const int    MaxWordLength    = 140;
     private const string WordsPanelPrefKey = "WordsPanelOn";
@@ -144,11 +142,7 @@ public class UIController : MonoBehaviour
     /// </summary>
     public void RebuildChineseDisplays(ChinesePhaseData data)
     {
-        chineseMatchedDisplay?.BuildCells(data);
-        chineseTargetDisplay?.BuildCells(data);
-
-        if (chineseTargetDisplay != null && SettingsManager.Instance != null)
-            chineseTargetDisplay.SetPinyinVisible(SettingsManager.Instance.ShowPinyin);
+        chineseDisplay?.RebuildForChinese(data);
     }
 
     /// <summary>
@@ -156,29 +150,7 @@ public class UIController : MonoBehaviour
     /// </summary>
     public void RebuildMixedDisplays(MixedPhaseParser.MixedPhaseResult parsed)
     {
-        // Only build cell display when there is actual Chinese content
-        if (!MixedPhaseParser.IsPurelyEnglish(parsed))
-            chineseMatchedDisplay?.BuildMixedCells(parsed);
-        else
-            chineseMatchedDisplay?.Clear();
-
-        // Show target display for any phase that has Chinese content
-        if (chineseTargetDisplay != null)
-        {
-            if (!MixedPhaseParser.IsPurelyEnglish(parsed))
-            {
-                chineseTargetDisplay.BuildMixedCells(parsed);
-                if (SettingsManager.Instance != null)
-                    chineseTargetDisplay.SetPinyinVisible(SettingsManager.Instance.ShowPinyin);
-                chineseTargetDisplay.gameObject.SetActive(true);
-                chineseTargetDisplay?.SyncFontSizesNextFrame();
-            }
-            else
-            {
-                chineseTargetDisplay.Clear();
-                chineseTargetDisplay.gameObject.SetActive(false);
-            }
-        }
+        chineseDisplay?.RebuildForMixed(parsed);
     }
 
     void Update()
@@ -223,26 +195,20 @@ public class UIController : MonoBehaviour
     {
         if (wordEngine == null) return;
 
-        // Use cell-based display only when there is actual Chinese content
-        bool useCellDisplay = wordEngine.IsChinesePhase ||
-            (wordEngine.IsMixedPhase && !MixedPhaseParser.IsPurelyEnglish(wordEngine.CurrentMixedData));
+        bool useCellDisplay = chineseDisplay != null && chineseDisplay.IsShowingCells;
 
         if (useCellDisplay)
         {
             matchedTextUI.gameObject.SetActive(false);
-            if (chineseMatchedDisplay != null) chineseMatchedDisplay.gameObject.SetActive(true);
-            chineseMatchedDisplay?.UpdateProgress(wordEngine.MatchedLength);
-
-            // ChineseTargetDisplay handles target for all phases with Chinese content
             targetTextUI.gameObject.SetActive(false);
+            chineseDisplay.SetVisible(true);
+            chineseDisplay.UpdateProgress(wordEngine.MatchedLength);
         }
         else
         {
             targetTextUI.gameObject.SetActive(true);
             matchedTextUI.gameObject.SetActive(true);
-            if (chineseMatchedDisplay != null) chineseMatchedDisplay.gameObject.SetActive(false);
-            if (chineseTargetDisplay != null) chineseTargetDisplay.gameObject.SetActive(false);
-
+            chineseDisplay?.SetVisible(false);
             targetTextUI.text = wordEngine.TargetText;
             matchedTextUI.text = wordEngine.GetDisplayText(showCursor);
         }
@@ -304,7 +270,7 @@ public class UIController : MonoBehaviour
         if (PinyinLookup.ContainsChinese(text))
         {
             // Open pinyin confirmation popup for any text containing Chinese characters
-            chinesePinyinPopup?.Show(text, entry =>
+            chineseDisplay?.ShowPinyinPopup(text, entry =>
             {
                 PhaseManager.Instance.AddMixedPhase(entry);
                 PhaseManager.Instance.SaveCurrentList();

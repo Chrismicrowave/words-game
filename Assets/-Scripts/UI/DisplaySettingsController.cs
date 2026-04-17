@@ -9,7 +9,7 @@ public class DisplaySettingsController : MonoBehaviour
     [SerializeField] private TextMeshProUGUI resolutionLabel;
     [SerializeField] private Toggle screenshakeToggle;
     [SerializeField] private Toggle showPinyinToggle;   // optional — hidden if null
-    [SerializeField] private ChineseTargetDisplay chineseTargetDisplay; // optional
+    [SerializeField] private ChineseDisplayController chineseDisplay; // optional
 
     private static readonly (int w, int h)[] Resolutions =
     {
@@ -102,7 +102,7 @@ public class DisplaySettingsController : MonoBehaviour
         if (SettingsManager.Instance != null) SettingsManager.Instance.ShowPinyin = value;
         else PlayerPrefs.SetInt(SettingsManager.KeyShowPinyin, value ? 1 : 0);
 
-        chineseTargetDisplay?.SetPinyinVisible(value);
+        chineseDisplay?.SetPinyinVisible(value);
         PlayerPrefs.Save();
     }
 
