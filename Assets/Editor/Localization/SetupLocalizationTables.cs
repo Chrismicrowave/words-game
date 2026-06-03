@@ -125,8 +125,8 @@ public class SetupLocalizationTables
         E(col, "UI.WordList.TabMyList",        "My List",         "我的列表");
         E(col, "UI.WordList.TabDaily",         "Daily",           "每日");
         E(col, "UI.WordList.SwapBtn",          "Swap",            "切换");
-        E(col, "UI.WordList.UpBtn",            "Up",              "上移");
-        E(col, "UI.WordList.DownBtn",          "Down",            "下移");
+        E(col, "UI.WordList.UpBtn",            "<",               "<");
+        E(col, "UI.WordList.DownBtn",          ">",               ">");
         E(col, "UI.WordList.DeleteBtn",        "Delete",          "删除");
         E(col, "UI.WordList.AddBtn",           "Add",             "添加");
         E(col, "UI.WordList.ImportBtn",        "Import",          "导入");

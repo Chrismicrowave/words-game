@@ -119,11 +119,11 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 734294040
-    m_Localized: "\u4E0A\u79FB"
+    m_Localized: <
     m_Metadata:
       m_Items: []
   - m_Id: 734294041
-    m_Localized: "\u4E0B\u79FB"
+    m_Localized: '>'
     m_Metadata:
       m_Items: []
   - m_Id: 734294042
