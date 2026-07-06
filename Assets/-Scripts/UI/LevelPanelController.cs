@@ -44,6 +44,9 @@ public class LevelPanelController : MonoBehaviour
     [Header("Trendy Placeholder")]
     [SerializeField] private GameObject trendyPlaceholder;  // "Coming Soon" shown in Trendy tab
 
+    [Header("Challenge Names")]
+    public string[] challengeNames = new string[20];  // Display names for challenges (index 0 = challenge_01)
+
     private LevelTab currentTab = LevelTab.Challenges;
     private LevelWordListProvider selectedProvider;
 
@@ -162,7 +165,13 @@ public class LevelPanelController : MonoBehaviour
             var tmp = btnObj.GetComponentInChildren<TextMeshProUGUI>();
             if (tmp != null)
             {
-                tmp.text = provider.DisplayName;
+                // Use challenge name from Inspector array if available, otherwise filename
+                int idx = challengeProviders.IndexOf(provider);
+                if (currentTab == LevelTab.Challenges && idx >= 0 && idx < challengeNames.Length
+                    && !string.IsNullOrEmpty(challengeNames[idx]))
+                    tmp.text = challengeNames[idx];
+                else
+                    tmp.text = provider.DisplayName;
                 if (chineseFontAsset != null && provider.LanguageMode == LanguageMode.Mixed)
                     tmp.font = chineseFontAsset;
             }
