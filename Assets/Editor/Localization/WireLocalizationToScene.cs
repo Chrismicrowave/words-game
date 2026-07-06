@@ -52,17 +52,11 @@ public class WireLocalizationToScene
             ("--- UI ---/Menus/SettingsPanel/Card/ContentArea/-DisplayPanel/ShowPinyinRow/Label",  "UI", "UI.Settings.Display.ShowPinyin"),
 
             // Word list panel
-            ("--- UI ---/Menus/WordListPanel/MyListTabBtn/Text",              "UI", "UI.WordList.TabMyList"),
-            ("--- UI ---/Menus/WordListPanel/DailyTabBtn/Text",               "UI", "UI.WordList.TabDaily"),
-            ("--- UI ---/Menus/WordListPanel/DailyPanelBtns/SwapBtn (1)/Text (TMP)", "UI", "UI.WordList.SwapBtn"),
-            ("--- UI ---/Menus/WordListPanel/DailyPanelBtns/FetchDailyBtn/Text (TMP)", "UI", "UI.WordList.FetchDailyBtn"),
             ("--- UI ---/Menus/WordListPanel/MyListPanelBtns/SwapBtn/Text (TMP)", "UI", "UI.WordList.SwapBtn"),
             ("--- UI ---/Menus/WordListPanel/MyListPanelBtns/UpBtn/Text (TMP)",   "UI", "UI.WordList.UpBtn"),
             ("--- UI ---/Menus/WordListPanel/MyListPanelBtns/DownBtn/Text (TMP)", "UI", "UI.WordList.DownBtn"),
             ("--- UI ---/Menus/WordListPanel/MyListPanelBtns/DelBtn/Text (TMP)",  "UI", "UI.WordList.DeleteBtn"),
             ("--- UI ---/Menus/WordListPanel/MyListPanelBtns/AddBtn/Text (TMP)",  "UI", "UI.WordList.AddBtn"),
-            ("--- UI ---/Menus/WordListPanel/MyListPanelBtns/ImportBtn/Text (TMP)","UI", "UI.WordList.ImportBtn"),
-            ("--- UI ---/Menus/WordListPanel/MyListPanelBtns/ExportBtn/Text (TMP)","UI", "UI.WordList.ExportBtn"),
 
             // Daily picker
             ("--- UI ---/Menus/DailyPickerPanel/Card/Title",       "UI", "UI.DailyPicker.Title"),

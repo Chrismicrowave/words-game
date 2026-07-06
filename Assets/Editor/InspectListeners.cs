@@ -8,15 +8,11 @@ public class InspectListeners
     public static void Execute()
     {
         string[] paths = {
-            "--- UI ---/Menus/WordListPanel/MyListTabBtn",
-            "--- UI ---/Menus/WordListPanel/DailyTabBtn",
             "--- UI ---/Menus/WordListPanel/MyListPanelBtns/AddBtn",
             "--- UI ---/Menus/WordListPanel/MyListPanelBtns/DelBtn",
             "--- UI ---/Menus/WordListPanel/MyListPanelBtns/SwapBtn",
             "--- UI ---/Menus/WordListPanel/MyListPanelBtns/UpBtn",
             "--- UI ---/Menus/WordListPanel/MyListPanelBtns/DownBtn",
-            "--- UI ---/Menus/WordListPanel/DailyPanelBtns/FetchDailyBtn",
-            "--- UI ---/Menus/WordListPanel/DailyPanelBtns/SwapBtn (1)",
         };
 
         foreach (string path in paths)

@@ -378,7 +378,6 @@ public class UIController : MonoBehaviour
             // we keep the Unity API surface minimal and explicit.
             wordListTabManager?.SetMyListProvider(provider);
             wordListTabManager?.SaveMyListPath(provider.FilePath);
-            wordListTabManager?.SaveActiveTab("mylist");
             PhaseManager.Instance.LoadWordList(provider);
         });
     }

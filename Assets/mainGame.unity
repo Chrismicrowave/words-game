@@ -1531,6 +1531,7 @@ GameObject:
   - component: {fileID: 50738326}
   - component: {fileID: 50738328}
   - component: {fileID: 50738327}
+  - component: {fileID: 50738329}
   m_Layer: 0
   m_Name: TabNameTMP
   m_TagString: Untagged
@@ -1657,6 +1658,30 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 50738325}
   m_CullTransparentMesh: 1
+--- !u!114 &50738329
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 50738325}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 779ad42f3a3f65345bd329bb7fafe2d5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LocalizeText
+  localizedString:
+    m_TableReference:
+      m_TableCollectionName: UI
+    m_TableEntryReference:
+      m_KeyId: 0
+      m_Key: UI.Level.TabCustom
+    m_FallbackState: 0
+    m_WaitForCompletion: 0
+    m_LocalVariables: []
+  references:
+    version: 2
+    RefIds: []
 --- !u!1 &52825884
 GameObject:
   m_ObjectHideFlags: 0
@@ -5818,7 +5843,7 @@ GameObject:
   - component: {fileID: 278644508}
   - component: {fileID: 278644511}
   - component: {fileID: 278644510}
-  - component: {fileID: 278644509}
+  - component: {fileID: 278644512}
   m_Layer: 0
   m_Name: Text
   m_TagString: Untagged
@@ -5845,30 +5870,6 @@ RectTransform:
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
---- !u!114 &278644509
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 278644507}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 779ad42f3a3f65345bd329bb7fafe2d5, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::LocalizeText
-  localizedString:
-    m_TableReference:
-      m_TableCollectionName: UI
-    m_TableEntryReference:
-      m_KeyId: 0
-      m_Key: UI.PinyinPopup.OKBtn
-    m_FallbackState: 0
-    m_WaitForCompletion: 0
-    m_LocalVariables: []
-  references:
-    version: 2
-    RefIds: []
 --- !u!114 &278644510
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -5969,6 +5970,30 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 278644507}
   m_CullTransparentMesh: 1
+--- !u!114 &278644512
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 278644507}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 779ad42f3a3f65345bd329bb7fafe2d5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LocalizeText
+  localizedString:
+    m_TableReference:
+      m_TableCollectionName: UI
+    m_TableEntryReference:
+      m_KeyId: 0
+      m_Key: UI.Level.CreateListBtn
+    m_FallbackState: 0
+    m_WaitForCompletion: 0
+    m_LocalVariables: []
+  references:
+    version: 2
+    RefIds: []
 --- !u!1 &281460117
 GameObject:
   m_ObjectHideFlags: 0
@@ -8792,7 +8817,7 @@ GameObject:
   - component: {fileID: 437034738}
   - component: {fileID: 437034737}
   - component: {fileID: 437034736}
-  - component: {fileID: 437034735}
+  - component: {fileID: 437034739}
   m_Layer: 0
   m_Name: Title
   m_TagString: Untagged
@@ -8819,30 +8844,6 @@ RectTransform:
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 1560, y: 50}
   m_Pivot: {x: 0.5, y: 1}
---- !u!114 &437034735
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 437034733}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 779ad42f3a3f65345bd329bb7fafe2d5, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::LocalizeText
-  localizedString:
-    m_TableReference:
-      m_TableCollectionName: UI
-    m_TableEntryReference:
-      m_KeyId: 0
-      m_Key: UI.PinyinPopup.Title
-    m_FallbackState: 0
-    m_WaitForCompletion: 0
-    m_LocalVariables: []
-  references:
-    version: 2
-    RefIds: []
 --- !u!114 &437034736
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -8963,6 +8964,30 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 437034733}
   m_CullTransparentMesh: 1
+--- !u!114 &437034739
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 437034733}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 779ad42f3a3f65345bd329bb7fafe2d5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LocalizeText
+  localizedString:
+    m_TableReference:
+      m_TableCollectionName: UI
+    m_TableEntryReference:
+      m_KeyId: 0
+      m_Key: UI.Level.Title
+    m_FallbackState: 0
+    m_WaitForCompletion: 0
+    m_LocalVariables: []
+  references:
+    version: 2
+    RefIds: []
 --- !u!1 &438728124
 GameObject:
   m_ObjectHideFlags: 0
@@ -9973,7 +9998,7 @@ GameObject:
   - component: {fileID: 516230491}
   - component: {fileID: 516230494}
   - component: {fileID: 516230493}
-  - component: {fileID: 516230492}
+  - component: {fileID: 516230495}
   m_Layer: 0
   m_Name: Text
   m_TagString: Untagged
@@ -10000,30 +10025,6 @@ RectTransform:
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
---- !u!114 &516230492
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 516230490}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 779ad42f3a3f65345bd329bb7fafe2d5, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::LocalizeText
-  localizedString:
-    m_TableReference:
-      m_TableCollectionName: UI
-    m_TableEntryReference:
-      m_KeyId: 0
-      m_Key: UI.PinyinPopup.CancelBtn
-    m_FallbackState: 0
-    m_WaitForCompletion: 0
-    m_LocalVariables: []
-  references:
-    version: 2
-    RefIds: []
 --- !u!114 &516230493
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -10124,6 +10125,30 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 516230490}
   m_CullTransparentMesh: 1
+--- !u!114 &516230495
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 516230490}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 779ad42f3a3f65345bd329bb7fafe2d5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LocalizeText
+  localizedString:
+    m_TableReference:
+      m_TableCollectionName: UI
+    m_TableEntryReference:
+      m_KeyId: 0
+      m_Key: UI.Level.CancelBtn
+    m_FallbackState: 0
+    m_WaitForCompletion: 0
+    m_LocalVariables: []
+  references:
+    version: 2
+    RefIds: []
 --- !u!1 &526934861
 GameObject:
   m_ObjectHideFlags: 0
@@ -10306,6 +10331,7 @@ GameObject:
   - component: {fileID: 540831032}
   - component: {fileID: 540831034}
   - component: {fileID: 540831033}
+  - component: {fileID: 540831035}
   m_Layer: 0
   m_Name: TabNameTMP
   m_TagString: Untagged
@@ -10432,6 +10458,30 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 540831031}
   m_CullTransparentMesh: 1
+--- !u!114 &540831035
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 540831031}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 779ad42f3a3f65345bd329bb7fafe2d5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LocalizeText
+  localizedString:
+    m_TableReference:
+      m_TableCollectionName: UI
+    m_TableEntryReference:
+      m_KeyId: 0
+      m_Key: UI.Level.TabChallenges
+    m_FallbackState: 0
+    m_WaitForCompletion: 0
+    m_LocalVariables: []
+  references:
+    version: 2
+    RefIds: []
 --- !u!1 &552458061
 GameObject:
   m_ObjectHideFlags: 0
@@ -12095,6 +12145,7 @@ GameObject:
   - component: {fileID: 657611894}
   - component: {fileID: 657611896}
   - component: {fileID: 657611895}
+  - component: {fileID: 657611897}
   m_Layer: 0
   m_Name: TabNameTMP
   m_TagString: Untagged
@@ -12221,6 +12272,30 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 657611893}
   m_CullTransparentMesh: 1
+--- !u!114 &657611897
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 657611893}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 779ad42f3a3f65345bd329bb7fafe2d5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LocalizeText
+  localizedString:
+    m_TableReference:
+      m_TableCollectionName: UI
+    m_TableEntryReference:
+      m_KeyId: 0
+      m_Key: UI.Level.TabTrendy
+    m_FallbackState: 0
+    m_WaitForCompletion: 0
+    m_LocalVariables: []
+  references:
+    version: 2
+    RefIds: []
 --- !u!1001 &670312108
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -14329,7 +14404,7 @@ GameObject:
   - component: {fileID: 761549145}
   - component: {fileID: 761549148}
   - component: {fileID: 761549147}
-  - component: {fileID: 761549146}
+  - component: {fileID: 761549149}
   m_Layer: 0
   m_Name: Text
   m_TagString: Untagged
@@ -14356,30 +14431,6 @@ RectTransform:
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
---- !u!114 &761549146
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 761549144}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 779ad42f3a3f65345bd329bb7fafe2d5, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::LocalizeText
-  localizedString:
-    m_TableReference:
-      m_TableCollectionName: UI
-    m_TableEntryReference:
-      m_KeyId: 0
-      m_Key: UI.PinyinPopup.OKBtn
-    m_FallbackState: 0
-    m_WaitForCompletion: 0
-    m_LocalVariables: []
-  references:
-    version: 2
-    RefIds: []
 --- !u!114 &761549147
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -14480,6 +14531,30 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 761549144}
   m_CullTransparentMesh: 1
+--- !u!114 &761549149
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 761549144}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 779ad42f3a3f65345bd329bb7fafe2d5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LocalizeText
+  localizedString:
+    m_TableReference:
+      m_TableCollectionName: UI
+    m_TableEntryReference:
+      m_KeyId: 0
+      m_Key: UI.Level.OKBtn
+    m_FallbackState: 0
+    m_WaitForCompletion: 0
+    m_LocalVariables: []
+  references:
+    version: 2
+    RefIds: []
 --- !u!1001 &761687407
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -15053,6 +15128,7 @@ GameObject:
   - component: {fileID: 801264506}
   - component: {fileID: 801264508}
   - component: {fileID: 801264507}
+  - component: {fileID: 801264509}
   m_Layer: 0
   m_Name: Text (TMP)
   m_TagString: Untagged
@@ -15181,6 +15257,30 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 801264505}
   m_CullTransparentMesh: 1
+--- !u!114 &801264509
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 801264505}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 779ad42f3a3f65345bd329bb7fafe2d5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LocalizeText
+  localizedString:
+    m_TableReference:
+      m_TableCollectionName: UI
+    m_TableEntryReference:
+      m_KeyId: 0
+      m_Key: UI.HUD.PlayBtn
+    m_FallbackState: 0
+    m_WaitForCompletion: 0
+    m_LocalVariables: []
+  references:
+    version: 2
+    RefIds: []
 --- !u!1 &802223197
 GameObject:
   m_ObjectHideFlags: 0
@@ -22636,7 +22736,7 @@ GameObject:
   - component: {fileID: 1265092946}
   - component: {fileID: 1265092949}
   - component: {fileID: 1265092948}
-  - component: {fileID: 1265092947}
+  - component: {fileID: 1265092950}
   m_Layer: 0
   m_Name: Text
   m_TagString: Untagged
@@ -22663,30 +22763,6 @@ RectTransform:
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
---- !u!114 &1265092947
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1265092945}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 779ad42f3a3f65345bd329bb7fafe2d5, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::LocalizeText
-  localizedString:
-    m_TableReference:
-      m_TableCollectionName: UI
-    m_TableEntryReference:
-      m_KeyId: 0
-      m_Key: UI.PinyinPopup.OKBtn
-    m_FallbackState: 0
-    m_WaitForCompletion: 0
-    m_LocalVariables: []
-  references:
-    version: 2
-    RefIds: []
 --- !u!114 &1265092948
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -22787,6 +22863,30 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1265092945}
   m_CullTransparentMesh: 1
+--- !u!114 &1265092950
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1265092945}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 779ad42f3a3f65345bd329bb7fafe2d5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LocalizeText
+  localizedString:
+    m_TableReference:
+      m_TableCollectionName: UI
+    m_TableEntryReference:
+      m_KeyId: 0
+      m_Key: UI.Level.ImportBtn
+    m_FallbackState: 0
+    m_WaitForCompletion: 0
+    m_LocalVariables: []
+  references:
+    version: 2
+    RefIds: []
 --- !u!1 &1269279171
 GameObject:
   m_ObjectHideFlags: 0
@@ -29254,7 +29354,7 @@ GameObject:
   - component: {fileID: 1631696611}
   - component: {fileID: 1631696614}
   - component: {fileID: 1631696613}
-  - component: {fileID: 1631696612}
+  - component: {fileID: 1631696615}
   m_Layer: 0
   m_Name: Text
   m_TagString: Untagged
@@ -29281,30 +29381,6 @@ RectTransform:
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
---- !u!114 &1631696612
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1631696610}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 779ad42f3a3f65345bd329bb7fafe2d5, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::LocalizeText
-  localizedString:
-    m_TableReference:
-      m_TableCollectionName: UI
-    m_TableEntryReference:
-      m_KeyId: 0
-      m_Key: UI.PinyinPopup.OKBtn
-    m_FallbackState: 0
-    m_WaitForCompletion: 0
-    m_LocalVariables: []
-  references:
-    version: 2
-    RefIds: []
 --- !u!114 &1631696613
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -29405,6 +29481,30 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1631696610}
   m_CullTransparentMesh: 1
+--- !u!114 &1631696615
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1631696610}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 779ad42f3a3f65345bd329bb7fafe2d5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LocalizeText
+  localizedString:
+    m_TableReference:
+      m_TableCollectionName: UI
+    m_TableEntryReference:
+      m_KeyId: 0
+      m_Key: UI.Level.ExportBtn
+    m_FallbackState: 0
+    m_WaitForCompletion: 0
+    m_LocalVariables: []
+  references:
+    version: 2
+    RefIds: []
 --- !u!1 &1632628065
 GameObject:
   m_ObjectHideFlags: 0
@@ -29627,6 +29727,27 @@ MonoBehaviour:
   deleteListBtn: {fileID: 1672393878}
   chineseFontAsset: {fileID: 11400000, guid: 428be41dc6b96d74cb9084b697519d27, type: 2}
   trendyPlaceholder: {fileID: 1718431469}
+  challengeNames:
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
 --- !u!1 &1644255321
 GameObject:
   m_ObjectHideFlags: 0
@@ -31956,7 +32077,7 @@ GameObject:
   - component: {fileID: 1796594279}
   - component: {fileID: 1796594282}
   - component: {fileID: 1796594281}
-  - component: {fileID: 1796594280}
+  - component: {fileID: 1796594283}
   m_Layer: 0
   m_Name: Text
   m_TagString: Untagged
@@ -31983,30 +32104,6 @@ RectTransform:
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
---- !u!114 &1796594280
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1796594278}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 779ad42f3a3f65345bd329bb7fafe2d5, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::LocalizeText
-  localizedString:
-    m_TableReference:
-      m_TableCollectionName: UI
-    m_TableEntryReference:
-      m_KeyId: 0
-      m_Key: UI.PinyinPopup.OKBtn
-    m_FallbackState: 0
-    m_WaitForCompletion: 0
-    m_LocalVariables: []
-  references:
-    version: 2
-    RefIds: []
 --- !u!114 &1796594281
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -32107,6 +32204,30 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1796594278}
   m_CullTransparentMesh: 1
+--- !u!114 &1796594283
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1796594278}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 779ad42f3a3f65345bd329bb7fafe2d5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LocalizeText
+  localizedString:
+    m_TableReference:
+      m_TableCollectionName: UI
+    m_TableEntryReference:
+      m_KeyId: 0
+      m_Key: UI.Level.DeleteListBtn
+    m_FallbackState: 0
+    m_WaitForCompletion: 0
+    m_LocalVariables: []
+  references:
+    version: 2
+    RefIds: []
 --- !u!1 &1807016001
 GameObject:
   m_ObjectHideFlags: 0

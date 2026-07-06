@@ -121,17 +121,12 @@ public class SetupLocalizationTables
         E(col, "UI.Settings.Display.ShowPinyin",  "Show Pinyin",  "显示拼音");
         E(col, "UI.Settings.Display.Language",    "Language",     "语言");
 
-        // Word list panel
-        E(col, "UI.WordList.TabMyList",        "My List",         "我的列表");
-        E(col, "UI.WordList.TabDaily",         "Daily",           "每日");
+        // Word list panel (per-phase editing)
         E(col, "UI.WordList.SwapBtn",          "Swap",            "切换");
         E(col, "UI.WordList.UpBtn",            "<",               "<");
         E(col, "UI.WordList.DownBtn",          ">",               ">");
         E(col, "UI.WordList.DeleteBtn",        "Delete",          "删除");
         E(col, "UI.WordList.AddBtn",           "Add",             "添加");
-        E(col, "UI.WordList.ImportBtn",        "Import",          "导入");
-        E(col, "UI.WordList.ExportBtn",        "Export",          "导出");
-        E(col, "UI.WordList.FetchDailyBtn",    "Fetch Daily",     "获取每日单词");
         E(col, "UI.WordList.PhasePlaceholder", "Enter a phase...", "输入词语...");
 
         // Daily picker panel
