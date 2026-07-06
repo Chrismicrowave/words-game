@@ -184,7 +184,7 @@ public class LevelPanelController : MonoBehaviour
             foreach (Transform child in levelGridContent)
             {
                 var img = child.GetComponent<Image>();
-                if (img != null) img.color = Color.white;
+                if (img != null) img.color = tabInactiveColor;
             }
         }
 
