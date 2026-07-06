@@ -3,19 +3,20 @@ using UnityEngine.UI;
 
 /// <summary>
 /// Flashes the FailBG overlay with shifting random colours when the player
-/// fails a phase. Subscribes in Awake so subscriptions survive if
-/// OnGameStartManager deactivates this GO in Start.
+/// fails a phase. Stays visible (last colour) until player restarts.
+/// Subscribes in Awake so subscriptions survive if OnGameStartManager
+/// deactivates this GO in Start.
 /// </summary>
 public class FailFlashController : MonoBehaviour
 {
     [Header("Timing")]
-    [SerializeField] private float interval = 0.15f;      // time between colour shifts
-    [SerializeField] private float displayTime = 1.5f;     // total flash duration
+    [SerializeField] private float interval = 0.5f;      // time between colour shifts
+    [SerializeField] private float displayTime = 0.5f;     // total flash duration
 
     [Header("Colour")]
-    [SerializeField] private float saturation = 0.8f;
-    [SerializeField] private float brightness = 0.7f;
-    [SerializeField] private float alpha = 0.5f;
+    [SerializeField] private float saturation = 1.0f;
+    [SerializeField] private float brightness = 1.0f;
+    [SerializeField] private float alpha = 0.7f;
 
     private Image image;
     private float flashTimer;
@@ -32,7 +33,7 @@ public class FailFlashController : MonoBehaviour
             GameStateManager.Instance.OnPhaseRestarted += OnPhaseRestarted;
             GameStateManager.Instance.OnGameReset += OnPhaseRestarted;
         }
-        // Start transparent (manager may override active state)
+        // Start transparent — OnGameStartManager may deactivate in Start
         var c = image.color;
         c.a = 0f;
         image.color = c;
@@ -79,18 +80,14 @@ public class FailFlashController : MonoBehaviour
 
     private void OnPhaseRestarted()
     {
-        StopFlashing();
+        isFlashing = false;
+        gameObject.SetActive(false);
     }
 
     private void StopFlashing()
     {
         isFlashing = false;
-        if (image != null)
-        {
-            var c = image.color;
-            c.a = 0f;
-            image.color = c;
-        }
+        // Keep last colour visible until player restarts
     }
 
     private void ShiftColour()

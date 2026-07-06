@@ -7410,6 +7410,7 @@ GameObject:
   - component: {fileID: 369087729}
   - component: {fileID: 369087730}
   - component: {fileID: 369087731}
+  - component: {fileID: 369087732}
   m_Layer: 0
   m_Name: GameSystems
   m_TagString: Untagged
@@ -7576,6 +7577,21 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c5743b996ec6486418c7cccd2edf37fd, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LocalizationBootstrapper
+--- !u!114 &369087732
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 369087720}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 20f6bd7906643f94888df1913a8b924d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::OnGameStartManager
+  toggles:
+  - gameObject: {fileID: 957620896}
+    activeAtStart: 1
 --- !u!1 &371531124
 GameObject:
   m_ObjectHideFlags: 0
@@ -16783,7 +16799,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!224 &957620897
 RectTransform:
   m_ObjectHideFlags: 0
@@ -37611,8 +37627,8 @@ SceneRoots:
   m_ObjectHideFlags: 0
   m_Roots:
   - {fileID: 1902836642}
+  - {fileID: 369087728}
   - {fileID: 1162325692}
   - {fileID: 1761848515}
   - {fileID: 774874139}
-  - {fileID: 369087728}
   - {fileID: 680745022}
