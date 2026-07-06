@@ -16776,6 +16776,7 @@ GameObject:
   - component: {fileID: 957620897}
   - component: {fileID: 957620899}
   - component: {fileID: 957620898}
+  - component: {fileID: 957620900}
   m_Layer: 5
   m_Name: FailBG
   m_TagString: Untagged
@@ -16817,7 +16818,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
   m_Color: {r: 0.52112263, g: 0.19215687, b: 0.8862745, a: 0.69803923}
-  m_RaycastTarget: 1
+  m_RaycastTarget: 0
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
   m_OnCullStateChanged:
@@ -16841,6 +16842,23 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 957620896}
   m_CullTransparentMesh: 1
+--- !u!114 &957620900
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 957620896}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7c0c7d09546c7d847a0e69780ca3c4f8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::FailFlashController
+  interval: 0.5
+  displayTime: 0.5
+  saturation: 1
+  brightness: 1
+  alpha: 0.7
 --- !u!1 &961432933
 GameObject:
   m_ObjectHideFlags: 0

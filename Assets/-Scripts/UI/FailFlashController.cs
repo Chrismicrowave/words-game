@@ -25,14 +25,20 @@ public class FailFlashController : MonoBehaviour
     void Awake()
     {
         image = GetComponent<Image>();
-        gameObject.SetActive(false);
+        // Start visible but transparent so OnEnable events fire
+        var c = image.color;
+        c.a = 0f;
+        image.color = c;
     }
 
     void OnEnable()
     {
-        GameStateManager.Instance.OnPhaseFailed += OnPhaseFailed;
-        GameStateManager.Instance.OnPhaseRestarted += OnPhaseRestarted;
-        GameStateManager.Instance.OnGameReset += OnPhaseRestarted;
+        if (GameStateManager.Instance != null)
+        {
+            GameStateManager.Instance.OnPhaseFailed += OnPhaseFailed;
+            GameStateManager.Instance.OnPhaseRestarted += OnPhaseRestarted;
+            GameStateManager.Instance.OnGameReset += OnPhaseRestarted;
+        }
     }
 
     void OnDisable()
@@ -67,7 +73,6 @@ public class FailFlashController : MonoBehaviour
 
     private void OnPhaseFailed()
     {
-        gameObject.SetActive(true);
         isFlashing = true;
         flashTimer = 0f;
         elapsed = 0f;
@@ -82,7 +87,12 @@ public class FailFlashController : MonoBehaviour
     private void StopFlashing()
     {
         isFlashing = false;
-        gameObject.SetActive(false);
+        if (image != null)
+        {
+            var c = image.color;
+            c.a = 0f;
+            image.color = c;
+        }
     }
 
     private void ShiftColour()
