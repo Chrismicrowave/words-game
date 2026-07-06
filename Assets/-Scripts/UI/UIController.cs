@@ -60,6 +60,9 @@ public class UIController : MonoBehaviour
     [Header("Chinese Language")]
     [SerializeField] private ChineseDisplayController chineseDisplay;
 
+    [Header("Level Panel")]
+    [SerializeField] private GameObject levelPanel;
+
     private const int    MaxWordLength    = 140;
     private const string WordsPanelPrefKey = "WordsPanelOn";
     private const string TimerPanelPrefKey = "TimerPanelOn";
@@ -355,6 +358,11 @@ public class UIController : MonoBehaviour
     public void OnSettingsBtnClicked()
     {
         if (settingsPanel != null) settingsPanel.gameObject.SetActive(true);
+    }
+
+    public void OnPlayBtnClicked()
+    {
+        if (levelPanel != null) levelPanel.SetActive(true);
     }
 
     public void OnImportClicked()

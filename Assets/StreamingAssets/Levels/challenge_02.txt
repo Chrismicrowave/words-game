@@ -1,0 +1,10 @@
+fish
+bird
+tree
+book
+hand
+star
+moon
+rain
+door
+bell

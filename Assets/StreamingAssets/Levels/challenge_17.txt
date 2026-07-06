@@ -1,0 +1,10 @@
+oxygen
+hydrogen
+nitrogen
+carbon
+helium
+sodium
+potassium
+calcium
+silicon
+aluminum

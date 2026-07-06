@@ -1,0 +1,10 @@
+velocity
+gravity
+friction
+magnetic
+kinetic
+thermal
+optical
+acoustic
+nuclear
+orbital

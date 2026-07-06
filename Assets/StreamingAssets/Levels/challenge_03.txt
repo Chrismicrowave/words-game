@@ -1,0 +1,10 @@
+green
+table
+plant
+clock
+storm
+bread
+train
+chair
+sheep
+dream
