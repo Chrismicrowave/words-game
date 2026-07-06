@@ -2,9 +2,9 @@ using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
-/// Self-contained fail flash. Subscribes in Awake (GO must be active
-/// at scene load). On fail: activates and shifts random colours.
-/// On restart/play: deactivates.
+/// Flashes shifting random colours while its GO is active.
+/// Activated/deactivated by FailBGBridge. No event subscriptions.
+/// Works regardless of Editor active state.
 /// </summary>
 public class FailFlashController : MonoBehaviour
 {
@@ -16,40 +16,15 @@ public class FailFlashController : MonoBehaviour
     private Image image;
     private float flashTimer;
 
-    void Awake()
-    {
-        image = GetComponent<Image>();
-        GameStateManager.Instance.OnPhaseFailed += OnPhaseFailed;
-        GameStateManager.Instance.OnPhaseRestarted += Off;
-        GameStateManager.Instance.OnGameReset += Off;
-        GameStateManager.Instance.OnPhaseStarted += Off;
-        gameObject.SetActive(false);
-    }
+    void Awake() { image = GetComponent<Image>(); }
 
-    void OnDestroy()
-    {
-        if (GameStateManager.Instance == null) return;
-        GameStateManager.Instance.OnPhaseFailed -= OnPhaseFailed;
-        GameStateManager.Instance.OnPhaseRestarted -= Off;
-        GameStateManager.Instance.OnGameReset -= Off;
-        GameStateManager.Instance.OnPhaseStarted -= Off;
-    }
+    void OnEnable() { flashTimer = 0f; ShiftColour(); }
 
     void Update()
     {
-        if (!gameObject.activeSelf) return;
         flashTimer += Time.deltaTime;
         if (flashTimer >= interval) { flashTimer = 0f; ShiftColour(); }
     }
-
-    private void OnPhaseFailed()
-    {
-        gameObject.SetActive(true);
-        flashTimer = 0f;
-        ShiftColour();
-    }
-
-    private void Off() { gameObject.SetActive(false); }
 
     private void ShiftColour()
     {

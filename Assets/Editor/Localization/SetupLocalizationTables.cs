@@ -143,8 +143,8 @@ public class SetupLocalizationTables
         E(col, "UI.PinyinPopup.OKBtn",     "OK",             "确认");
 
         // Level panel
-        E(col, "UI.HUD.PlayBtn",            "Play",       "游戏");
-        E(col, "UI.Level.Title",            "Play",       "游戏");
+        E(col, "UI.HUD.PlayBtn",           "Levels",    "关卡");
+        E(col, "UI.Level.Title",            "Levels",    "关卡");
         E(col, "UI.Level.TabChallenges",    "Challenges", "挑战");
         E(col, "UI.Level.TabCustom",        "Custom",     "自定义");
         E(col, "UI.Level.TabTrendy",        "Trendy",     "流行");
