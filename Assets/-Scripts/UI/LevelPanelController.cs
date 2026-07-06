@@ -159,14 +159,6 @@ public class LevelPanelController : MonoBehaviour
         foreach (var provider in providers)
         {
             var btnObj = Instantiate(levelButtonPrefab, levelGridContent);
-            var tmp = btnObj.GetComponentInChildren<TextMeshProUGUI>();
-            if (tmp != null)
-            {
-                tmp.text = provider.DisplayName;
-                if (chineseFontAsset != null && provider.LanguageMode == LanguageMode.Mixed)
-                    tmp.font = chineseFontAsset;
-            }
-
             var btn = btnObj.GetComponent<Button>();
             if (btn != null)
             {
