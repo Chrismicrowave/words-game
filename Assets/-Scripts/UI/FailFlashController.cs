@@ -3,8 +3,8 @@ using UnityEngine.UI;
 
 /// <summary>
 /// Flashes the FailBG overlay with shifting random colours when the player
-/// fails a phase. Exposes interval (rate of colour shift) and displayTime
-/// (total flash duration).
+/// fails a phase. Subscribes in Awake so subscriptions survive if
+/// OnGameStartManager deactivates this GO in Start.
 /// </summary>
 public class FailFlashController : MonoBehaviour
 {
@@ -25,23 +25,20 @@ public class FailFlashController : MonoBehaviour
     void Awake()
     {
         image = GetComponent<Image>();
-        // Start visible but transparent so OnEnable events fire
-        var c = image.color;
-        c.a = 0f;
-        image.color = c;
-    }
-
-    void OnEnable()
-    {
+        // Subscribe here — survives if manager deactivates GO in Start
         if (GameStateManager.Instance != null)
         {
             GameStateManager.Instance.OnPhaseFailed += OnPhaseFailed;
             GameStateManager.Instance.OnPhaseRestarted += OnPhaseRestarted;
             GameStateManager.Instance.OnGameReset += OnPhaseRestarted;
         }
+        // Start transparent (manager may override active state)
+        var c = image.color;
+        c.a = 0f;
+        image.color = c;
     }
 
-    void OnDisable()
+    void OnDestroy()
     {
         if (GameStateManager.Instance != null)
         {
@@ -73,6 +70,7 @@ public class FailFlashController : MonoBehaviour
 
     private void OnPhaseFailed()
     {
+        gameObject.SetActive(true);
         isFlashing = true;
         flashTimer = 0f;
         elapsed = 0f;
