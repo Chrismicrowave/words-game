@@ -45,7 +45,13 @@ public class LevelPanelController : MonoBehaviour
     [SerializeField] private GameObject trendyPlaceholder;  // "Coming Soon" shown in Trendy tab
 
     [Header("Challenge Names")]
-    public string[] challengeNames = new string[20];  // Display names for challenges (index 0 = challenge_01)
+    public string[] challengeNames = new string[]
+    {
+        "First Steps", "Cat Nap", "Rain Drop", "Star Light", "River Run",
+        "Mountain", "Ocean Blue", "Sky High", "Wind Song", "Fire Dance",
+        "Crystal", "Iron Will", "Silver Lining", "Golden Hour", "Dark Night",
+        "Thunder", "Storm Chaser", "Moon Walker", "Sun Seeker", "Final Boss"
+    };
     public string[] challengeNamesZh = new string[20]; // Chinese display names
 
     private LevelTab currentTab = LevelTab.Challenges;
