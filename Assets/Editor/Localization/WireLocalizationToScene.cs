@@ -27,7 +27,7 @@ public class WireLocalizationToScene
 
             // HUD
             ("--- UI ---/HUD-Btns/WordsBtn/Text (TMP)",    "UI", "UI.HUD.WordsBtn"),
-            ("--- UI ---/HUD-Btns/PlayBtn/Text (TMP)",     "UI", "UI.HUD.PlayBtn"),
+            ("--- UI ---/HUD-Btns/LevelBtn/Text (TMP)",    "UI", "UI.HUD.PlayBtn"),
             ("--- UI ---/HUD-Btns/TimerBtn/Text (TMP)",    "UI", "UI.HUD.TimerBtn"),
             ("--- UI ---/HUD-Btns/InfoBtn/Text",           "UI", "UI.HUD.InfoBtn"),
             ("--- UI ---/HUD-Btns/ResetBtn/Text (TMP)",    "UI", "UI.HUD.ResetBtn"),
