@@ -46,6 +46,7 @@ public class LevelPanelController : MonoBehaviour
 
     [Header("Challenge Names")]
     public string[] challengeNames = new string[20];  // Display names for challenges (index 0 = challenge_01)
+    public string[] challengeNamesZh = new string[20]; // Chinese display names
 
     private LevelTab currentTab = LevelTab.Challenges;
     private LevelWordListProvider selectedProvider;
@@ -167,9 +168,17 @@ public class LevelPanelController : MonoBehaviour
             {
                 // Use challenge name from Inspector array if available, otherwise filename
                 int idx = challengeProviders.IndexOf(provider);
-                if (currentTab == LevelTab.Challenges && idx >= 0 && idx < challengeNames.Length
-                    && !string.IsNullOrEmpty(challengeNames[idx]))
-                    tmp.text = challengeNames[idx];
+                if (currentTab == LevelTab.Challenges && idx >= 0)
+                {
+                    // Check if Chinese locale is active
+                    bool isChinese = UnityEngine.Localization.Settings.LocalizationSettings.SelectedLocale != null
+                        && UnityEngine.Localization.Settings.LocalizationSettings.SelectedLocale.Identifier.Code == "zh-Hans";
+                    string[] names = isChinese ? challengeNamesZh : challengeNames;
+                    if (idx < names.Length && !string.IsNullOrEmpty(names[idx]))
+                        tmp.text = names[idx];
+                    else
+                        tmp.text = provider.DisplayName;
+                }
                 else
                     tmp.text = provider.DisplayName;
                 if (chineseFontAsset != null && provider.LanguageMode == LanguageMode.Mixed)
