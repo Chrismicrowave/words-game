@@ -2,14 +2,14 @@ using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
-/// Flashes the FailBG overlay with shifting random colours while the player
-/// is in the failed state (waiting for Backspace). OFF all other times.
-/// Subscribes in Awake so subscriptions survive OnGameStartManager deactivation.
+/// Flashes the FailBG overlay with shifting random colours while active.
+/// Activated/deactivated by OnGameStartManager bridge. No event
+/// subscriptions needed — works regardless of Editor active state.
 /// </summary>
 public class FailFlashController : MonoBehaviour
 {
     [Header("Timing")]
-    [SerializeField] private float interval = 0.5f;      // time between colour shifts
+    [SerializeField] private float interval = 0.5f;
 
     [Header("Colour")]
     [SerializeField] private float saturation = 1.0f;
@@ -22,34 +22,17 @@ public class FailFlashController : MonoBehaviour
     void Awake()
     {
         image = GetComponent<Image>();
-        if (GameStateManager.Instance != null)
-        {
-            GameStateManager.Instance.OnPhaseFailed += OnPhaseFailed;
-            GameStateManager.Instance.OnPhaseRestarted += OnPhaseRestarted;
-            GameStateManager.Instance.OnGameReset += OnPhaseRestarted;
-            GameStateManager.Instance.OnPhaseStarted += OnPhaseStarted;
-        }
-        // Start invisible — OnGameStartManager may also deactivate
-        var c = image.color;
-        c.a = 0f;
-        image.color = c;
-        gameObject.SetActive(false);
     }
 
-    void OnDestroy()
+    void OnEnable()
     {
-        if (GameStateManager.Instance != null)
-        {
-            GameStateManager.Instance.OnPhaseFailed -= OnPhaseFailed;
-            GameStateManager.Instance.OnPhaseRestarted -= OnPhaseRestarted;
-            GameStateManager.Instance.OnGameReset -= OnPhaseRestarted;
-            GameStateManager.Instance.OnPhaseStarted -= OnPhaseStarted;
-        }
+        flashTimer = 0f;
+        ShiftColour();
     }
 
     void Update()
     {
-        if (!gameObject.activeSelf) return;
+        if (image == null) return;
 
         flashTimer += Time.deltaTime;
         if (flashTimer >= interval)
@@ -59,26 +42,8 @@ public class FailFlashController : MonoBehaviour
         }
     }
 
-    private void OnPhaseFailed()
-    {
-        gameObject.SetActive(true);
-        flashTimer = 0f;
-        ShiftColour();
-    }
-
-    private void OnPhaseRestarted()
-    {
-        gameObject.SetActive(false);
-    }
-
-    private void OnPhaseStarted()
-    {
-        gameObject.SetActive(false);
-    }
-
     private void ShiftColour()
     {
-        if (image == null) return;
         float hue = Random.value;
         var colour = Color.HSVToRGB(hue, saturation, brightness);
         colour.a = alpha;
