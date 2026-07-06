@@ -202,6 +202,50 @@ MonoBehaviour:
       )'
     m_Metadata:
       m_Items: []
+  - m_Id: 28985478442115072
+    m_Localized: Play
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28985478563749888
+    m_Localized: Play
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28985478563749889
+    m_Localized: Challenges
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28985478563749890
+    m_Localized: Custom
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28985478563749891
+    m_Localized: Trendy
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28985478563749892
+    m_Localized: Cancel
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28985478563749893
+    m_Localized: OK
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28985478563749894
+    m_Localized: Import
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28985478563749895
+    m_Localized: Export
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28985478563749896
+    m_Localized: Create
+    m_Metadata:
+      m_Items: []
+  - m_Id: 28985478563749897
+    m_Localized: Delete
+    m_Metadata:
+      m_Items: []
   references:
     version: 2
     RefIds: []

@@ -27,6 +27,7 @@ public class WireLocalizationToScene
 
             // HUD
             ("--- UI ---/HUD-Btns/WordsBtn/Text (TMP)",    "UI", "UI.HUD.WordsBtn"),
+            ("--- UI ---/HUD-Btns/PlayBtn/Text (TMP)",     "UI", "UI.HUD.PlayBtn"),
             ("--- UI ---/HUD-Btns/TimerBtn/Text (TMP)",    "UI", "UI.HUD.TimerBtn"),
             ("--- UI ---/HUD-Btns/InfoBtn/Text",           "UI", "UI.HUD.InfoBtn"),
             ("--- UI ---/HUD-Btns/ResetBtn/Text (TMP)",    "UI", "UI.HUD.ResetBtn"),
@@ -74,6 +75,18 @@ public class WireLocalizationToScene
             ("--- UI ---/Menus/ChinesePinyinPopup/Card/Title",                   "UI", "UI.PinyinPopup.Title"),
             ("--- UI ---/Menus/ChinesePinyinPopup/Card/ButtonRow/CancelBtn/Text","UI", "UI.PinyinPopup.CancelBtn"),
             ("--- UI ---/Menus/ChinesePinyinPopup/Card/ButtonRow/OKBtn/Text",    "UI", "UI.PinyinPopup.OKBtn"),
+
+            // Level panel
+            ("--- UI ---/Menus/Level/Card/Title",                                    "UI", "UI.Level.Title"),
+            ("--- UI ---/Menus/Level/Card/TabRows/TabBtn1/TabNameTMP",               "UI", "UI.Level.TabChallenges"),
+            ("--- UI ---/Menus/Level/Card/TabRows/TabBtn1 (1)/TabNameTMP",           "UI", "UI.Level.TabCustom"),
+            ("--- UI ---/Menus/Level/Card/TabRows/TabBtn1 (2)/TabNameTMP",           "UI", "UI.Level.TabTrendy"),
+            ("--- UI ---/Menus/Level/Card/ButtonRow/CancelBtn/Text",                 "UI", "UI.Level.CancelBtn"),
+            ("--- UI ---/Menus/Level/Card/ButtonRow/OKBtn/Text",                     "UI", "UI.Level.OKBtn"),
+            ("--- UI ---/Menus/Level/Card/ButtonRow/ImportBtn/Text",                 "UI", "UI.Level.ImportBtn"),
+            ("--- UI ---/Menus/Level/Card/ButtonRow/ExportBtn/Text",                 "UI", "UI.Level.ExportBtn"),
+            ("--- UI ---/Menus/Level/Card/ButtonRow/CreateListBtn/Text",             "UI", "UI.Level.CreateListBtn"),
+            ("--- UI ---/Menus/Level/Card/ButtonRow/DeleteListBtn/Text",             "UI", "UI.Level.DeleteListBtn"),
         };
 
         foreach (var (path, table, key) in uiMappings)

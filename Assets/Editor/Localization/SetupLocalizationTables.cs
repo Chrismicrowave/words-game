@@ -147,6 +147,19 @@ public class SetupLocalizationTables
         E(col, "UI.PinyinPopup.CancelBtn", "Cancel",         "取消");
         E(col, "UI.PinyinPopup.OKBtn",     "OK",             "确认");
 
+        // Level panel
+        E(col, "UI.HUD.PlayBtn",            "Play",       "游戏");
+        E(col, "UI.Level.Title",            "Play",       "游戏");
+        E(col, "UI.Level.TabChallenges",    "Challenges", "挑战");
+        E(col, "UI.Level.TabCustom",        "Custom",     "自定义");
+        E(col, "UI.Level.TabTrendy",        "Trendy",     "流行");
+        E(col, "UI.Level.CancelBtn",        "Cancel",     "取消");
+        E(col, "UI.Level.OKBtn",            "OK",         "确认");
+        E(col, "UI.Level.ImportBtn",        "Import",     "导入");
+        E(col, "UI.Level.ExportBtn",        "Export",     "导出");
+        E(col, "UI.Level.CreateListBtn",    "Create",     "创建");
+        E(col, "UI.Level.DeleteListBtn",    "Delete",     "删除");
+
         // Instructions
         E(col, "UI.Instructions.Body",
             "Rules:\n1. Hold the letter one by one and don't let go\n2. If you see the same letter when holding, release it\n\n(Ignore cases, space and punctuations)\n(use props, extra hands, whatever you need:) )",
