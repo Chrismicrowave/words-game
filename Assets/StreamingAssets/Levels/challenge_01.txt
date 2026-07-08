@@ -1,0 +1,16 @@
+{
+  "name": "First Steps",
+  "words": [
+    "the",
+    "cat",
+    "run",
+    "big",
+    "red",
+    "dot",
+    "cup",
+    "dog",
+    "hat",
+    "sun"
+  ],
+  "nameZh": "起步"
+}

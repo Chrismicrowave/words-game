@@ -1,0 +1,16 @@
+{
+  "name": "Mountain",
+  "words": [
+    "adventure",
+    "butterfly",
+    "chocolate",
+    "elephant",
+    "festival",
+    "goldfish",
+    "horizon",
+    "lantern",
+    "mountain",
+    "notebook"
+  ],
+  "nameZh": "山峰"
+}

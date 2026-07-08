@@ -1,0 +1,16 @@
+{
+  "name": "Thunder",
+  "words": [
+    "shadow",
+    "puzzle",
+    "candle",
+    "basket",
+    "rabbit",
+    "penguin",
+    "window",
+    "guitar",
+    "cactus",
+    "pillow"
+  ],
+  "nameZh": "雷鸣"
+}

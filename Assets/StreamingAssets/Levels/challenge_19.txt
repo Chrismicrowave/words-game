@@ -1,0 +1,16 @@
+{
+  "name": "Sun Seeker",
+  "words": [
+    "symphony",
+    "melody",
+    "rhythm",
+    "harmony",
+    "chorus",
+    "ballad",
+    "sonata",
+    "crescendo",
+    "cadence",
+    "prelude"
+  ],
+  "nameZh": "逐日者"
+}

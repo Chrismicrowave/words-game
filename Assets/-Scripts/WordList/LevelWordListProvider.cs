@@ -3,9 +3,14 @@ using System.IO;
 using UnityEngine;
 
 /// <summary>
-/// IWordListProvider backed by a .txt (one word per line) or .json file.
-/// JSON format: { "name": "First Steps", "nameZh": "起步", "words": [...] }
-/// Used for challenge levels (read-only JSON) and custom levels (read-write .txt).
+/// IWordListProvider backed by a .txt file.
+///
+/// If the file content starts with '{' it is parsed as JSON:
+///   { "name": "First Steps", "nameZh": "起步", "words": [...] }
+/// Otherwise it is treated as a plain word-per-line text file.
+///
+/// Challenge levels are read-only JSON-format .txt files.
+/// Custom levels are read-write plain .txt files (one word per line).
 /// </summary>
 public class LevelWordListProvider : IWordListProvider
 {
@@ -43,24 +48,7 @@ public class LevelWordListProvider : IWordListProvider
         string dir = Path.GetDirectoryName(FilePath);
         if (!Directory.Exists(dir))
             Directory.CreateDirectory(dir);
-
-        string ext = Path.GetExtension(FilePath).ToLower();
-        if (ext == ".json")
-        {
-            // JSON files are read-only challenges — Save() should not be called
-            // for them (IsEditable is false), but handle gracefully.
-            var data = new LevelJsonData
-            {
-                name = DisplayName,
-                nameZh = DisplayNameZh,
-                words = words.ToArray()
-            };
-            File.WriteAllText(FilePath, JsonUtility.ToJson(data, true));
-        }
-        else
-        {
-            File.WriteAllLines(FilePath, words);
-        }
+        File.WriteAllLines(FilePath, words);
     }
 
     public void DeleteFile()
@@ -77,11 +65,13 @@ public class LevelWordListProvider : IWordListProvider
             return;
         }
 
-        string ext = Path.GetExtension(FilePath).ToLower();
-        if (ext == ".json")
+        string raw = File.ReadAllText(FilePath);
+        string trimmed = raw.TrimStart();
+
+        if (trimmed.Length > 0 && trimmed[0] == '{')
         {
-            string json = File.ReadAllText(FilePath);
-            var data = JsonUtility.FromJson<LevelJsonData>(json);
+            // JSON format
+            var data = JsonUtility.FromJson<LevelJsonData>(raw);
             if (data != null)
             {
                 DisplayName = data.name ?? DisplayName;
@@ -91,14 +81,14 @@ public class LevelWordListProvider : IWordListProvider
         }
         else
         {
-            // Original .txt behavior: one word per line
-            var lines = File.ReadAllLines(FilePath);
+            // Plain text: one word per line
             words = new List<string>();
+            var lines = raw.Split('\n');
             foreach (string line in lines)
             {
-                string trimmed = line.Trim();
-                if (!string.IsNullOrEmpty(trimmed))
-                    words.Add(trimmed);
+                string word = line.Trim();
+                if (!string.IsNullOrEmpty(word))
+                    words.Add(word);
             }
         }
 
@@ -134,18 +124,16 @@ public class LevelWordListProvider : IWordListProvider
     }
 
     /// <summary>
-    /// Scans the given directory for .txt and .json files and
-    /// returns LevelWordListProvider instances.
+    /// Scans the given directory for .txt files and returns
+    /// LevelWordListProvider instances.
     /// </summary>
     public static List<LevelWordListProvider> ScanDirectory(string directory, bool isEditable = false)
     {
         var providers = new List<LevelWordListProvider>();
         if (!Directory.Exists(directory)) return providers;
 
-        var files = new List<string>();
-        files.AddRange(Directory.GetFiles(directory, "*.txt"));
-        files.AddRange(Directory.GetFiles(directory, "*.json"));
-        files.Sort();
+        var files = Directory.GetFiles(directory, "*.txt");
+        System.Array.Sort(files);
         foreach (var f in files)
             providers.Add(new LevelWordListProvider(f, isEditable));
         return providers;

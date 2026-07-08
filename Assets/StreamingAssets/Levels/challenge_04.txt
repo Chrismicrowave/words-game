@@ -1,0 +1,16 @@
+{
+  "name": "Star Light",
+  "words": [
+    "Monday",
+    "garden",
+    "bright",
+    "castle",
+    "giraffe",
+    "planet",
+    "silver",
+    "forest",
+    "bridge",
+    "river"
+  ],
+  "nameZh": "星光"
+}

@@ -1,0 +1,16 @@
+{
+  "name": "Sky High",
+  "words": [
+    "abandon",
+    "balance",
+    "capture",
+    "deliver",
+    "explain",
+    "fashion",
+    "genuine",
+    "harmony",
+    "imagine",
+    "justice"
+  ],
+  "nameZh": "高空"
+}

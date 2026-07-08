@@ -1,0 +1,16 @@
+{
+  "name": "Wind Song",
+  "words": [
+    "kingdom",
+    "library",
+    "miracle",
+    "natural",
+    "opinion",
+    "passage",
+    "quality",
+    "routine",
+    "silence",
+    "texture"
+  ],
+  "nameZh": "风之歌"
+}
