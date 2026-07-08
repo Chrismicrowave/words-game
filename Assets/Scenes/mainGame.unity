@@ -32740,7 +32740,7 @@ GameObject:
   - component: {fileID: 1634712220}
   - component: {fileID: 1634712221}
   m_Layer: 0
-  m_Name: Level
+  m_Name: LevelPanel
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -32796,27 +32796,6 @@ MonoBehaviour:
   deleteListBtn: {fileID: 1672393878}
   chineseFontAsset: {fileID: 11400000, guid: 428be41dc6b96d74cb9084b697519d27, type: 2}
   trendyPlaceholder: {fileID: 1718431469}
-  challengeNames:
-  - 
-  - 
-  - 
-  - 
-  - 
-  - 
-  - 
-  - 
-  - 
-  - 
-  - 
-  - 
-  - 
-  - 
-  - 
-  - 
-  - 
-  - 
-  - 
-  - 
 --- !u!114 &1634712221
 MonoBehaviour:
   m_ObjectHideFlags: 0
