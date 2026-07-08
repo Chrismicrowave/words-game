@@ -52,7 +52,6 @@ public class LevelPanelController : MonoBehaviour
         "Crystal", "Iron Will", "Silver Lining", "Golden Hour", "Dark Night",
         "Thunder", "Storm Chaser", "Moon Walker", "Sun Seeker", "Final Boss"
     };
-    public string[] challengeNamesZh = new string[20]; // Chinese display names
 
     private LevelTab currentTab = LevelTab.Challenges;
     private LevelWordListProvider selectedProvider;
