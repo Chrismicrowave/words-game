@@ -1,7 +1,6 @@
 using TMPro;
 using UnityEngine;
 using UnityEngine.Localization;
-using UnityEngine.ResourceManagement.AsyncOperations;
 
 /// <summary>
 /// Drives a TextMeshProUGUI from a LocalizedString.
@@ -12,7 +11,7 @@ using UnityEngine.ResourceManagement.AsyncOperations;
 /// locale switch), NOT when re-subscribing after OnDisable.  That means a
 /// panel that is shown/hidden would only get its text set the first time.
 /// We work around this by force-resolving via GetLocalizedString() on every
-/// OnEnable — if the value is already cached the handle completes synchronously.
+/// OnEnable — if the value is already cached it returns synchronously.
 /// </summary>
 [RequireComponent(typeof(TextMeshProUGUI))]
 public class LocalizeText : MonoBehaviour
@@ -29,11 +28,11 @@ public class LocalizeText : MonoBehaviour
     {
         localizedString.StringChanged += Apply;
 
-        // Force-resolve — StringChanged only fires on change, so re-subscribing
-        // after OnDisable would miss the current value.
-        var handle = localizedString.GetLocalizedString();
-        if (handle.IsDone && handle.Status == AsyncOperationStatus.Succeeded)
-            Apply(handle.Result);
+        // StringChanged only fires on *change*, so re-subscribing after
+        // OnDisable would miss the cached value.  Force-resolve here.
+        var cached = localizedString.GetLocalizedString();
+        if (!string.IsNullOrEmpty(cached))
+            Apply(cached);
     }
 
     void OnDisable()
