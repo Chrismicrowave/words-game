@@ -158,7 +158,7 @@ public class LevelWordListProvider : IWordListProvider
             n++;
         } while (File.Exists(path));
 
-        File.WriteAllText(path, "");
+        File.WriteAllText(path, "hello world");
         return new LevelWordListProvider(path, true);
     }
 }
