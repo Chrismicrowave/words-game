@@ -3,12 +3,14 @@ using System.IO;
 using UnityEngine;
 
 /// <summary>
-/// IWordListProvider backed by a plain .txt file (one word per line).
-/// Used for challenge levels (read-only) and custom levels (read-write).
+/// IWordListProvider backed by a .txt (one word per line) or .json file.
+/// JSON format: { "name": "First Steps", "nameZh": "起步", "words": [...] }
+/// Used for challenge levels (read-only JSON) and custom levels (read-write .txt).
 /// </summary>
 public class LevelWordListProvider : IWordListProvider
 {
     public string DisplayName { get; private set; }
+    public string DisplayNameZh { get; private set; }
     public LanguageMode LanguageMode { get; private set; } = LanguageMode.English;
     public bool IsEditable { get; private set; }
     public string FilePath { get; private set; }
@@ -41,7 +43,24 @@ public class LevelWordListProvider : IWordListProvider
         string dir = Path.GetDirectoryName(FilePath);
         if (!Directory.Exists(dir))
             Directory.CreateDirectory(dir);
-        File.WriteAllLines(FilePath, words);
+
+        string ext = Path.GetExtension(FilePath).ToLower();
+        if (ext == ".json")
+        {
+            // JSON files are read-only challenges — Save() should not be called
+            // for them (IsEditable is false), but handle gracefully.
+            var data = new LevelJsonData
+            {
+                name = DisplayName,
+                nameZh = DisplayNameZh,
+                words = words.ToArray()
+            };
+            File.WriteAllText(FilePath, JsonUtility.ToJson(data, true));
+        }
+        else
+        {
+            File.WriteAllLines(FilePath, words);
+        }
     }
 
     public void DeleteFile()
@@ -58,13 +77,29 @@ public class LevelWordListProvider : IWordListProvider
             return;
         }
 
-        var lines = File.ReadAllLines(FilePath);
-        words = new List<string>();
-        foreach (string line in lines)
+        string ext = Path.GetExtension(FilePath).ToLower();
+        if (ext == ".json")
         {
-            string trimmed = line.Trim();
-            if (!string.IsNullOrEmpty(trimmed))
-                words.Add(trimmed);
+            string json = File.ReadAllText(FilePath);
+            var data = JsonUtility.FromJson<LevelJsonData>(json);
+            if (data != null)
+            {
+                DisplayName = data.name ?? DisplayName;
+                DisplayNameZh = data.nameZh;
+                words = data.words != null ? new List<string>(data.words) : new List<string>();
+            }
+        }
+        else
+        {
+            // Original .txt behavior: one word per line
+            var lines = File.ReadAllLines(FilePath);
+            words = new List<string>();
+            foreach (string line in lines)
+            {
+                string trimmed = line.Trim();
+                if (!string.IsNullOrEmpty(trimmed))
+                    words.Add(trimmed);
+            }
         }
 
         // Auto-detect language mode
@@ -80,6 +115,14 @@ public class LevelWordListProvider : IWordListProvider
         LanguageMode = hasChinese ? LanguageMode.Mixed : LanguageMode.English;
     }
 
+    [System.Serializable]
+    private class LevelJsonData
+    {
+        public string name;
+        public string nameZh;
+        public string[] words;
+    }
+
     public static string GetChallengeDirectory()
     {
         return Path.Combine(Application.streamingAssetsPath, "Levels");
@@ -91,15 +134,18 @@ public class LevelWordListProvider : IWordListProvider
     }
 
     /// <summary>
-    /// Scans the given directory for .txt files and returns LevelWordListProvider instances.
+    /// Scans the given directory for .txt and .json files and
+    /// returns LevelWordListProvider instances.
     /// </summary>
     public static List<LevelWordListProvider> ScanDirectory(string directory, bool isEditable = false)
     {
         var providers = new List<LevelWordListProvider>();
         if (!Directory.Exists(directory)) return providers;
 
-        var files = Directory.GetFiles(directory, "*.txt");
-        System.Array.Sort(files);
+        var files = new List<string>();
+        files.AddRange(Directory.GetFiles(directory, "*.txt"));
+        files.AddRange(Directory.GetFiles(directory, "*.json"));
+        files.Sort();
         foreach (var f in files)
             providers.Add(new LevelWordListProvider(f, isEditable));
         return providers;
