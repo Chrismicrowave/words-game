@@ -172,21 +172,17 @@ public class LevelPanelController : MonoBehaviour
             var tmp = btnObj.GetComponentInChildren<TextMeshProUGUI>();
             if (tmp != null)
             {
-                // Use challenge name from Inspector array if available, otherwise filename
                 int idx = challengeProviders.IndexOf(provider);
-                if (currentTab == LevelTab.Challenges && idx >= 0)
+                if (currentTab == LevelTab.Challenges && idx >= 0
+                    && idx < challengeNames.Length && !string.IsNullOrEmpty(challengeNames[idx]))
                 {
-                    // Check if Chinese locale is active
-                    bool isChinese = UnityEngine.Localization.Settings.LocalizationSettings.SelectedLocale != null
-                        && UnityEngine.Localization.Settings.LocalizationSettings.SelectedLocale.Identifier.Code == "zh-Hans";
-                    string[] names = isChinese ? challengeNamesZh : challengeNames;
-                    if (idx < names.Length && !string.IsNullOrEmpty(names[idx]))
-                        tmp.text = names[idx];
-                    else
-                        tmp.text = provider.DisplayName;
+                    // Use localization string table keyed by English name
+                    string localized = LocalizationService.Get("UI", challengeNames[idx]);
+                    tmp.text = localized != challengeNames[idx] ? localized : challengeNames[idx];
                 }
                 else
                     tmp.text = provider.DisplayName;
+
                 if (chineseFontAsset != null && provider.LanguageMode == LanguageMode.Mixed)
                     tmp.font = chineseFontAsset;
             }
