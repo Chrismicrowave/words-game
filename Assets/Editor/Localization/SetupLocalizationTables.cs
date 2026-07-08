@@ -147,7 +147,7 @@ public class SetupLocalizationTables
         E(col, "UI.Level.Title",            "Levels",    "关卡");
         E(col, "UI.Level.TabChallenges",    "Challenges", "挑战");
         E(col, "UI.Level.TabCustom",        "Custom",     "自定义");
-        E(col, "UI.Level.TabTrendy",        "Trendy",     "流行");
+        E(col, "UI.Level.TabTrendy",        "Trending",   "流行");
         E(col, "UI.Level.CancelBtn",        "Cancel",     "取消");
         E(col, "UI.Level.OKBtn",            "OK",         "确认");
         E(col, "UI.Level.ImportBtn",        "Import",     "导入");

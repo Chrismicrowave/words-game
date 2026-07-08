@@ -370,6 +370,50 @@ MonoBehaviour:
     m_Localized: Delete
     m_Metadata:
       m_Items: []
+  - m_Id: 29692335720751104
+    m_Localized: Levels
+    m_Metadata:
+      m_Items: []
+  - m_Id: 29692335829803008
+    m_Localized: Levels
+    m_Metadata:
+      m_Items: []
+  - m_Id: 29692335829803009
+    m_Localized: Challenges
+    m_Metadata:
+      m_Items: []
+  - m_Id: 29692335829803010
+    m_Localized: Custom
+    m_Metadata:
+      m_Items: []
+  - m_Id: 29692335829803011
+    m_Localized: Trending
+    m_Metadata:
+      m_Items: []
+  - m_Id: 29692335833997312
+    m_Localized: Cancel
+    m_Metadata:
+      m_Items: []
+  - m_Id: 29692335833997313
+    m_Localized: OK
+    m_Metadata:
+      m_Items: []
+  - m_Id: 29692335833997314
+    m_Localized: Import
+    m_Metadata:
+      m_Items: []
+  - m_Id: 29692335833997315
+    m_Localized: Export
+    m_Metadata:
+      m_Items: []
+  - m_Id: 29692335833997316
+    m_Localized: Create
+    m_Metadata:
+      m_Items: []
+  - m_Id: 29692335833997317
+    m_Localized: Delete
+    m_Metadata:
+      m_Items: []
   references:
     version: 2
     RefIds: []
