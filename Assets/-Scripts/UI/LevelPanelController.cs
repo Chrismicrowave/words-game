@@ -123,6 +123,20 @@ public class LevelPanelController : MonoBehaviour
             trendyPlaceholder.SetActive(tab == LevelTab.Trendy);
     }
 
+    private void LoadChallengeManifest()
+    {
+        challengeNameMap = new Dictionary<string, string>();
+        string path = Path.Combine(Application.streamingAssetsPath, "Levels", "levels.json");
+        if (!File.Exists(path)) return;
+
+        string json = File.ReadAllText(path);
+        var wrapper = new LevelManifest();
+        JsonUtility.FromJsonOverwrite("{\"entries\":" + json + "}", wrapper);
+        if (wrapper.entries == null) return;
+        foreach (var entry in wrapper.entries)
+            challengeNameMap[entry.file] = entry.name;
+    }
+
     private void UpdateTabColors()
     {
         if (challengesTabImage != null)
