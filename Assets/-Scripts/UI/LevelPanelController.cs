@@ -54,6 +54,22 @@ public class LevelPanelController : MonoBehaviour
     private Image customTabImage;
     private Image trendyTabImage;
 
+    // Challenge name manifest — maps filename (e.g. "challenge_01.txt") to English display name
+    private Dictionary<string, string> challengeNameMap;
+
+    [System.Serializable]
+    private class LevelManifestEntry
+    {
+        public string file;
+        public string name;
+    }
+
+    [System.Serializable]
+    private class LevelManifest
+    {
+        public LevelManifestEntry[] entries;
+    }
+
     void Awake()
     {
         challengesTabImage = challengesTabBtn?.GetComponent<Image>();
