@@ -194,16 +194,17 @@ public class LevelPanelController : MonoBehaviour
             var tmp = btnObj.GetComponentInChildren<TextMeshProUGUI>();
             if (tmp != null)
             {
-                int idx = challengeProviders.IndexOf(provider);
-                if (currentTab == LevelTab.Challenges && idx >= 0
-                    && idx < challengeNames.Length && !string.IsNullOrEmpty(challengeNames[idx]))
+                string displayName = provider.DisplayName;
+                if (currentTab == LevelTab.Challenges && challengeNameMap != null)
                 {
-                    // Use localization string table keyed by English name
-                    string localized = LocalizationService.Get("UI", challengeNames[idx]);
-                    tmp.text = localized != challengeNames[idx] ? localized : challengeNames[idx];
+                    string fileName = Path.GetFileName(provider.FilePath);
+                    if (challengeNameMap.TryGetValue(fileName, out var mapped))
+                        displayName = mapped;
                 }
-                else
-                    tmp.text = provider.DisplayName;
+                // Localize via string table — falls back to English name if no
+                // locale-specific entry exists (e.g. new challenge not yet translated)
+                string localized = LocalizationService.Get("UI", displayName);
+                tmp.text = localized != displayName ? localized : displayName;
 
                 if (chineseFontAsset != null && provider.LanguageMode == LanguageMode.Mixed)
                     tmp.font = chineseFontAsset;
