@@ -4,14 +4,11 @@ using UnityEngine.Localization;
 
 /// <summary>
 /// Drives a TextMeshProUGUI from a LocalizedString.
-/// Fires immediately on enable (sets text to current locale) and
-/// re-fires whenever the locale changes.
 ///
-/// NOTE: StringChanged only fires when the value *changes* (first load or
-/// locale switch), NOT when re-subscribing after OnDisable.  That means a
-/// panel that is shown/hidden would only get its text set the first time.
-/// We work around this by force-resolving via GetLocalizedString() on every
-/// OnEnable — if the value is already cached it returns synchronously.
+/// Subscribes once in Awake (never unsubscribes on disable), so the handler
+/// stays alive across panel show/hide cycles and locale switches alike.
+/// StringChanged fires on first load and on every locale change — no need
+/// for GetLocalizedString() or manual refresh.
 /// </summary>
 [RequireComponent(typeof(TextMeshProUGUI))]
 public class LocalizeText : MonoBehaviour
@@ -22,20 +19,10 @@ public class LocalizeText : MonoBehaviour
     void Awake()
     {
         m_Tmp = GetComponent<TextMeshProUGUI>();
-    }
-
-    void OnEnable()
-    {
         localizedString.StringChanged += Apply;
-
-        // StringChanged only fires on *change*, so re-subscribing after
-        // OnDisable would miss the cached value.  Force-resolve here.
-        var cached = localizedString.GetLocalizedString();
-        if (!string.IsNullOrEmpty(cached))
-            Apply(cached);
     }
 
-    void OnDisable()
+    void OnDestroy()
     {
         localizedString.StringChanged -= Apply;
     }
