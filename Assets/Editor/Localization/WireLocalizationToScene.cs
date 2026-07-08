@@ -71,16 +71,16 @@ public class WireLocalizationToScene
             ("--- UI ---/Menus/ChinesePinyinPopup/Card/ButtonRow/OKBtn/Text",    "UI", "UI.PinyinPopup.OKBtn"),
 
             // Level panel
-            ("--- UI ---/Menus/LevelPanel/Card/Title",                                    "UI", "UI.Level.Title"),
-            ("--- UI ---/Menus/LevelPanel/Card/TabRows/TabBtn1/TabNameTMP",               "UI", "UI.Level.TabChallenges"),
-            ("--- UI ---/Menus/LevelPanel/Card/TabRows/TabBtn1 (1)/TabNameTMP",           "UI", "UI.Level.TabCustom"),
-            ("--- UI ---/Menus/LevelPanel/Card/TabRows/TabBtn1 (2)/TabNameTMP",           "UI", "UI.Level.TabTrendy"),
-            ("--- UI ---/Menus/LevelPanel/Card/ButtonRow/CancelBtn/Text",                 "UI", "UI.Level.CancelBtn"),
-            ("--- UI ---/Menus/LevelPanel/Card/ButtonRow/OKBtn/Text",                     "UI", "UI.Level.OKBtn"),
-            ("--- UI ---/Menus/LevelPanel/Card/ButtonRow/ImportBtn/Text",                 "UI", "UI.Level.ImportBtn"),
-            ("--- UI ---/Menus/LevelPanel/Card/ButtonRow/ExportBtn/Text",                 "UI", "UI.Level.ExportBtn"),
-            ("--- UI ---/Menus/LevelPanel/Card/ButtonRow/CreateListBtn/Text",             "UI", "UI.Level.CreateListBtn"),
-            ("--- UI ---/Menus/LevelPanel/Card/ButtonRow/DeleteListBtn/Text",             "UI", "UI.Level.DeleteListBtn"),
+            ("--- UI ---/Menus/Level/Card/Title",                                    "UI", "UI.Level.Title"),
+            ("--- UI ---/Menus/Level/Card/TabRows/TabBtn1/TabNameTMP",               "UI", "UI.Level.TabChallenges"),
+            ("--- UI ---/Menus/Level/Card/TabRows/TabBtn1 (1)/TabNameTMP",           "UI", "UI.Level.TabCustom"),
+            ("--- UI ---/Menus/Level/Card/TabRows/TabBtn1 (2)/TabNameTMP",           "UI", "UI.Level.TabTrendy"),
+            ("--- UI ---/Menus/Level/Card/ButtonRow/CancelBtn/Text",                 "UI", "UI.Level.CancelBtn"),
+            ("--- UI ---/Menus/Level/Card/ButtonRow/OKBtn/Text",                     "UI", "UI.Level.OKBtn"),
+            ("--- UI ---/Menus/Level/Card/ButtonRow/ImportBtn/Text",                 "UI", "UI.Level.ImportBtn"),
+            ("--- UI ---/Menus/Level/Card/ButtonRow/ExportBtn/Text",                 "UI", "UI.Level.ExportBtn"),
+            ("--- UI ---/Menus/Level/Card/ButtonRow/CreateListBtn/Text",             "UI", "UI.Level.CreateListBtn"),
+            ("--- UI ---/Menus/Level/Card/ButtonRow/DeleteListBtn/Text",             "UI", "UI.Level.DeleteListBtn"),
         };
 
         foreach (var (path, table, key) in uiMappings)
