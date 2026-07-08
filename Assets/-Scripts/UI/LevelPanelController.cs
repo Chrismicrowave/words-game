@@ -177,16 +177,14 @@ public class LevelPanelController : MonoBehaviour
             if (tmp != null)
             {
                 string displayName = provider.DisplayName;
-                if (currentTab == LevelTab.Challenges && challengeNameMap != null)
+                if (currentTab == LevelTab.Challenges && !string.IsNullOrEmpty(provider.DisplayNameZh))
                 {
-                    string fileName = Path.GetFileName(provider.FilePath);
-                    if (challengeNameMap.TryGetValue(fileName, out var mapped))
-                        displayName = mapped;
+                    bool isChinese = UnityEngine.Localization.Settings.LocalizationSettings.SelectedLocale != null
+                        && UnityEngine.Localization.Settings.LocalizationSettings.SelectedLocale.Identifier.Code == "zh-Hans";
+                    if (isChinese)
+                        displayName = provider.DisplayNameZh;
                 }
-                // Localize via string table — falls back to English name if no
-                // locale-specific entry exists (e.g. new challenge not yet translated)
-                string localized = LocalizationService.Get("UI", displayName);
-                tmp.text = localized != displayName ? localized : displayName;
+                tmp.text = displayName;
 
                 if (chineseFontAsset != null && provider.LanguageMode == LanguageMode.Mixed)
                     tmp.font = chineseFontAsset;
