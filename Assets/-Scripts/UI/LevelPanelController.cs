@@ -72,6 +72,8 @@ public class LevelPanelController : MonoBehaviour
 
     void Awake()
     {
+        LoadChallengeManifest();
+
         challengesTabImage = challengesTabBtn?.GetComponent<Image>();
         customTabImage = customTabBtn?.GetComponent<Image>();
         trendyTabImage = trendyTabBtn?.GetComponent<Image>();
