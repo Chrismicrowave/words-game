@@ -155,27 +155,27 @@ public class SetupLocalizationTables
         E(col, "UI.Level.CreateListBtn",    "Create",     "创建");
         E(col, "UI.Level.DeleteListBtn",    "Delete",     "删除");
 
-        // Challenge names (grid buttons)
-        E(col, "UI.Level.ChallengeName.0",  "First Steps",    "起步");
-        E(col, "UI.Level.ChallengeName.1",  "Cat Nap",        "猫眠");
-        E(col, "UI.Level.ChallengeName.2",  "Rain Drop",      "雨滴");
-        E(col, "UI.Level.ChallengeName.3",  "Star Light",     "星光");
-        E(col, "UI.Level.ChallengeName.4",  "River Run",      "河流");
-        E(col, "UI.Level.ChallengeName.5",  "Mountain",       "山峰");
-        E(col, "UI.Level.ChallengeName.6",  "Ocean Blue",     "蔚蓝海洋");
-        E(col, "UI.Level.ChallengeName.7",  "Sky High",       "高空");
-        E(col, "UI.Level.ChallengeName.8",  "Wind Song",      "风之歌");
-        E(col, "UI.Level.ChallengeName.9",  "Fire Dance",     "火舞");
-        E(col, "UI.Level.ChallengeName.10", "Crystal",        "水晶");
-        E(col, "UI.Level.ChallengeName.11", "Iron Will",      "钢铁意志");
-        E(col, "UI.Level.ChallengeName.12", "Silver Lining",  "银边");
-        E(col, "UI.Level.ChallengeName.13", "Golden Hour",    "金色时刻");
-        E(col, "UI.Level.ChallengeName.14", "Dark Night",     "黑夜");
-        E(col, "UI.Level.ChallengeName.15", "Thunder",        "雷鸣");
-        E(col, "UI.Level.ChallengeName.16", "Storm Chaser",   "追风暴者");
-        E(col, "UI.Level.ChallengeName.17", "Moon Walker",    "月行者");
-        E(col, "UI.Level.ChallengeName.18", "Sun Seeker",     "逐日者");
-        E(col, "UI.Level.ChallengeName.19", "Final Boss",     "最终BOSS");
+        // Challenge names (grid buttons) — keyed by English name
+        E(col, "First Steps",    "First Steps",    "起步");
+        E(col, "Cat Nap",        "Cat Nap",        "猫眠");
+        E(col, "Rain Drop",      "Rain Drop",      "雨滴");
+        E(col, "Star Light",     "Star Light",     "星光");
+        E(col, "River Run",      "River Run",      "河流");
+        E(col, "Mountain",       "Mountain",       "山峰");
+        E(col, "Ocean Blue",     "Ocean Blue",     "蔚蓝海洋");
+        E(col, "Sky High",       "Sky High",       "高空");
+        E(col, "Wind Song",      "Wind Song",      "风之歌");
+        E(col, "Fire Dance",     "Fire Dance",     "火舞");
+        E(col, "Crystal",        "Crystal",        "水晶");
+        E(col, "Iron Will",      "Iron Will",      "钢铁意志");
+        E(col, "Silver Lining",  "Silver Lining",  "银边");
+        E(col, "Golden Hour",    "Golden Hour",    "金色时刻");
+        E(col, "Dark Night",     "Dark Night",     "黑夜");
+        E(col, "Thunder",        "Thunder",        "雷鸣");
+        E(col, "Storm Chaser",   "Storm Chaser",   "追风暴者");
+        E(col, "Moon Walker",    "Moon Walker",    "月行者");
+        E(col, "Sun Seeker",     "Sun Seeker",     "逐日者");
+        E(col, "Final Boss",     "Final Boss",     "最终BOSS");
 
         // Instructions
         E(col, "UI.Instructions.Body",
