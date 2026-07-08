@@ -155,6 +155,28 @@ public class SetupLocalizationTables
         E(col, "UI.Level.CreateListBtn",    "Create",     "创建");
         E(col, "UI.Level.DeleteListBtn",    "Delete",     "删除");
 
+        // Challenge names (grid buttons)
+        E(col, "UI.Level.ChallengeName.0",  "First Steps",    "起步");
+        E(col, "UI.Level.ChallengeName.1",  "Cat Nap",        "猫眠");
+        E(col, "UI.Level.ChallengeName.2",  "Rain Drop",      "雨滴");
+        E(col, "UI.Level.ChallengeName.3",  "Star Light",     "星光");
+        E(col, "UI.Level.ChallengeName.4",  "River Run",      "河流");
+        E(col, "UI.Level.ChallengeName.5",  "Mountain",       "山峰");
+        E(col, "UI.Level.ChallengeName.6",  "Ocean Blue",     "蔚蓝海洋");
+        E(col, "UI.Level.ChallengeName.7",  "Sky High",       "高空");
+        E(col, "UI.Level.ChallengeName.8",  "Wind Song",      "风之歌");
+        E(col, "UI.Level.ChallengeName.9",  "Fire Dance",     "火舞");
+        E(col, "UI.Level.ChallengeName.10", "Crystal",        "水晶");
+        E(col, "UI.Level.ChallengeName.11", "Iron Will",      "钢铁意志");
+        E(col, "UI.Level.ChallengeName.12", "Silver Lining",  "银边");
+        E(col, "UI.Level.ChallengeName.13", "Golden Hour",    "金色时刻");
+        E(col, "UI.Level.ChallengeName.14", "Dark Night",     "黑夜");
+        E(col, "UI.Level.ChallengeName.15", "Thunder",        "雷鸣");
+        E(col, "UI.Level.ChallengeName.16", "Storm Chaser",   "追风暴者");
+        E(col, "UI.Level.ChallengeName.17", "Moon Walker",    "月行者");
+        E(col, "UI.Level.ChallengeName.18", "Sun Seeker",     "逐日者");
+        E(col, "UI.Level.ChallengeName.19", "Final Boss",     "最终BOSS");
+
         // Instructions
         E(col, "UI.Instructions.Body",
             "Rules:\n1. Hold the letter one by one and don't let go\n2. If you see the same letter when holding, release it\n\n(Ignore cases, space and punctuations)\n(use props, extra hands, whatever you need:) )",
