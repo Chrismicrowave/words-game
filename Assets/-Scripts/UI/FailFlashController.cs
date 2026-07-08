@@ -4,6 +4,7 @@ using UnityEngine.UI;
 /// <summary>
 /// Flashes shifting random colours while its GO is active.
 /// Activated/deactivated by FailBGBridge. No event subscriptions.
+/// Targets a child Image (set in Inspector) rather than GetComponent.
 /// Works regardless of Editor active state.
 /// </summary>
 public class FailFlashController : MonoBehaviour
@@ -12,11 +13,9 @@ public class FailFlashController : MonoBehaviour
     [SerializeField] private float saturation = 1.0f;
     [SerializeField] private float brightness = 1.0f;
     [SerializeField] private float alpha = 0.7f;
+    [SerializeField] private Image targetImage;
 
-    private Image image;
     private float flashTimer;
-
-    void Awake() { image = GetComponent<Image>(); }
 
     void OnEnable() { flashTimer = 0f; ShiftColour(); }
 
@@ -28,8 +27,9 @@ public class FailFlashController : MonoBehaviour
 
     private void ShiftColour()
     {
+        if (targetImage == null) return;
         var c = Color.HSVToRGB(Random.value, saturation, brightness);
         c.a = alpha;
-        image.color = c;
+        targetImage.color = c;
     }
 }
