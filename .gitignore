@@ -97,3 +97,42 @@ InitTestScene*.unity*
 
 # Auto-generated scenes by play mode tests
 /[Aa]ssets/[Ii]nit[Tt]est[Ss]cene*.unity*
+# ── Unity ─────────────────────────────────────────────────────
+ProfilerCaptures/
+
+# Asset meta data should only be ignored when manually modified
+
+*.userosscache
+
+# Rider
+.idea/
+*.sln.iml
+
+# VS Code
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Unity Editor per-user settings
+UserSettings/
+
+# ── CRITICAL: Binary art assets ────────────────────────────
+# DO NOT put *.fbx, *.psd, *.tga, *.wav, *.mp3 etc. here.
+# If listed here, git IGNORES them and LFS CAN'T BACK THEM UP.
+# If a binary file is missing from your repo, CHECK .gitignore FIRST.
+# ─────────────────────────────────────────────────────────────
+
+# AI / CLI / MCP tooling (teammates get raw Unity project only)
+.claude/
+CLAUDE.md
+.mcp.json
+Assets/Editor/AIMCP/AgentMirror/
+
+# ── UCC Gateway MCP ──────────────────────────────────────
+Library/AgentMirror/
+.codegraph/
+.claude/knowledge/ucc-pending/
+.claude/unity-mode-history.jsonl
+.claude/UCC-MCP-Update-Archive/

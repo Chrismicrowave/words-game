@@ -43,3 +43,18 @@ Architecture details: `docs/architecture.md`
 - Systems subscribe to events in OnEnable/Start, unsubscribe in OnDisable
 - InputHandler clears EventSystem selection on Enter/Backspace to prevent UI button double-triggers
 - TimerSystem pauses on failed input, resumes on restart — paused time excluded from phase duration
+
+
+[UCC-START — do not edit]
+## Universal Unity Rules (from ucc-gateway v0.1.1)
+
+- **Never `??` with Unity Objects** — use `if (x == null)` only
+- **Always use the new Input System** — never `Input.GetKey`
+- **Editor values beat script defaults** — check inspector first
+- **Stop Play Mode before structural edits** — changes don't persist
+- **Script controls initial active state** — Awake()/Start(), not GO toggle
+- **Wire references via MCP** — never tell user to do it
+- **No name-based lookups** — use stableId or inspector references
+- **RefHub for shared systems** — single source for cameras, UI, managers
+- **Use ucc-gateway for all scene/asset/code queries** — faster, no round-trips
+[UCC-END]
