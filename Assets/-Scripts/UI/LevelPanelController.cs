@@ -165,10 +165,17 @@ public class LevelPanelController : MonoBehaviour
                 string displayName = provider.DisplayName;
                 if (currentTab == LevelTab.Challenges && !string.IsNullOrEmpty(provider.DisplayNameZh))
                 {
-                    bool isChinese = UnityEngine.Localization.Settings.LocalizationSettings.SelectedLocale != null
-                        && UnityEngine.Localization.Settings.LocalizationSettings.SelectedLocale.Identifier.Code == "zh-Hans";
-                    if (isChinese)
-                        displayName = provider.DisplayNameZh;
+                    try
+                    {
+                        var locale = UnityEngine.Localization.Settings.LocalizationSettings.SelectedLocale;
+                        if (locale != null && locale.Identifier.Code == "zh-Hans")
+                            displayName = provider.DisplayNameZh;
+                    }
+                    catch
+                    {
+                        // LocalizationSettings.SelectedLocale can throw NRE when
+                        // the system hasn't fully initialized — ignore and use English.
+                    }
                 }
                 tmp.text = displayName;
 
