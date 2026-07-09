@@ -44,6 +44,9 @@ public class LevelPanelController : MonoBehaviour
     [Header("Trending Placeholder")]
     [SerializeField] private GameObject trendyPlaceholder;  // "Coming Soon" shown in Trending tab
 
+    [Header("Debug")]
+    [SerializeField] private bool unlockAll;  // Editor toggle — unlocks all challenge levels
+
     private const string LastLevelPathPrefKey = "LevelPanel_LastPath";
     private const string LastLevelTabPrefKey  = "LevelPanel_LastTab";
 
