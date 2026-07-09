@@ -15,50 +15,50 @@ MonoBehaviour:
   m_TableCollectionName: Gameplay
   m_TableCollectionNameGuidString: 1c10f7571c6fc0d489e392886116c4ee
   m_Entries:
-  - m_Id: 214200320
+  - m_Id: 238018560
     m_Key: Gameplay.PhaseComplete
     m_Metadata:
       m_Items: []
-  - m_Id: 264531968
+  - m_Id: 292544512
     m_Key: Gameplay.AllPhasesComplete
     m_Metadata:
       m_Items: []
-  - m_Id: 264531969
+  - m_Id: 292544513
     m_Key: Gameplay.FailureSuffix
     m_Metadata:
       m_Items: []
-  - m_Id: 264531970
+  - m_Id: 292544514
     m_Key: Gameplay.ExpectedTo
     m_Metadata:
       m_Items: []
-  - m_Id: 264531971
+  - m_Id: 296738816
     m_Key: Gameplay.ActionPrompt
     m_Metadata:
       m_Items: []
-  - m_Id: 264531972
+  - m_Id: 296738817
     m_Key: Gameplay.VerbHold
     m_Metadata:
       m_Items: []
-  - m_Id: 264531973
+  - m_Id: 296738818
     m_Key: Gameplay.VerbRelease
     m_Metadata:
       m_Items: []
-  - m_Id: 264531974
+  - m_Id: 296738819
     m_Key: Gameplay.VerbHoldLower
     m_Metadata:
       m_Items: []
-  - m_Id: 264531975
+  - m_Id: 296738820
     m_Key: Gameplay.VerbReleaseLower
     m_Metadata:
       m_Items: []
   m_Metadata:
     m_Items: []
   m_KeyGenerator:
-    rid: 1019856799222989074
+    rid: 7151743906518401109
   references:
     version: 2
     RefIds:
-    - rid: 1019856799222989074
+    - rid: 7151743906518401109
       type: {class: DistributedUIDGenerator, ns: UnityEngine.Localization.Tables, asm: Unity.Localization}
       data:
-        m_CustomEpoch: 1776408133296
+        m_CustomEpoch: 1783582830111

@@ -155,28 +155,6 @@ public class SetupLocalizationTables
         E(col, "UI.Level.CreateListBtn",    "Create",     "创建");
         E(col, "UI.Level.DeleteListBtn",    "Delete",     "删除");
 
-        // Challenge names (grid buttons) — keyed by English name
-        E(col, "First Steps",    "First Steps",    "起步");
-        E(col, "Cat Nap",        "Cat Nap",        "猫眠");
-        E(col, "Rain Drop",      "Rain Drop",      "雨滴");
-        E(col, "Star Light",     "Star Light",     "星光");
-        E(col, "River Run",      "River Run",      "河流");
-        E(col, "Mountain",       "Mountain",       "山峰");
-        E(col, "Ocean Blue",     "Ocean Blue",     "蔚蓝海洋");
-        E(col, "Sky High",       "Sky High",       "高空");
-        E(col, "Wind Song",      "Wind Song",      "风之歌");
-        E(col, "Fire Dance",     "Fire Dance",     "火舞");
-        E(col, "Crystal",        "Crystal",        "水晶");
-        E(col, "Iron Will",      "Iron Will",      "钢铁意志");
-        E(col, "Silver Lining",  "Silver Lining",  "银边");
-        E(col, "Golden Hour",    "Golden Hour",    "金色时刻");
-        E(col, "Dark Night",     "Dark Night",     "黑夜");
-        E(col, "Thunder",        "Thunder",        "雷鸣");
-        E(col, "Storm Chaser",   "Storm Chaser",   "追风暴者");
-        E(col, "Moon Walker",    "Moon Walker",    "月行者");
-        E(col, "Sun Seeker",     "Sun Seeker",     "逐日者");
-        E(col, "Final Boss",     "Final Boss",     "最终BOSS");
-
         // Instructions
         E(col, "UI.Instructions.Body",
             "Rules:\n1. Hold the letter one by one and don't let go\n2. If you see the same letter when holding, release it\n\n(Ignore cases, space and punctuations)\n(use props, extra hands, whatever you need:) )",
