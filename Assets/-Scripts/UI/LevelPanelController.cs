@@ -248,6 +248,7 @@ public class LevelPanelController : MonoBehaviour
             {
                 bool unlocked = unlockAll || IsChallengeUnlocked(providers, provider);
                 SetChallengeLockState(btnObj, btn, unlocked);
+                SetStarDisplay(btnObj, providers, provider);
             }
         }
 
