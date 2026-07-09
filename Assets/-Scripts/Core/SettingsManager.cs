@@ -65,12 +65,6 @@ public class SettingsManager : SingletonBehaviour<SettingsManager>
         set { PlayerPrefs.SetInt(KeyResolution, value); ApplyDisplay(); }
     }
 
-    public int QualityLevel
-    {
-        get => PlayerPrefs.GetInt(KeyQuality, QualitySettings.GetQualityLevel());
-        set { PlayerPrefs.SetInt(KeyQuality, value); QualitySettings.SetQualityLevel(value); }
-    }
-
     public bool ShowActionPrompts
     {
         get => PlayerPrefs.GetInt(KeyActionPrompts, 1) == 1;
