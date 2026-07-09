@@ -38,12 +38,12 @@ public class GameCoordinator : MonoBehaviour
         var challenges = LevelWordListProvider.ScanDirectory(challengeDir);
         if (challenges.Count > 0)
         {
-            PhaseManager.Instance.LoadWordList(challenges[0]);
-            PhaseManager.Instance.CurrentLevelMode = LevelMode.Challenge;
+            Services.Get<PhaseManager>().LoadWordList(challenges[0]);
+            Services.Get<PhaseManager>().CurrentLevelMode = LevelMode.Challenge;
         }
         else if (defaultWordList != null)
         {
-            PhaseManager.Instance.LoadWordList(defaultWordList);
+            Services.Get<PhaseManager>().LoadWordList(defaultWordList);
         }
 
         // Subscribe to input events
@@ -52,8 +52,8 @@ public class GameCoordinator : MonoBehaviour
         InputHandler.Instance.OnEnterPressed += HandleEnter;
 
         // Subscribe to phase changes
-        PhaseManager.Instance.OnPhaseWordChanged += HandlePhaseWordChanged;
-        PhaseManager.Instance.OnWordListChanged  += HandleWordListChanged;
+        Services.Get<PhaseManager>().OnPhaseWordChanged += HandlePhaseWordChanged;
+        Services.Get<PhaseManager>().OnWordListChanged  += HandleWordListChanged;
 
         // Track failures for star rating
         GameStateManager.Instance.OnPhaseFailed += HandlePhaseFailed;
@@ -75,10 +75,10 @@ public class GameCoordinator : MonoBehaviour
             InputHandler.Instance.OnBackspacePressed -= HandleBackspace;
             InputHandler.Instance.OnEnterPressed -= HandleEnter;
         }
-        if (PhaseManager.Instance != null)
+        if (Services.Get<PhaseManager>() != null)
         {
-            PhaseManager.Instance.OnPhaseWordChanged -= HandlePhaseWordChanged;
-            PhaseManager.Instance.OnWordListChanged  -= HandleWordListChanged;
+            Services.Get<PhaseManager>().OnPhaseWordChanged -= HandlePhaseWordChanged;
+            Services.Get<PhaseManager>().OnWordListChanged  -= HandleWordListChanged;
         }
         if (GameStateManager.Instance != null)
         {
@@ -117,12 +117,12 @@ public class GameCoordinator : MonoBehaviour
                 // Always play the word-complete sound via the PhaseComplete event,
                 // even for the last word. Then go straight to AllComplete if done.
                 GameStateManager.Instance.TransitionTo(GameState.PhaseComplete);
-                if (!PhaseManager.Instance.HasMorePhases)
+                if (!Services.Get<PhaseManager>().HasMorePhases)
                 {
                     leaderboardService.SubmitScore(
-                        PhaseManager.Instance.ActiveProvider?.DisplayName ?? "Unknown",
+                        Services.Get<PhaseManager>().ActiveProvider?.DisplayName ?? "Unknown",
                         TimerSystem.Instance.TotalElapsedTime,
-                        PhaseManager.Instance.TotalPhases
+                        Services.Get<PhaseManager>().TotalPhases
                     );
                     GameStateManager.Instance.TransitionTo(GameState.AllComplete);
                 }
@@ -136,12 +136,12 @@ public class GameCoordinator : MonoBehaviour
 
     private void HandlePhaseFailed()
     {
-        PhaseManager.Instance?.RecordFailure();
+        Services.Get<PhaseManager>()?.RecordFailure();
     }
 
     private void HandleAllPhasesCompleted()
     {
-        if (PhaseManager.Instance == null) return;
+        if (Services.Get<PhaseManager>() == null) return;
 
         // Stop camera/keyboard shake effects from the last phase
         var cameraShake = Services.Get<CameraShakeAndZoom>();
@@ -151,17 +151,17 @@ public class GameCoordinator : MonoBehaviour
         if (keyboardShake != null)
             keyboardShake.SetShaking(false);
 
-        if (PhaseManager.Instance.CurrentLevelMode == LevelMode.Challenge)
+        if (Services.Get<PhaseManager>().CurrentLevelMode == LevelMode.Challenge)
         {
-            int stars = ChallengeProgression.CalculateStars(PhaseManager.Instance.TotalErrors);
-            int challengeIndex = FindChallengeIndex(PhaseManager.Instance.ActiveProvider);
+            int stars = ChallengeProgression.CalculateStars(Services.Get<PhaseManager>().TotalErrors);
+            int challengeIndex = FindChallengeIndex(Services.Get<PhaseManager>().ActiveProvider);
             if (challengeIndex >= 0)
             {
                 ChallengeProgression.SaveStarRating(challengeIndex, stars);
                 ChallengeProgression.UnlockNext(challengeIndex);
             }
 
-            string levelName = PhaseManager.Instance.ActiveProvider?.DisplayName ?? "Level";
+            string levelName = Services.Get<PhaseManager>().ActiveProvider?.DisplayName ?? "Level";
             if (levelCompletePanel != null)
                 levelCompletePanel.Show(levelName, stars);
         }
@@ -201,7 +201,7 @@ public class GameCoordinator : MonoBehaviour
         if (GameStateManager.Instance.CurrentState != GameState.PhaseComplete)
             return;
 
-        if (PhaseManager.Instance.AdvancePhase())
+        if (Services.Get<PhaseManager>().AdvancePhase())
         {
             LoadCurrentPhase();
             GameStateManager.Instance.TransitionTo(GameState.Playing);
@@ -211,9 +211,9 @@ public class GameCoordinator : MonoBehaviour
         {
             // All phases done — submit score
             leaderboardService.SubmitScore(
-                PhaseManager.Instance.ActiveProvider?.DisplayName ?? "Unknown",
+                Services.Get<PhaseManager>().ActiveProvider?.DisplayName ?? "Unknown",
                 TimerSystem.Instance.TotalElapsedTime,
-                PhaseManager.Instance.TotalPhases
+                Services.Get<PhaseManager>().TotalPhases
             );
             GameStateManager.Instance.TransitionTo(GameState.AllComplete);
         }
@@ -222,21 +222,21 @@ public class GameCoordinator : MonoBehaviour
     // Loads the current phase into the WordEngine, handling Chinese and English modes.
     private void LoadCurrentPhase()
     {
-        int index = PhaseManager.Instance.CurrentPhaseIndex;
-        var lang  = PhaseManager.Instance.CurrentLanguageMode;
+        int index = Services.Get<PhaseManager>().CurrentPhaseIndex;
+        var lang  = Services.Get<PhaseManager>().CurrentLanguageMode;
 
         MixedPhaseParser.MixedPhaseResult parsed;
 
         if (lang == LanguageMode.Chinese)
         {
-            var cw = PhaseManager.Instance.GetChineseWord(index);
+            var cw = Services.Get<PhaseManager>().GetChineseWord(index);
             parsed = cw != null
                 ? MixedPhaseParser.FromChinese(cw)
-                : MixedPhaseParser.FromEnglish(PhaseManager.Instance.CurrentWord);
+                : MixedPhaseParser.FromEnglish(Services.Get<PhaseManager>().CurrentWord);
         }
         else if (lang == LanguageMode.Mixed)
         {
-            var mw = PhaseManager.Instance.GetMixedWord(index);
+            var mw = Services.Get<PhaseManager>().GetMixedWord(index);
             if (mw != null)
             {
                 if (MixedPhaseParser.IsPurelyEnglish(mw))
@@ -255,12 +255,12 @@ public class GameCoordinator : MonoBehaviour
             }
             else
             {
-                parsed = MixedPhaseParser.FromEnglish(PhaseManager.Instance.CurrentWord);
+                parsed = MixedPhaseParser.FromEnglish(Services.Get<PhaseManager>().CurrentWord);
             }
         }
         else
         {
-            parsed = MixedPhaseParser.FromEnglish(PhaseManager.Instance.CurrentWord);
+            parsed = MixedPhaseParser.FromEnglish(Services.Get<PhaseManager>().CurrentWord);
         }
 
         wordEngine.LoadMixedWord(parsed);
@@ -283,7 +283,7 @@ public class GameCoordinator : MonoBehaviour
     // Called from UI button
     public void ResetGame()
     {
-        PhaseManager.Instance.ResetToBeginning();
+        Services.Get<PhaseManager>().ResetToBeginning();
         LoadCurrentPhase();
         TimerSystem.Instance.ResetAll();
         GameStateManager.Instance.RaiseGameReset();

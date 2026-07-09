@@ -55,17 +55,17 @@ public class LevelCompletePanelController : MonoBehaviour
         if (InputHandler.Instance != null)
             InputHandler.Instance.SetGameplayBlocked(false);
 
-        if (PhaseManager.Instance == null) return;
+        if (Services.Get<PhaseManager>() == null) return;
 
         var challengeDir = LevelWordListProvider.GetChallengeDirectory();
         var challenges = LevelWordListProvider.ScanDirectory(challengeDir);
-        int currentIdx = FindChallengeIndex(PhaseManager.Instance.ActiveProvider);
+        int currentIdx = FindChallengeIndex(Services.Get<PhaseManager>().ActiveProvider);
         int nextIdx = currentIdx + 1;
 
         if (nextIdx < challenges.Count)
         {
-            PhaseManager.Instance.CurrentLevelMode = LevelMode.Challenge;
-            PhaseManager.Instance.LoadWordList(challenges[nextIdx]);
+            Services.Get<PhaseManager>().CurrentLevelMode = LevelMode.Challenge;
+            Services.Get<PhaseManager>().LoadWordList(challenges[nextIdx]);
         }
         else
         {

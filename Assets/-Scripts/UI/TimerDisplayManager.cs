@@ -16,8 +16,9 @@ public class TimerDisplayManager : MonoBehaviour
 
     void OnDisable()
     {
-        if (TimerSystem.Instance != null)
-            TimerSystem.Instance.OnTimerUpdated -= UpdateTimerDisplay;
+        var timerSystem = Services.Get<TimerSystem>();
+        if (timerSystem != null)
+            timerSystem.OnTimerUpdated -= UpdateTimerDisplay;
     }
 
     private void UpdateTimerDisplay(float phaseDuration, float total)
