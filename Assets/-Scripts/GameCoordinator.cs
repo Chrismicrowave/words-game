@@ -74,6 +74,8 @@ public class GameCoordinator : MonoBehaviour
             PhaseManager.Instance.OnPhaseWordChanged -= HandlePhaseWordChanged;
             PhaseManager.Instance.OnWordListChanged  -= HandleWordListChanged;
         }
+        if (GameStateManager.Instance != null)
+            GameStateManager.Instance.OnPhaseFailed -= HandlePhaseFailed;
     }
 
     private void HandleKeyAction(KeyCode key, bool isPressed)
