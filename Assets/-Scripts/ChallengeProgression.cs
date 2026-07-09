@@ -74,4 +74,13 @@ public static class ChallengeProgression
     /// <summary>Get saved star rating for a challenge (0-3, 0 = unrated).</summary>
     public static int GetStarRating(int challengeIndex) =>
         PlayerPrefs.GetInt($"ChallengeStar_{challengeIndex}", 0);
+
+    /// <summary>Builds a star string with filled + empty stars, e.g. ★★☆ for 2/3.</summary>
+    public static string GetStarDisplay(int stars)
+    {
+        char[] result = { '☆', '☆', '☆' };
+        for (int i = 0; i < stars && i < 3; i++)
+            result[i] = '★';
+        return new string(result);
+    }
 }
