@@ -76,8 +76,11 @@ public class LevelPanelController : MonoBehaviour
         if (challengesTabBtn != null) challengesTabBtn.onClick.AddListener(() => SwitchTab(LevelTab.Challenges));
         if (customTabBtn != null) customTabBtn.onClick.AddListener(() => SwitchTab(LevelTab.Custom));
         if (trendyTabBtn != null) trendyTabBtn.onClick.AddListener(() => SwitchTab(LevelTab.Trending));
+    }
 
-        // Track challenge completion for progressive unlocking
+    void Start()
+    {
+        // Subscribe in Start when GameStateManager.Instance is guaranteed available
         if (GameStateManager.Instance != null)
             GameStateManager.Instance.OnAllPhasesCompleted += OnAllPhasesCompleted;
     }
