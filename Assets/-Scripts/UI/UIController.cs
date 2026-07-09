@@ -75,27 +75,27 @@ public class UIController : MonoBehaviour
 
     void OnEnable()
     {
-        if (GameStateManager.Instance != null)
+        if (Services.Get<GameStateManager>() != null)
         {
-            GameStateManager.Instance.OnStepProcessed     += HandleStepProcessed;
-            GameStateManager.Instance.OnPhaseCompleted    += HandlePhaseCompleted;
-            GameStateManager.Instance.OnPhaseFailed       += HandlePhaseFailed;
-            GameStateManager.Instance.OnPhaseRestarted    += HandleRestart;
-            GameStateManager.Instance.OnGameReset         += HandleGameReset;
-            GameStateManager.Instance.OnAllPhasesCompleted += HandleAllComplete;
+            Services.Get<GameStateManager>().OnStepProcessed     += HandleStepProcessed;
+            Services.Get<GameStateManager>().OnPhaseCompleted    += HandlePhaseCompleted;
+            Services.Get<GameStateManager>().OnPhaseFailed       += HandlePhaseFailed;
+            Services.Get<GameStateManager>().OnPhaseRestarted    += HandleRestart;
+            Services.Get<GameStateManager>().OnGameReset         += HandleGameReset;
+            Services.Get<GameStateManager>().OnAllPhasesCompleted += HandleAllComplete;
         }
     }
 
     void OnDisable()
     {
-        if (GameStateManager.Instance != null)
+        if (Services.Get<GameStateManager>() != null)
         {
-            GameStateManager.Instance.OnStepProcessed     -= HandleStepProcessed;
-            GameStateManager.Instance.OnPhaseCompleted    -= HandlePhaseCompleted;
-            GameStateManager.Instance.OnPhaseFailed       -= HandlePhaseFailed;
-            GameStateManager.Instance.OnPhaseRestarted    -= HandleRestart;
-            GameStateManager.Instance.OnGameReset         -= HandleGameReset;
-            GameStateManager.Instance.OnAllPhasesCompleted -= HandleAllComplete;
+            Services.Get<GameStateManager>().OnStepProcessed     -= HandleStepProcessed;
+            Services.Get<GameStateManager>().OnPhaseCompleted    -= HandlePhaseCompleted;
+            Services.Get<GameStateManager>().OnPhaseFailed       -= HandlePhaseFailed;
+            Services.Get<GameStateManager>().OnPhaseRestarted    -= HandleRestart;
+            Services.Get<GameStateManager>().OnGameReset         -= HandleGameReset;
+            Services.Get<GameStateManager>().OnAllPhasesCompleted -= HandleAllComplete;
         }
     }
 
@@ -217,7 +217,7 @@ public class UIController : MonoBehaviour
             matchedTextUI.text = wordEngine.GetDisplayText(showCursor);
         }
 
-        if (showActionPrompt && GameStateManager.Instance.CurrentState == GameState.Playing)
+        if (showActionPrompt && Services.Get<GameStateManager>().CurrentState == GameState.Playing)
         {
             string prompt = BuildActionPrompt();
             if (!string.IsNullOrEmpty(prompt))
@@ -303,8 +303,8 @@ public class UIController : MonoBehaviour
     {
         if (phaseListUIManager == null || phaseListUIManager.SelectedPhaseIndex < 0) return;
         Services.Get<PhaseManager>().JumpToPhase(phaseListUIManager.SelectedPhaseIndex);
-        GameStateManager.Instance.RaisePhaseRestarted();
-        GameStateManager.Instance.TransitionTo(GameState.Playing);
+        Services.Get<GameStateManager>().RaisePhaseRestarted();
+        Services.Get<GameStateManager>().TransitionTo(GameState.Playing);
     }
 
     public void OnMovePhaseUpClicked()

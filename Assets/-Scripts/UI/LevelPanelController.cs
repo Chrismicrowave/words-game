@@ -85,7 +85,7 @@ public class LevelPanelController : MonoBehaviour
 
     void OnEnable()
     {
-        if (InputHandler.Instance != null) InputHandler.Instance.SetGameplayBlocked(true);
+        if (Services.Get<InputHandler>() != null) Services.Get<InputHandler>().SetGameplayBlocked(true);
         RefreshAll();
 
         // Restore last selected tab from PlayerPrefs
@@ -98,7 +98,7 @@ public class LevelPanelController : MonoBehaviour
 
     void OnDisable()
     {
-        if (InputHandler.Instance != null) InputHandler.Instance.SetGameplayBlocked(false);
+        if (Services.Get<InputHandler>() != null) Services.Get<InputHandler>().SetGameplayBlocked(false);
     }
 
     private void RefreshAll()
