@@ -29,9 +29,19 @@ public class GameCoordinator : MonoBehaviour
 
         uiController = FindAnyObjectByType<UIController>();
 
-        // Load the default word list into PhaseManager
-        if (defaultWordList != null)
+        // Load the first challenge as the default word list, so the game
+        // always starts in Challenge mode with level 1's words.
+        var challengeDir = LevelWordListProvider.GetChallengeDirectory();
+        var challenges = LevelWordListProvider.ScanDirectory(challengeDir);
+        if (challenges.Count > 0)
+        {
+            PhaseManager.Instance.LoadWordList(challenges[0]);
+            PhaseManager.Instance.CurrentLevelMode = LevelMode.Challenge;
+        }
+        else if (defaultWordList != null)
+        {
             PhaseManager.Instance.LoadWordList(defaultWordList);
+        }
 
         // Subscribe to input events
         InputHandler.Instance.OnKeyAction += HandleKeyAction;
