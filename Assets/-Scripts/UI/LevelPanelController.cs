@@ -44,9 +44,6 @@ public class LevelPanelController : MonoBehaviour
     [Header("Trending Placeholder")]
     [SerializeField] private GameObject trendyPlaceholder;  // "Coming Soon" shown in Trending tab
 
-    [Header("Complete Panel")]
-    [SerializeField] private LevelCompletePanelController levelCompletePanel; // shown on challenge clear
-
     [Header("Scroll")]
     [SerializeField] private ScrollRect levelScrollRect;  // LevelGrid ScrollRect — reset to top on refresh
 
