@@ -48,7 +48,7 @@ public class LevelPanelController : MonoBehaviour
     [SerializeField] private ScrollRect levelScrollRect;  // LevelGrid ScrollRect — reset to top on refresh
 
     [Header("Debug")]
-    [SerializeField] private bool unlockAllChallenges;  // bypass all challenge level locks
+    [SerializeField] private bool unlockAllChallengesChallenges;  // bypass all challenge level locks
     [SerializeField] private int customUnlockLevels = 5;  // challenges to clear before Custom tab unlocks
     [SerializeField] private bool unlockCustomTab;  // bypass Custom tab lock
 
@@ -141,7 +141,7 @@ public class LevelPanelController : MonoBehaviour
         if (deleteListBtn != null) deleteListBtn.gameObject.SetActive(isCustom);
 
         // Lock Custom tab until enough challenges are cleared
-        bool customUnlocked = unlockAllFeatures ||
+        bool customUnlocked = unlockAllChallengesFeatures ||
             (ChallengeProgression.UnlockedCount - 1) >= customUnlockLevels;
         if (customTabBtn != null)
             customTabBtn.interactable = customUnlocked;
@@ -216,7 +216,7 @@ public class LevelPanelController : MonoBehaviour
             // Apply locked/unlocked state for Challenge tab
             if (currentTab == LevelTab.Challenges)
             {
-                bool unlocked = unlockAll || IsChallengeUnlocked(providers, provider);
+                bool unlocked = unlockAllChallenges || IsChallengeUnlocked(providers, provider);
                 SetChallengeLockState(btnObj, btn, unlocked);
                 SetStarDisplay(btnObj, providers, provider);
             }
@@ -295,7 +295,7 @@ public class LevelPanelController : MonoBehaviour
         // Fallback: select the first unlocked item
         for (int i = 0; i < levelGridContent.childCount; i++)
         {
-            bool isLocked = currentTab == LevelTab.Challenges && !unlockAll
+            bool isLocked = currentTab == LevelTab.Challenges && !unlockAllChallenges
                 && !ChallengeProgression.IsUnlocked(i);
             if (!isLocked)
             {
