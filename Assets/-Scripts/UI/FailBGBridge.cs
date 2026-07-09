@@ -10,19 +10,19 @@ public class FailBGBridge : MonoBehaviour
 
     void Awake()
     {
-        GameStateManager.Instance.OnPhaseFailed += Show;
-        GameStateManager.Instance.OnPhaseRestarted += Hide;
-        GameStateManager.Instance.OnGameReset += Hide;
-        GameStateManager.Instance.OnPhaseStarted += Hide;
+        Services.Get<GameStateManager>().OnPhaseFailed += Show;
+        Services.Get<GameStateManager>().OnPhaseRestarted += Hide;
+        Services.Get<GameStateManager>().OnGameReset += Hide;
+        Services.Get<GameStateManager>().OnPhaseStarted += Hide;
     }
 
     void OnDestroy()
     {
-        if (GameStateManager.Instance == null) return;
-        GameStateManager.Instance.OnPhaseFailed -= Show;
-        GameStateManager.Instance.OnPhaseRestarted -= Hide;
-        GameStateManager.Instance.OnGameReset -= Hide;
-        GameStateManager.Instance.OnPhaseStarted -= Hide;
+        if (Services.Get<GameStateManager>() == null) return;
+        Services.Get<GameStateManager>().OnPhaseFailed -= Show;
+        Services.Get<GameStateManager>().OnPhaseRestarted -= Hide;
+        Services.Get<GameStateManager>().OnGameReset -= Hide;
+        Services.Get<GameStateManager>().OnPhaseStarted -= Hide;
     }
 
     private void Show() { if (failBG) failBG.SetActive(true); }

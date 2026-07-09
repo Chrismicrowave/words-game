@@ -276,16 +276,16 @@ public class UIController : MonoBehaviour
             // Open pinyin confirmation popup for any text containing Chinese characters
             chineseDisplay?.ShowPinyinPopup(text, entry =>
             {
-                PhaseManager.Instance.AddMixedPhase(entry);
-                PhaseManager.Instance.SaveCurrentList();
+                Services.Get<PhaseManager>().AddMixedPhase(entry);
+                Services.Get<PhaseManager>().SaveCurrentList();
                 phaseInputField.text = "";
                 EventSystem.current.SetSelectedGameObject(null);
             }, () => { /* cancelled — leave input as-is */ });
         }
         else
         {
-            PhaseManager.Instance.AddPhase(text, 0);
-            PhaseManager.Instance.SaveCurrentList();
+            Services.Get<PhaseManager>().AddPhase(text, 0);
+            Services.Get<PhaseManager>().SaveCurrentList();
             phaseInputField.text = "";
             EventSystem.current.SetSelectedGameObject(null);
         }
@@ -294,15 +294,15 @@ public class UIController : MonoBehaviour
     public void OnDeletePhaseClicked()
     {
         if (phaseListUIManager == null || phaseListUIManager.SelectedPhaseIndex < 0) return;
-        PhaseManager.Instance.RemovePhase(phaseListUIManager.SelectedPhaseIndex);
-        PhaseManager.Instance.SaveCurrentList();
+        Services.Get<PhaseManager>().RemovePhase(phaseListUIManager.SelectedPhaseIndex);
+        Services.Get<PhaseManager>().SaveCurrentList();
         phaseListUIManager.ClearSelection();
     }
 
     public void OnSwapPhaseClicked()
     {
         if (phaseListUIManager == null || phaseListUIManager.SelectedPhaseIndex < 0) return;
-        PhaseManager.Instance.JumpToPhase(phaseListUIManager.SelectedPhaseIndex);
+        Services.Get<PhaseManager>().JumpToPhase(phaseListUIManager.SelectedPhaseIndex);
         GameStateManager.Instance.RaisePhaseRestarted();
         GameStateManager.Instance.TransitionTo(GameState.Playing);
     }
@@ -311,7 +311,7 @@ public class UIController : MonoBehaviour
     {
         if (phaseListUIManager == null || phaseListUIManager.SelectedPhaseIndex <= 0) return;
         int idx = phaseListUIManager.SelectedPhaseIndex;
-        PhaseManager.Instance.MovePhase(idx, idx - 1);
+        Services.Get<PhaseManager>().MovePhase(idx, idx - 1);
         // RefreshPhaseList has already run (via OnWordListChanged); re-highlight at new position
         phaseListUIManager.SetSelectedPhaseIndex(idx - 1);
     }
@@ -319,9 +319,9 @@ public class UIController : MonoBehaviour
     public void OnMovePhaseDownClicked()
     {
         if (phaseListUIManager == null || phaseListUIManager.SelectedPhaseIndex < 0
-            || phaseListUIManager.SelectedPhaseIndex >= PhaseManager.Instance.TotalPhases - 1) return;
+            || phaseListUIManager.SelectedPhaseIndex >= Services.Get<PhaseManager>().TotalPhases - 1) return;
         int idx = phaseListUIManager.SelectedPhaseIndex;
-        PhaseManager.Instance.MovePhase(idx, idx + 1);
+        Services.Get<PhaseManager>().MovePhase(idx, idx + 1);
         // RefreshPhaseList has already run (via OnWordListChanged); re-highlight at new position
         phaseListUIManager.SetSelectedPhaseIndex(idx + 1);
     }
@@ -378,18 +378,18 @@ public class UIController : MonoBehaviour
             // we keep the Unity API surface minimal and explicit.
             wordListTabManager?.SetMyListProvider(provider);
             wordListTabManager?.SaveMyListPath(provider.FilePath);
-            PhaseManager.Instance.LoadWordList(provider);
+            Services.Get<PhaseManager>().LoadWordList(provider);
         });
     }
 
     public void OnExportClicked()
     {
-        var provider = PhaseManager.Instance.ActiveProvider;
+        var provider = Services.Get<PhaseManager>().ActiveProvider;
         string defaultName = (provider?.DisplayName ?? "wordlist").Replace(" ", "_");
         // Snapshot the display words from PhaseManager — provider.GetWords() may be empty for
         // Chinese/Mixed lists where the provider stores chineseWords/mixedWords, not words[].
         // PhaseManager.Words is always the rebuilt display list populated by LoadWordList().
-        var words = new System.Collections.Generic.List<string>(PhaseManager.Instance.Words);
+        var words = new System.Collections.Generic.List<string>(Services.Get<PhaseManager>().Words);
         var ext = new[] { new ExtensionFilter("Text Files", "txt") };
         StandaloneFileBrowser.SaveFilePanelAsync("Export Word List", "", defaultName, ext, path =>
         {
