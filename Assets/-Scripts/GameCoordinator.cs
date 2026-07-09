@@ -16,6 +16,9 @@ public class GameCoordinator : MonoBehaviour
     [Header("Word List")]
     [SerializeField] private FixedWordListProvider defaultWordList;
 
+    [Header("Complete Panel")]
+    [SerializeField] private LevelCompletePanelController levelCompletePanel;
+
     private WordEngine wordEngine;
     private ILeaderboardService leaderboardService;
     private UIController uiController;
