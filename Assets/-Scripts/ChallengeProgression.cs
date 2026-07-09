@@ -23,9 +23,16 @@ public static class ChallengeProgression
     public static bool IsUnlocked(int challengeIndex) =>
         challengeIndex < UnlockedCount;
 
-    /// <summary>Unlock the next challenge after completing the current one.</summary>
-    public static void UnlockNext() =>
-        UnlockedCount = UnlockedCount + 1;
+    /// <summary>
+    /// Unlock next challenge after completing the given one (0-based index).
+    /// Completing challenge 0 unlocks challenge 1; replaying 0 doesn't re-unlock.
+    /// </summary>
+    public static void UnlockNext(int completedChallengeIndex)
+    {
+        int next = completedChallengeIndex + 2; // 0-based: complete 0 → unlock up to 1
+        if (next > UnlockedCount)
+            UnlockedCount = next;
+    }
 
     /// <summary>Reset all progress back to level 1 only.</summary>
     public static void Reset() => UnlockedCount = 1;
