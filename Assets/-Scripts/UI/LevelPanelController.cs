@@ -48,9 +48,9 @@ public class LevelPanelController : MonoBehaviour
     [SerializeField] private ScrollRect levelScrollRect;  // LevelGrid ScrollRect — reset to top on refresh
 
     [Header("Debug")]
-    [SerializeField] private bool unlockAll;  // Editor toggle — unlocks all challenge levels
+    [SerializeField] private bool unlockAllChallenges;  // bypass all challenge level locks
     [SerializeField] private int customUnlockLevels = 5;  // challenges to clear before Custom tab unlocks
-    [SerializeField] private bool unlockAllFeatures = false;  // bypass Custom tab lock
+    [SerializeField] private bool unlockCustomTab;  // bypass Custom tab lock
 
     private const string LastLevelPathPrefKey = "LevelPanel_LastPath";
     private const string LastLevelTabPrefKey  = "LevelPanel_LastTab";

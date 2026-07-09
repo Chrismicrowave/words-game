@@ -36111,8 +36111,9 @@ MonoBehaviour:
   chineseFontAsset: {fileID: 11400000, guid: 428be41dc6b96d74cb9084b697519d27, type: 2}
   trendyPlaceholder: {fileID: 1718431469}
   levelScrollRect: {fileID: 371531129}
-  levelCompletePanel: {fileID: 177717653}
   unlockAll: 0
+  customUnlockLevels: 5
+  unlockAllFeatures: 0
 --- !u!114 &1634712221
 MonoBehaviour:
   m_ObjectHideFlags: 0
