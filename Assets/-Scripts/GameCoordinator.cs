@@ -52,6 +52,9 @@ public class GameCoordinator : MonoBehaviour
         PhaseManager.Instance.OnPhaseWordChanged += HandlePhaseWordChanged;
         PhaseManager.Instance.OnWordListChanged  += HandleWordListChanged;
 
+        // Track failures for star rating
+        GameStateManager.Instance.OnPhaseFailed += HandlePhaseFailed;
+
         // Start the first phase
         uiController.Initialize(wordEngine);
         LoadCurrentPhase();
