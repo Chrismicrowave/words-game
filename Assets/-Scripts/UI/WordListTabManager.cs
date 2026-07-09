@@ -11,6 +11,19 @@ public class WordListTabManager : MonoBehaviour
 
     private IWordListProvider myListProvider;
 
+    void OnEnable()
+    {
+        if (PhaseManager.Instance != null)
+            PhaseManager.Instance.OnWordListChanged += OnWordListChanged;
+        UpdateButtonVisibility();
+    }
+
+    void OnDisable()
+    {
+        if (PhaseManager.Instance != null)
+            PhaseManager.Instance.OnWordListChanged -= OnWordListChanged;
+    }
+
     IEnumerator Start()
     {
         // Init my list provider — restore last imported path if it still exists,
@@ -61,5 +74,17 @@ public class WordListTabManager : MonoBehaviour
     {
         PlayerPrefs.SetString(MyListPathPrefKey, filePath);
         PlayerPrefs.Save();
+    }
+
+    private void OnWordListChanged()
+    {
+        UpdateButtonVisibility();
+    }
+
+    private void UpdateButtonVisibility()
+    {
+        if (myListPanelBtns == null) return;
+        bool editable = PhaseManager.Instance?.ActiveProvider?.IsEditable ?? false;
+        myListPanelBtns.SetActive(editable);
     }
 }
