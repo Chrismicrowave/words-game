@@ -129,6 +129,11 @@ public class LevelPanelController : MonoBehaviour
                 ChallengeProgression.SaveStarRating(challengeIndex, stars);
                 ChallengeProgression.UnlockNext(challengeIndex);
             }
+
+            // Show completion panel
+            string levelName = PhaseManager.Instance.ActiveProvider?.DisplayName ?? "Level";
+            if (levelCompletePanel != null)
+                levelCompletePanel.Show(levelName, stars);
         }
     }
 
