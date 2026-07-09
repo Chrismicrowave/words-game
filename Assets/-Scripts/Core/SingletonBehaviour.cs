@@ -16,5 +16,6 @@ public abstract class SingletonBehaviour<T> : MonoBehaviour where T : MonoBehavi
             return;
         }
         Instance = this as T;
+        Services.Register(Instance);
     }
 }
