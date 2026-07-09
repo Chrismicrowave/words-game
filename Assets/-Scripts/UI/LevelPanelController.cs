@@ -102,7 +102,7 @@ public class LevelPanelController : MonoBehaviour
 
         // Show/hide placeholder for Trendy
         if (trendyPlaceholder != null)
-            trendyPlaceholder.SetActive(tab == LevelTab.Trendy);
+            trendyPlaceholder.SetActive(tab == LevelTab.Trending);
     }
 
     private void UpdateTabColors()
@@ -112,7 +112,7 @@ public class LevelPanelController : MonoBehaviour
         if (customTabImage != null)
             customTabImage.color = currentTab == LevelTab.Custom ? tabActiveColor : tabInactiveColor;
         if (trendyTabImage != null)
-            trendyTabImage.color = currentTab == LevelTab.Trendy ? tabActiveColor : tabInactiveColor;
+            trendyTabImage.color = currentTab == LevelTab.Trending ? tabActiveColor : tabInactiveColor;
     }
 
     private void UpdateButtonVisibility()
@@ -143,7 +143,7 @@ public class LevelPanelController : MonoBehaviour
             case LevelTab.Custom:
                 providers = customProviders;
                 break;
-            case LevelTab.Trendy:
+            case LevelTab.Trending:
             default:
                 providers = new List<LevelWordListProvider>();
                 break;
@@ -152,7 +152,7 @@ public class LevelPanelController : MonoBehaviour
         if (providers.Count == 0)
         {
             // Show empty state
-            okBtn?.gameObject.SetActive(currentTab == LevelTab.Trendy ? false : true);
+            okBtn?.gameObject.SetActive(currentTab == LevelTab.Trending ? false : true);
             return;
         }
 
