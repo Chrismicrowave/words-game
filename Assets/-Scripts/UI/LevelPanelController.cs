@@ -44,6 +44,9 @@ public class LevelPanelController : MonoBehaviour
     [Header("Trending Placeholder")]
     [SerializeField] private GameObject trendyPlaceholder;  // "Coming Soon" shown in Trending tab
 
+    private const string LastLevelPathPrefKey = "LevelPanel_LastPath";
+    private const string LastLevelTabPrefKey  = "LevelPanel_LastTab";
+
     private LevelTab currentTab = LevelTab.Challenges;
     private LevelWordListProvider selectedProvider;
 
