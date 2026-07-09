@@ -276,9 +276,18 @@ public class LevelPanelController : MonoBehaviour
             }
         }
 
-        // Fallback: select the first item
-        var firstBtn = levelGridContent.GetChild(0).gameObject;
-        OnLevelClicked(providers[0], firstBtn);
+        // Fallback: select the first unlocked item
+        for (int i = 0; i < levelGridContent.childCount; i++)
+        {
+            bool isLocked = currentTab == LevelTab.Challenges && !unlockAll
+                && !ChallengeProgression.IsUnlocked(i);
+            if (!isLocked)
+            {
+                var fallbackBtn = levelGridContent.GetChild(i).gameObject;
+                OnLevelClicked(providers[i], fallbackBtn);
+                return;
+            }
+        }
     }
 
     private void OnLevelClicked(LevelWordListProvider provider, GameObject btnObj)
