@@ -39,16 +39,6 @@ public class TimerSystem : SingletonBehaviour<TimerSystem>
             IsRunning = false;
         }
     }
-
-    public void ResumeTimer()
-    {
-        if (!IsRunning && phaseStartTime > 0f)
-        {
-            pausedDuration = Time.time - phaseStartTime - CurrentPhaseDuration;
-            IsRunning = true;
-        }
-    }
-
     public void StopAndAccumulate()
     {
         if (IsRunning)
