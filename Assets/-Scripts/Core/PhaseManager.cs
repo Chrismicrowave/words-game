@@ -91,11 +91,6 @@ public class PhaseManager : SingletonBehaviour<PhaseManager>
         return true;
     }
 
-    public void RestartPhase()
-    {
-        OnPhaseWordChanged?.Invoke(CurrentWord);
-    }
-
     public void ResetToBeginning()
     {
         CurrentPhaseIndex = 0;
