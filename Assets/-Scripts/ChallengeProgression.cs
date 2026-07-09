@@ -1,7 +1,7 @@
 using UnityEngine;
 
 /// <summary>
-/// Tracks which challenge levels the player has unlocked.
+/// Tracks which challenge levels the player has unlocked and their star ratings.
 /// Progress is persisted in PlayerPrefs and survives restarts.
 /// </summary>
 public static class ChallengeProgression
@@ -29,4 +29,31 @@ public static class ChallengeProgression
 
     /// <summary>Reset all progress back to level 1 only.</summary>
     public static void Reset() => UnlockedCount = 1;
+
+    // ── Star rating ────────────────────────────────────────────────────────────
+
+    /// <summary>Calculate stars (0-3) from total error count.</summary>
+    public static int CalculateStars(int totalErrors)
+    {
+        if (totalErrors == 0) return 3;
+        if (totalErrors < 5)  return 2;
+        if (totalErrors < 10) return 1;
+        return 0;
+    }
+
+    /// <summary>Save star rating for a challenge by index (0-based).</summary>
+    public static void SaveStarRating(int challengeIndex, int stars)
+    {
+        string key = $"ChallengeStar_{challengeIndex}";
+        int current = PlayerPrefs.GetInt(key, 0);
+        if (stars > current) // only overwrite if better
+        {
+            PlayerPrefs.SetInt(key, stars);
+            PlayerPrefs.Save();
+        }
+    }
+
+    /// <summary>Get saved star rating for a challenge (0-3, 0 = unrated).</summary>
+    public static int GetStarRating(int challengeIndex) =>
+        PlayerPrefs.GetInt($"ChallengeStar_{challengeIndex}", 0);
 }
