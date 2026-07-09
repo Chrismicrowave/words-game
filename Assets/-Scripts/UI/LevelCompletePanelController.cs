@@ -69,7 +69,7 @@ public class LevelCompletePanelController : MonoBehaviour
         }
         else
         {
-            GameStateManager.Instance.TransitionTo(GameState.Idle);
+            Services.Get<GameStateManager>().TransitionTo(GameState.Idle);
         }
     }
 

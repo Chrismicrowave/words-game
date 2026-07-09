@@ -95,8 +95,8 @@ public class GameCoordinator : MonoBehaviour
             return;
 
         // Start timer on first key action
-        if (!TimerSystem.Instance.IsRunning)
-            TimerSystem.Instance.StartTimer();
+        if (!Services.Get<TimerSystem>().IsRunning)
+            Services.Get<TimerSystem>().StartTimer();
 
         StepResult result = wordEngine.ProcessInput(key, isPressed);
 
@@ -113,7 +113,7 @@ public class GameCoordinator : MonoBehaviour
             case StepResult.Correct:
                 break;
             case StepResult.PhaseComplete:
-                TimerSystem.Instance.StopAndAccumulate();
+                Services.Get<TimerSystem>().StopAndAccumulate();
                 // Always play the word-complete sound via the PhaseComplete event,
                 // even for the last word. Then go straight to AllComplete if done.
                 Services.Get<GameStateManager>().TransitionTo(GameState.PhaseComplete);
@@ -121,14 +121,14 @@ public class GameCoordinator : MonoBehaviour
                 {
                     leaderboardService.SubmitScore(
                         Services.Get<PhaseManager>().ActiveProvider?.DisplayName ?? "Unknown",
-                        TimerSystem.Instance.TotalElapsedTime,
+                        Services.Get<TimerSystem>().TotalElapsedTime,
                         Services.Get<PhaseManager>().TotalPhases
                     );
                     Services.Get<GameStateManager>().TransitionTo(GameState.AllComplete);
                 }
                 break;
             case StepResult.Failed:
-                TimerSystem.Instance.PauseTimer();
+                Services.Get<TimerSystem>().PauseTimer();
                 Services.Get<GameStateManager>().TransitionTo(GameState.PhaseFailed);
                 break;
         }
@@ -187,7 +187,7 @@ public class GameCoordinator : MonoBehaviour
         {
             wordEngine.Reset();
             LoadCurrentPhase();
-            TimerSystem.Instance.ResetPhaseTimer();
+            Services.Get<TimerSystem>().ResetPhaseTimer();
 
             Services.Get<GameStateManager>().RaisePhaseRestarted();
             Services.Get<GameStateManager>().TransitionTo(GameState.Playing);
@@ -212,7 +212,7 @@ public class GameCoordinator : MonoBehaviour
             // All phases done — submit score
             leaderboardService.SubmitScore(
                 Services.Get<PhaseManager>().ActiveProvider?.DisplayName ?? "Unknown",
-                TimerSystem.Instance.TotalElapsedTime,
+                Services.Get<TimerSystem>().TotalElapsedTime,
                 Services.Get<PhaseManager>().TotalPhases
             );
             Services.Get<GameStateManager>().TransitionTo(GameState.AllComplete);
@@ -275,7 +275,7 @@ public class GameCoordinator : MonoBehaviour
 
     private void HandleWordListChanged()
     {
-        TimerSystem.Instance.ResetAll();
+        Services.Get<TimerSystem>().ResetAll();
         LoadCurrentPhase();   // refresh display target to match the new word at CurrentPhaseIndex
         Services.Get<GameStateManager>().TransitionTo(GameState.Playing);
     }
@@ -285,7 +285,7 @@ public class GameCoordinator : MonoBehaviour
     {
         Services.Get<PhaseManager>().ResetToBeginning();
         LoadCurrentPhase();
-        TimerSystem.Instance.ResetAll();
+        Services.Get<TimerSystem>().ResetAll();
         Services.Get<GameStateManager>().RaiseGameReset();
         Services.Get<GameStateManager>().TransitionTo(GameState.Playing);
     }
