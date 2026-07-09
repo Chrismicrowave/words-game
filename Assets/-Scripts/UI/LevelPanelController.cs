@@ -84,19 +84,6 @@ public class LevelPanelController : MonoBehaviour
         if (trendyTabBtn != null) trendyTabBtn.onClick.AddListener(() => SwitchTab(LevelTab.Trending));
     }
 
-    void Start()
-    {
-        // Subscribe in Start when GameStateManager.Instance is guaranteed available
-        if (GameStateManager.Instance != null)
-            GameStateManager.Instance.OnAllPhasesCompleted += OnAllPhasesCompleted;
-    }
-
-    void OnDestroy()
-    {
-        if (GameStateManager.Instance != null)
-            GameStateManager.Instance.OnAllPhasesCompleted -= OnAllPhasesCompleted;
-    }
-
     void OnEnable()
     {
         if (InputHandler.Instance != null) InputHandler.Instance.SetGameplayBlocked(true);
@@ -113,39 +100,6 @@ public class LevelPanelController : MonoBehaviour
     void OnDisable()
     {
         if (InputHandler.Instance != null) InputHandler.Instance.SetGameplayBlocked(false);
-    }
-
-    private void OnAllPhasesCompleted()
-    {
-        if (PhaseManager.Instance == null) return;
-
-        if (PhaseManager.Instance.CurrentLevelMode == LevelMode.Challenge)
-        {
-            // Save star rating for the completed challenge
-            int stars = ChallengeProgression.CalculateStars(PhaseManager.Instance.TotalErrors);
-            int challengeIndex = FindChallengeIndex(PhaseManager.Instance.ActiveProvider);
-            if (challengeIndex >= 0)
-            {
-                ChallengeProgression.SaveStarRating(challengeIndex, stars);
-                ChallengeProgression.UnlockNext(challengeIndex);
-            }
-
-            // Show completion panel
-            string levelName = PhaseManager.Instance.ActiveProvider?.DisplayName ?? "Level";
-            if (levelCompletePanel != null)
-                levelCompletePanel.Show(levelName, stars);
-        }
-    }
-
-    private int FindChallengeIndex(IWordListProvider provider)
-    {
-        if (provider == null || !(provider is LevelWordListProvider lvlProvider)) return -1;
-        for (int i = 0; i < challengeProviders.Count; i++)
-        {
-            if (challengeProviders[i].FilePath == lvlProvider.FilePath)
-                return i;
-        }
-        return -1;
     }
 
     private void RefreshAll()
