@@ -201,10 +201,39 @@ public class LevelPanelController : MonoBehaviour
                 var captured = provider;
                 btn.onClick.AddListener(() => OnLevelClicked(captured, btnObj));
             }
+
+            // Apply locked/unlocked state for Challenge tab
+            if (currentTab == LevelTab.Challenges)
+            {
+                bool unlocked = unlockAll || IsChallengeUnlocked(providers, provider);
+                SetChallengeLockState(btnObj, btn, unlocked);
+            }
         }
 
-        // Auto-select: restore saved selection or pick first item
+        // Auto-select: restore saved selection or pick first unlocked item
         TryRestoreSelection(providers);
+    }
+
+    private bool IsChallengeUnlocked(List<LevelWordListProvider> providers, LevelWordListProvider provider)
+    {
+        int idx = providers.IndexOf(provider);
+        return idx < 0 || ChallengeProgression.IsUnlocked(idx);
+    }
+
+    private void SetChallengeLockState(GameObject btnObj, Button btn, bool unlocked)
+    {
+        // Find children by name
+        Transform nameTf = null;
+        Transform lockedTf = null;
+        foreach (Transform child in btnObj.transform)
+        {
+            if (child.name == "LevelNameTMP") nameTf = child;
+            else if (child.name == "Locked") lockedTf = child;
+        }
+
+        if (nameTf != null) nameTf.gameObject.SetActive(unlocked);
+        if (lockedTf != null) lockedTf.gameObject.SetActive(!unlocked);
+        if (btn != null) btn.interactable = unlocked;
     }
 
     private void TryRestoreSelection(List<LevelWordListProvider> providers)
