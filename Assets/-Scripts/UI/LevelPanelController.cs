@@ -199,6 +199,34 @@ public class LevelPanelController : MonoBehaviour
                 btn.onClick.AddListener(() => OnLevelClicked(captured, btnObj));
             }
         }
+
+        // Auto-select: restore saved selection or pick first item
+        TryRestoreSelection(providers);
+    }
+
+    private void TryRestoreSelection(List<LevelWordListProvider> providers)
+    {
+        if (providers.Count == 0) return;
+
+        string savedPath = PlayerPrefs.GetString(LastLevelPathPrefKey, "");
+
+        // Try to match saved path
+        if (!string.IsNullOrEmpty(savedPath))
+        {
+            for (int i = 0; i < providers.Count; i++)
+            {
+                if (providers[i].FilePath == savedPath && i < levelGridContent.childCount)
+                {
+                    var btnObj = levelGridContent.GetChild(i).gameObject;
+                    OnLevelClicked(providers[i], btnObj);
+                    return;
+                }
+            }
+        }
+
+        // Fallback: select the first item
+        var firstBtn = levelGridContent.GetChild(0).gameObject;
+        OnLevelClicked(providers[0], firstBtn);
     }
 
     private void OnLevelClicked(LevelWordListProvider provider, GameObject btnObj)
