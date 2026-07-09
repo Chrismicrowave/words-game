@@ -16,6 +16,7 @@ public class PhaseManager : SingletonBehaviour<PhaseManager>
     public IWordListProvider ActiveProvider => activeProvider;
     public IReadOnlyList<string> Words => words;
     public LanguageMode CurrentLanguageMode => activeProvider?.LanguageMode ?? LanguageMode.English;
+    public LevelMode CurrentLevelMode { get; set; } = LevelMode.Challenge;
 
     public event Action<string> OnPhaseWordChanged;
     public event Action OnWordListChanged;
