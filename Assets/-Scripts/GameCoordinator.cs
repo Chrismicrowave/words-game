@@ -144,10 +144,12 @@ public class GameCoordinator : MonoBehaviour
         if (PhaseManager.Instance == null) return;
 
         // Stop camera/keyboard shake effects from the last phase
-        if (CameraShakeAndZoom.Instance != null)
-            CameraShakeAndZoom.Instance.ResetFOV();
-        if (KeyboardShake.Instance != null)
-            KeyboardShake.Instance.SetShaking(false);
+        var cameraShake = Services.Get<CameraShakeAndZoom>();
+        var keyboardShake = Services.Get<KeyboardShake>();
+        if (cameraShake != null)
+            cameraShake.ResetFOV();
+        if (keyboardShake != null)
+            keyboardShake.SetShaking(false);
 
         if (PhaseManager.Instance.CurrentLevelMode == LevelMode.Challenge)
         {
