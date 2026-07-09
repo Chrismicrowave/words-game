@@ -128,6 +128,39 @@ public class GameCoordinator : MonoBehaviour
         PhaseManager.Instance?.RecordFailure();
     }
 
+    private void HandleAllPhasesCompleted()
+    {
+        if (PhaseManager.Instance == null) return;
+
+        if (PhaseManager.Instance.CurrentLevelMode == LevelMode.Challenge)
+        {
+            int stars = ChallengeProgression.CalculateStars(PhaseManager.Instance.TotalErrors);
+            int challengeIndex = FindChallengeIndex(PhaseManager.Instance.ActiveProvider);
+            if (challengeIndex >= 0)
+            {
+                ChallengeProgression.SaveStarRating(challengeIndex, stars);
+                ChallengeProgression.UnlockNext(challengeIndex);
+            }
+
+            string levelName = PhaseManager.Instance.ActiveProvider?.DisplayName ?? "Level";
+            if (levelCompletePanel != null)
+                levelCompletePanel.Show(levelName, stars);
+        }
+    }
+
+    private int FindChallengeIndex(IWordListProvider provider)
+    {
+        if (provider == null || !(provider is LevelWordListProvider lvlProvider)) return -1;
+        var challengeDir = LevelWordListProvider.GetChallengeDirectory();
+        var challenges = LevelWordListProvider.ScanDirectory(challengeDir);
+        for (int i = 0; i < challenges.Count; i++)
+        {
+            if (challenges[i].FilePath == lvlProvider.FilePath)
+                return i;
+        }
+        return -1;
+    }
+
     private void HandleBackspace()
     {
         var state = GameStateManager.Instance.CurrentState;
