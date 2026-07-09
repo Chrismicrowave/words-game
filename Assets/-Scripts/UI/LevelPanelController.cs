@@ -219,6 +219,18 @@ public class LevelPanelController : MonoBehaviour
                 bool unlocked = unlockAllChallenges || IsChallengeUnlocked(providers, provider);
                 SetChallengeLockState(btnObj, btn, unlocked);
                 SetStarDisplay(btnObj, providers, provider);
+
+                // Show level number (1-20) on challenge buttons
+                int levelNum = providers.IndexOf(provider) + 1;
+                foreach (Transform child in btnObj.transform)
+                {
+                    if (child.name == "LevelNumTMP")
+                    {
+                        var numTmp = child.GetComponent<TMPro.TextMeshProUGUI>();
+                        if (numTmp != null) numTmp.text = levelNum.ToString();
+                        break;
+                    }
+                }
             }
         }
 
