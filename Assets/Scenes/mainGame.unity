@@ -9022,9 +9022,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 20f6bd7906643f94888df1913a8b924d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::OnGameStartManager
-  toggles:
-  - gameObject: {fileID: 957620896}
-    activeAtStart: 0
 --- !u!114 &369087733
 MonoBehaviour:
   m_ObjectHideFlags: 0
