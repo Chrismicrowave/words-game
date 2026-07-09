@@ -15,14 +15,14 @@ public class PhaseListUIManager : MonoBehaviour
 
     void OnEnable()
     {
-        if (PhaseManager.Instance != null)
-            PhaseManager.Instance.OnWordListChanged += RefreshPhaseList;
+        if (Services.Get<PhaseManager>() != null)
+            Services.Get<PhaseManager>().OnWordListChanged += RefreshPhaseList;
     }
 
     void OnDisable()
     {
-        if (PhaseManager.Instance != null)
-            PhaseManager.Instance.OnWordListChanged -= RefreshPhaseList;
+        if (Services.Get<PhaseManager>() != null)
+            Services.Get<PhaseManager>().OnWordListChanged -= RefreshPhaseList;
     }
 
     public void RefreshPhaseList()
@@ -32,8 +32,8 @@ public class PhaseListUIManager : MonoBehaviour
         foreach (Transform child in phaseListContent)
             Destroy(child.gameObject);
 
-        bool isChinese = PhaseManager.Instance.CurrentLanguageMode == LanguageMode.Chinese;
-        var words = PhaseManager.Instance.Words;
+        bool isChinese = Services.Get<PhaseManager>().CurrentLanguageMode == LanguageMode.Chinese;
+        var words = Services.Get<PhaseManager>().Words;
         for (int i = 0; i < words.Count; i++)
         {
             int index = i;
