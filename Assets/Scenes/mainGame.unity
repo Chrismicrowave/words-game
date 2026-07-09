@@ -1547,7 +1547,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::StableId
   _id: 19dd282bdf6f4e9b81116a85e3431342
---- !u!114 &50738336
+--- !u!114 &50738340
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -10344,6 +10344,7 @@ GameObject:
   m_Component:
   - component: {fileID: 488122178}
   - component: {fileID: 488122179}
+  - component: {fileID: 488122180}
   m_Layer: 5
   m_Name: ModeHUD
   m_TagString: Untagged
@@ -10385,6 +10386,20 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::StableId
   _id: e323f49317c9476cb7e5df0719245881
+--- !u!114 &488122180
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 488122177}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 52b66f12fd2d07f45b0b0cb6fc4f24d9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ModeHUDController
+  challengeHUD: {fileID: 789789124}
+  customHUD: {fileID: 1785399877}
 --- !u!1 &498777000
 GameObject:
   m_ObjectHideFlags: 0
@@ -11283,7 +11298,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::StableId
   _id: 6bd2f881a1964a459cdefe1c6dec315f
---- !u!114 &540831042
+--- !u!114 &540831046
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -13032,7 +13047,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::StableId
   _id: bea7871eddd84d978d97677c033d3767
---- !u!114 &657611904
+--- !u!114 &657611908
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -16154,7 +16169,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!224 &789789125
 RectTransform:
   m_ObjectHideFlags: 0
@@ -27540,7 +27555,7 @@ PrefabInstance:
       addedObject: {fileID: 50738330}
     - targetCorrespondingSourceObject: {fileID: 7994845846421549406, guid: ce85ed4ba53c2f84da23784a93bb5435, type: 3}
       insertIndex: -1
-      addedObject: {fileID: 50738336}
+      addedObject: {fileID: 50738340}
   m_SourcePrefab: {fileID: 100100000, guid: ce85ed4ba53c2f84da23784a93bb5435, type: 3}
 --- !u!224 &1397459705 stripped
 RectTransform:
@@ -28260,7 +28275,7 @@ PrefabInstance:
       addedObject: {fileID: 657611898}
     - targetCorrespondingSourceObject: {fileID: 7994845846421549406, guid: ce85ed4ba53c2f84da23784a93bb5435, type: 3}
       insertIndex: -1
-      addedObject: {fileID: 657611904}
+      addedObject: {fileID: 657611908}
   m_SourcePrefab: {fileID: 100100000, guid: ce85ed4ba53c2f84da23784a93bb5435, type: 3}
 --- !u!224 &1436913295 stripped
 RectTransform:
@@ -43618,7 +43633,7 @@ PrefabInstance:
       addedObject: {fileID: 540831036}
     - targetCorrespondingSourceObject: {fileID: 7994845846421549406, guid: ce85ed4ba53c2f84da23784a93bb5435, type: 3}
       insertIndex: -1
-      addedObject: {fileID: 540831042}
+      addedObject: {fileID: 540831046}
   m_SourcePrefab: {fileID: 100100000, guid: ce85ed4ba53c2f84da23784a93bb5435, type: 3}
 --- !u!1001 &7858527363857300424
 PrefabInstance:
