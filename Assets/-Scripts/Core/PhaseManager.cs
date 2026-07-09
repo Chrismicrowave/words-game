@@ -34,6 +34,8 @@ public class PhaseManager : SingletonBehaviour<PhaseManager>
         chineseWords = provider.GetChineseWords() ?? new List<ChineseWordEntry>();
         mixedWords = provider.GetMixedWords() ?? new List<MixedWordEntry>();
 
+        ResetErrors(); // fresh session, clear failure count
+
         // For Chinese/Mixed lists, populate words from display strings so TotalPhases is correct
         if (provider.LanguageMode == LanguageMode.Chinese && chineseWords.Count > 0)
         {
