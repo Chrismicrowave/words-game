@@ -3880,13 +3880,14 @@ GameObject:
   m_Component:
   - component: {fileID: 177717651}
   - component: {fileID: 177717652}
+  - component: {fileID: 177717653}
   m_Layer: 5
   m_Name: LevelCompletePanel
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &177717651
 RectTransform:
   m_ObjectHideFlags: 0
@@ -3922,6 +3923,20 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::StableId
   _id: a0c2d850853d49b0aa6f938b14382250
+--- !u!114 &177717653
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 177717650}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a1b08a3f6c5a4c347a9d2b4c02e89ced, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LevelCompletePanelController
+  levelResultTMP: {fileID: 1360765457}
+  starsTMP: {fileID: 1644886082}
 --- !u!1 &180025811
 GameObject:
   m_ObjectHideFlags: 0
