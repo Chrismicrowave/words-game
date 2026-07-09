@@ -28,12 +28,14 @@ public class LevelCompletePanelController : MonoBehaviour
     }
 
     /// <summary>Called by GameCoordinator when a challenge is completed.</summary>
-    public void Show(string levelName, int stars)
+    public void Show(string levelName, int stars, float totalTime)
     {
         if (levelResultTMP != null)
             levelResultTMP.text = $"{levelName} Cleared!";
         if (starsTMP != null)
             starsTMP.text = ChallengeProgression.GetStarDisplay(stars);
+        if (timeSpentTMP != null)
+            timeSpentTMP.text = $"Time: {totalTime:F2}s";
 
         gameObject.SetActive(true);
         panelActive = true;

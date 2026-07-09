@@ -163,7 +163,7 @@ public class GameCoordinator : MonoBehaviour
 
             string levelName = Services.Get<PhaseManager>().ActiveProvider?.DisplayName ?? "Level";
             if (levelCompletePanel != null)
-                levelCompletePanel.Show(levelName, stars);
+                levelCompletePanel.Show(levelName, stars, Services.Get<TimerSystem>().TotalElapsedTime);
         }
     }
 
