@@ -54,7 +54,7 @@ public class SettingsPanelController : MonoBehaviour
 
     public void ResetToDefaults()
     {
-        SettingsManager.Instance.ResetToDefaults();
+        Services.Get<SettingsManager>().ResetToDefaults();
         // Sub-panels refresh themselves via SettingsManager in v0.4+
     }
 
