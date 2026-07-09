@@ -128,10 +128,10 @@ public class LevelPanelController : MonoBehaviour
 
     private int FindChallengeIndex(IWordListProvider provider)
     {
-        if (provider == null) return -1;
+        if (provider == null || !(provider is LevelWordListProvider lvlProvider)) return -1;
         for (int i = 0; i < challengeProviders.Count; i++)
         {
-            if (challengeProviders[i].FilePath == provider.FilePath)
+            if (challengeProviders[i].FilePath == lvlProvider.FilePath)
                 return i;
         }
         return -1;
