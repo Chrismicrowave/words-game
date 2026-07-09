@@ -88,16 +88,6 @@ public class SettingsManager : SingletonBehaviour<SettingsManager>
         set => PlayerPrefs.SetInt(KeyShowPinyin, value ? 1 : 0);
     }
 
-    public LanguageMode ActiveLanguageMode
-    {
-        get
-        {
-            string stored = PlayerPrefs.GetString(KeyLanguageMode, "English");
-            return System.Enum.TryParse<LanguageMode>(stored, out var mode) ? mode : LanguageMode.English;
-        }
-        set => PlayerPrefs.SetString(KeyLanguageMode, value.ToString());
-    }
-
     public string UILanguageCode
     {
         get => PlayerPrefs.GetString(KeyUILanguage, "en");
