@@ -111,12 +111,30 @@ public class LevelPanelController : MonoBehaviour
 
     private void OnAllPhasesCompleted()
     {
-        // When a challenge is fully completed, unlock the next one
-        if (PhaseManager.Instance != null &&
-            PhaseManager.Instance.CurrentLevelMode == LevelMode.Challenge)
+        if (PhaseManager.Instance == null) return;
+
+        if (PhaseManager.Instance.CurrentLevelMode == LevelMode.Challenge)
         {
+            // Save star rating for the completed challenge
+            int stars = ChallengeProgression.CalculateStars(PhaseManager.Instance.TotalErrors);
+            int challengeIndex = FindChallengeIndex(PhaseManager.Instance.ActiveProvider);
+            if (challengeIndex >= 0)
+                ChallengeProgression.SaveStarRating(challengeIndex, stars);
+
+            // Unlock the next challenge
             ChallengeProgression.UnlockNext();
         }
+    }
+
+    private int FindChallengeIndex(IWordListProvider provider)
+    {
+        if (provider == null) return -1;
+        for (int i = 0; i < challengeProviders.Count; i++)
+        {
+            if (challengeProviders[i].FilePath == provider.FilePath)
+                return i;
+        }
+        return -1;
     }
 
     private void RefreshAll()
