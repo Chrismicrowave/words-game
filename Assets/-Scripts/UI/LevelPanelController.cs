@@ -100,7 +100,7 @@ public class LevelPanelController : MonoBehaviour
         UpdateButtonVisibility();
         PopulateGrid();
 
-        // Show/hide placeholder for Trendy
+        // Show/hide placeholder for Trending
         if (trendyPlaceholder != null)
             trendyPlaceholder.SetActive(tab == LevelTab.Trending);
     }
