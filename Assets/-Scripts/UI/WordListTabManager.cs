@@ -63,11 +63,15 @@ public class WordListTabManager : MonoBehaviour
             myListProvider = fileProvider;
         }
 
-        // Yield one frame so GameCoordinator.Start() completes first
+        // Prepare mylist provider (for word list panel use) but don't
+        // override PhaseManager — the game starts with a challenge list.
         yield return null;
 
         if (myListProvider != null)
-            PhaseManager.Instance.LoadWordList(myListProvider);
+        {
+            // Provider is ready but not loaded into PhaseManager.
+            // It will be loaded when the player interacts with the word list panel.
+        }
     }
 
     /// <summary>
