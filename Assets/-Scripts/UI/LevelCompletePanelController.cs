@@ -31,8 +31,9 @@ public class LevelCompletePanelController : MonoBehaviour
     {
         if (levelResultTMP != null)
             levelResultTMP.text = $"{levelName} Cleared!";
+        string starText = BuildStarString(stars);
         if (starsTMP != null)
-            starsTMP.text = stars > 0 ? new string('★', stars) : "";
+            starsTMP.text = starText;
 
         gameObject.SetActive(true);
         panelActive = true;
