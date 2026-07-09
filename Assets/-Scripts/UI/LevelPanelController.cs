@@ -377,7 +377,7 @@ public class LevelPanelController : MonoBehaviour
 
         Services.Get<PhaseManager>().LoadWordList(selectedProvider);
         // Restart timer and transition to playing
-        TimerSystem.Instance.ResetAll();
+        Services.Get<TimerSystem>().ResetAll();
         GameStateManager.Instance.RaiseGameReset();
         GameStateManager.Instance.TransitionTo(GameState.Playing);
         gameObject.SetActive(false);
