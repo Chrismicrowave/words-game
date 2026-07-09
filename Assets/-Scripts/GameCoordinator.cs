@@ -56,15 +56,15 @@ public class GameCoordinator : MonoBehaviour
         Services.Get<PhaseManager>().OnWordListChanged  += HandleWordListChanged;
 
         // Track failures for star rating
-        GameStateManager.Instance.OnPhaseFailed += HandlePhaseFailed;
+        Services.Get<GameStateManager>().OnPhaseFailed += HandlePhaseFailed;
 
         // Track challenge completion for star saving + panel
-        GameStateManager.Instance.OnAllPhasesCompleted += HandleAllPhasesCompleted;
+        Services.Get<GameStateManager>().OnAllPhasesCompleted += HandleAllPhasesCompleted;
 
         // Start the first phase
         uiController.Initialize(wordEngine);
         LoadCurrentPhase();
-        GameStateManager.Instance.TransitionTo(GameState.Playing);
+        Services.Get<GameStateManager>().TransitionTo(GameState.Playing);
     }
 
     void OnDestroy()
@@ -80,16 +80,16 @@ public class GameCoordinator : MonoBehaviour
             Services.Get<PhaseManager>().OnPhaseWordChanged -= HandlePhaseWordChanged;
             Services.Get<PhaseManager>().OnWordListChanged  -= HandleWordListChanged;
         }
-        if (GameStateManager.Instance != null)
+        if (Services.Get<GameStateManager>() != null)
         {
-            GameStateManager.Instance.OnPhaseFailed -= HandlePhaseFailed;
-            GameStateManager.Instance.OnAllPhasesCompleted -= HandleAllPhasesCompleted;
+            Services.Get<GameStateManager>().OnPhaseFailed -= HandlePhaseFailed;
+            Services.Get<GameStateManager>().OnAllPhasesCompleted -= HandleAllPhasesCompleted;
         }
     }
 
     private void HandleKeyAction(KeyCode key, bool isPressed)
     {
-        var state = GameStateManager.Instance.CurrentState;
+        var state = Services.Get<GameStateManager>().CurrentState;
 
         if (state != GameState.Playing)
             return;
@@ -106,7 +106,7 @@ public class GameCoordinator : MonoBehaviour
             : wordEngine.CurrentStep - 1;
 
         Step step = wordEngine.Steps[stepIndex];
-        GameStateManager.Instance.RaiseStepProcessed(result, step);
+        Services.Get<GameStateManager>().RaiseStepProcessed(result, step);
 
         switch (result)
         {
@@ -116,7 +116,7 @@ public class GameCoordinator : MonoBehaviour
                 TimerSystem.Instance.StopAndAccumulate();
                 // Always play the word-complete sound via the PhaseComplete event,
                 // even for the last word. Then go straight to AllComplete if done.
-                GameStateManager.Instance.TransitionTo(GameState.PhaseComplete);
+                Services.Get<GameStateManager>().TransitionTo(GameState.PhaseComplete);
                 if (!Services.Get<PhaseManager>().HasMorePhases)
                 {
                     leaderboardService.SubmitScore(
@@ -124,12 +124,12 @@ public class GameCoordinator : MonoBehaviour
                         TimerSystem.Instance.TotalElapsedTime,
                         Services.Get<PhaseManager>().TotalPhases
                     );
-                    GameStateManager.Instance.TransitionTo(GameState.AllComplete);
+                    Services.Get<GameStateManager>().TransitionTo(GameState.AllComplete);
                 }
                 break;
             case StepResult.Failed:
                 TimerSystem.Instance.PauseTimer();
-                GameStateManager.Instance.TransitionTo(GameState.PhaseFailed);
+                Services.Get<GameStateManager>().TransitionTo(GameState.PhaseFailed);
                 break;
         }
     }
@@ -182,15 +182,15 @@ public class GameCoordinator : MonoBehaviour
 
     private void HandleBackspace()
     {
-        var state = GameStateManager.Instance.CurrentState;
+        var state = Services.Get<GameStateManager>().CurrentState;
         if (state == GameState.Playing || state == GameState.PhaseFailed)
         {
             wordEngine.Reset();
             LoadCurrentPhase();
             TimerSystem.Instance.ResetPhaseTimer();
 
-            GameStateManager.Instance.RaisePhaseRestarted();
-            GameStateManager.Instance.TransitionTo(GameState.Playing);
+            Services.Get<GameStateManager>().RaisePhaseRestarted();
+            Services.Get<GameStateManager>().TransitionTo(GameState.Playing);
 
             keyboardVisual.FlashKey(KeyCode.Backspace, Color.yellow);
         }
@@ -198,13 +198,13 @@ public class GameCoordinator : MonoBehaviour
 
     private void HandleEnter()
     {
-        if (GameStateManager.Instance.CurrentState != GameState.PhaseComplete)
+        if (Services.Get<GameStateManager>().CurrentState != GameState.PhaseComplete)
             return;
 
         if (Services.Get<PhaseManager>().AdvancePhase())
         {
             LoadCurrentPhase();
-            GameStateManager.Instance.TransitionTo(GameState.Playing);
+            Services.Get<GameStateManager>().TransitionTo(GameState.Playing);
             keyboardVisual.FlashKey(KeyCode.Return, Color.yellow);
         }
         else
@@ -215,7 +215,7 @@ public class GameCoordinator : MonoBehaviour
                 TimerSystem.Instance.TotalElapsedTime,
                 Services.Get<PhaseManager>().TotalPhases
             );
-            GameStateManager.Instance.TransitionTo(GameState.AllComplete);
+            Services.Get<GameStateManager>().TransitionTo(GameState.AllComplete);
         }
     }
 
@@ -277,7 +277,7 @@ public class GameCoordinator : MonoBehaviour
     {
         TimerSystem.Instance.ResetAll();
         LoadCurrentPhase();   // refresh display target to match the new word at CurrentPhaseIndex
-        GameStateManager.Instance.TransitionTo(GameState.Playing);
+        Services.Get<GameStateManager>().TransitionTo(GameState.Playing);
     }
 
     // Called from UI button
@@ -286,8 +286,8 @@ public class GameCoordinator : MonoBehaviour
         Services.Get<PhaseManager>().ResetToBeginning();
         LoadCurrentPhase();
         TimerSystem.Instance.ResetAll();
-        GameStateManager.Instance.RaiseGameReset();
-        GameStateManager.Instance.TransitionTo(GameState.Playing);
+        Services.Get<GameStateManager>().RaiseGameReset();
+        Services.Get<GameStateManager>().TransitionTo(GameState.Playing);
     }
 
     public void CloseGame()
