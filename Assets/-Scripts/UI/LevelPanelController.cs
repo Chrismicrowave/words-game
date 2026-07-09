@@ -371,11 +371,11 @@ public class LevelPanelController : MonoBehaviour
         PlayerPrefs.Save();
 
         // Track which mode the player selected
-        PhaseManager.Instance.CurrentLevelMode = currentTab == LevelTab.Challenges
+        Services.Get<PhaseManager>().CurrentLevelMode = currentTab == LevelTab.Challenges
             ? LevelMode.Challenge
             : LevelMode.Custom;
 
-        PhaseManager.Instance.LoadWordList(selectedProvider);
+        Services.Get<PhaseManager>().LoadWordList(selectedProvider);
         // Restart timer and transition to playing
         TimerSystem.Instance.ResetAll();
         GameStateManager.Instance.RaiseGameReset();

@@ -14,9 +14,9 @@ public class WordListTabManager : MonoBehaviour
 
     void OnEnable()
     {
-        if (PhaseManager.Instance != null && !subscribed)
+        if (Services.Get<PhaseManager>() != null && !subscribed)
         {
-            PhaseManager.Instance.OnWordListChanged += OnWordListChanged;
+            Services.Get<PhaseManager>().OnWordListChanged += OnWordListChanged;
             subscribed = true;
         }
         UpdateButtonVisibility();
@@ -24,9 +24,9 @@ public class WordListTabManager : MonoBehaviour
 
     void OnDisable()
     {
-        if (PhaseManager.Instance != null && subscribed)
+        if (Services.Get<PhaseManager>() != null && subscribed)
         {
-            PhaseManager.Instance.OnWordListChanged -= OnWordListChanged;
+            Services.Get<PhaseManager>().OnWordListChanged -= OnWordListChanged;
             subscribed = false;
         }
     }
@@ -49,12 +49,12 @@ public class WordListTabManager : MonoBehaviour
             // Restore a previously imported list
             myListProvider = new FileWordListProvider(savedMyListPath);
         }
-        else if (PhaseManager.Instance != null)
+        else if (Services.Get<PhaseManager>() != null)
         {
             var fileProvider = new FileWordListProvider(defaultPath);
             if (!System.IO.File.Exists(defaultPath))
             {
-                var defaultWords = PhaseManager.Instance.ActiveProvider?.GetWords()
+                var defaultWords = Services.Get<PhaseManager>().ActiveProvider?.GetWords()
                     ?? new System.Collections.Generic.List<string>();
                 fileProvider.SetName("My List");
                 fileProvider.SetWords(defaultWords);
@@ -99,7 +99,7 @@ public class WordListTabManager : MonoBehaviour
     private void UpdateButtonVisibility()
     {
         if (myListPanelBtns == null) return;
-        bool editable = PhaseManager.Instance?.ActiveProvider?.IsEditable ?? false;
+        bool editable = Services.Get<PhaseManager>()?.ActiveProvider?.IsEditable ?? false;
         myListPanelBtns.SetActive(editable);
     }
 }
