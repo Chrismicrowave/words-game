@@ -34,8 +34,19 @@ public static class ChallengeProgression
             UnlockedCount = next;
     }
 
-    /// <summary>Reset all progress back to level 1 only.</summary>
-    public static void Reset() => UnlockedCount = 1;
+    /// <summary>Reset all progress back to level 1 only (unlock + stars).</summary>
+    public static void ResetAll()
+    {
+        UnlockedCount = 1;
+        // Clear all star ratings (keys ChallengeStar_0 through ChallengeStar_N)
+        for (int i = 0; i < 100; i++)
+        {
+            string key = $"ChallengeStar_{i}";
+            if (PlayerPrefs.HasKey(key))
+                PlayerPrefs.DeleteKey(key);
+        }
+        PlayerPrefs.Save();
+    }
 
     // ── Star rating ────────────────────────────────────────────────────────────
 
