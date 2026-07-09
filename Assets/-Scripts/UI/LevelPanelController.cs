@@ -79,7 +79,13 @@ public class LevelPanelController : MonoBehaviour
     {
         if (InputHandler.Instance != null) InputHandler.Instance.SetGameplayBlocked(true);
         RefreshAll();
-        SwitchTab(LevelTab.Challenges);
+
+        // Restore last selected tab from PlayerPrefs
+        LevelTab restoreTab = LevelTab.Challenges;
+        string savedTab = PlayerPrefs.GetString(LastLevelTabPrefKey, "Challenges");
+        if (savedTab == "Custom") restoreTab = LevelTab.Custom;
+        else if (savedTab == "Trending") restoreTab = LevelTab.Trending;
+        SwitchTab(restoreTab);
     }
 
     void OnDisable()
