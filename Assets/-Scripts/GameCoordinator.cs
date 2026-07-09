@@ -58,6 +58,9 @@ public class GameCoordinator : MonoBehaviour
         // Track failures for star rating
         GameStateManager.Instance.OnPhaseFailed += HandlePhaseFailed;
 
+        // Track challenge completion for star saving + panel
+        GameStateManager.Instance.OnAllPhasesCompleted += HandleAllPhasesCompleted;
+
         // Start the first phase
         uiController.Initialize(wordEngine);
         LoadCurrentPhase();
