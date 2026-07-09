@@ -69,7 +69,7 @@ public class LevelPanelController : MonoBehaviour
 
         if (challengesTabBtn != null) challengesTabBtn.onClick.AddListener(() => SwitchTab(LevelTab.Challenges));
         if (customTabBtn != null) customTabBtn.onClick.AddListener(() => SwitchTab(LevelTab.Custom));
-        if (trendyTabBtn != null) trendyTabBtn.onClick.AddListener(() => SwitchTab(LevelTab.Trendy));
+        if (trendyTabBtn != null) trendyTabBtn.onClick.AddListener(() => SwitchTab(LevelTab.Trending));
     }
 
     void OnEnable()
