@@ -44,6 +44,9 @@ public class LevelPanelController : MonoBehaviour
     [Header("Trending Placeholder")]
     [SerializeField] private GameObject trendyPlaceholder;  // "Coming Soon" shown in Trending tab
 
+    [Header("Scroll")]
+    [SerializeField] private ScrollRect levelScrollRect;  // LevelGrid ScrollRect — reset to top on refresh
+
     [Header("Debug")]
     [SerializeField] private bool unlockAll;  // Editor toggle — unlocks all challenge levels
 
