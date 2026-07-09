@@ -8882,6 +8882,7 @@ MonoBehaviour:
   cursorHotspot: {x: 0, y: 0}
   config: {fileID: 11400000, guid: 2b556900e3f14c94fb47f46e82546a4f, type: 2}
   defaultWordList: {fileID: 11400000, guid: 130043c01d85e03469798c86a98fdf32, type: 2}
+  levelCompletePanel: {fileID: 177717653}
 --- !u!114 &369087723
 MonoBehaviour:
   m_ObjectHideFlags: 0
