@@ -49,6 +49,8 @@ public class LevelPanelController : MonoBehaviour
 
     [Header("Debug")]
     [SerializeField] private bool unlockAll;  // Editor toggle — unlocks all challenge levels
+    [SerializeField] private int customUnlockLevels = 5;  // challenges to clear before Custom tab unlocks
+    [SerializeField] private bool unlockAllFeatures = false;  // bypass Custom tab lock
 
     private const string LastLevelPathPrefKey = "LevelPanel_LastPath";
     private const string LastLevelTabPrefKey  = "LevelPanel_LastTab";
