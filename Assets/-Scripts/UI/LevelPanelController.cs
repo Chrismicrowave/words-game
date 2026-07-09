@@ -41,8 +41,8 @@ public class LevelPanelController : MonoBehaviour
     [Header("Font")]
     [SerializeField] private TMP_FontAsset chineseFontAsset;
 
-    [Header("Trendy Placeholder")]
-    [SerializeField] private GameObject trendyPlaceholder;  // "Coming Soon" shown in Trendy tab
+    [Header("Trending Placeholder")]
+    [SerializeField] private GameObject trendyPlaceholder;  // "Coming Soon" shown in Trending tab
 
     private LevelTab currentTab = LevelTab.Challenges;
     private LevelWordListProvider selectedProvider;
