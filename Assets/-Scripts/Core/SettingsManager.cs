@@ -20,7 +20,6 @@ public class SettingsManager : SingletonBehaviour<SettingsManager>
     public const string KeyBGMVolume     = "settings_bgmVolume";
     public const string KeyFullscreen    = "settings_fullscreen";
     public const string KeyResolution    = "settings_resolution";
-    public const string KeyQuality       = "settings_quality";
     public const string KeyActionPrompts = "settings_actionPrompts";
     public const string KeyCRTFilter     = "settings_crtFilter";
     public const string KeyScreenShake   = "settings_screenShake";
