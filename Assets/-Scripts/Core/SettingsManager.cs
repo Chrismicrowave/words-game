@@ -126,8 +126,6 @@ public class SettingsManager : SingletonBehaviour<SettingsManager>
         Load();
     }
 
-    void Start() { }
-
     public void Load()
     {
         ApplyAudio();
