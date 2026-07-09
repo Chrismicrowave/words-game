@@ -139,7 +139,6 @@ public class SettingsManager : SingletonBehaviour<SettingsManager>
         PlayerPrefs.DeleteKey(KeyBGMVolume);
         PlayerPrefs.DeleteKey(KeyFullscreen);
         PlayerPrefs.DeleteKey(KeyResolution);
-        PlayerPrefs.DeleteKey(KeyQuality);
         PlayerPrefs.DeleteKey(KeyActionPrompts);
         PlayerPrefs.DeleteKey(KeyCRTFilter);
         PlayerPrefs.DeleteKey(KeyScreenShake);
