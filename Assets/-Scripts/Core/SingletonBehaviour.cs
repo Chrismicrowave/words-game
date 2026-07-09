@@ -10,12 +10,12 @@ public abstract class SingletonBehaviour<T> : MonoBehaviour where T : MonoBehavi
 
     protected virtual void Awake()
     {
-        if (Instance != null && Instance != this)
+        var instance = this as T;
+        if (Services.Get<T>() != null && Services.Get<T>() != instance)
         {
             Destroy(gameObject);
             return;
         }
-        Instance = this as T;
-        Services.Register(Instance);
+        Services.Register(instance);
     }
 }
