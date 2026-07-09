@@ -3937,6 +3937,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::LevelCompletePanelController
   levelResultTMP: {fileID: 1360765457}
   starsTMP: {fileID: 1644886082}
+  timeSpentTMP: {fileID: 1424245821}
 --- !u!1 &180025811
 GameObject:
   m_ObjectHideFlags: 0
