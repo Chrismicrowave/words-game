@@ -33247,6 +33247,7 @@ MonoBehaviour:
   deleteListBtn: {fileID: 1672393878}
   chineseFontAsset: {fileID: 11400000, guid: 428be41dc6b96d74cb9084b697519d27, type: 2}
   trendyPlaceholder: {fileID: 1718431469}
+  levelScrollRect: {fileID: 371531129}
 --- !u!114 &1634712221
 MonoBehaviour:
   m_ObjectHideFlags: 0
