@@ -114,7 +114,21 @@ public class GameCoordinator : MonoBehaviour
                 break;
             case StepResult.PhaseComplete:
                 TimerSystem.Instance.StopAndAccumulate();
-                GameStateManager.Instance.TransitionTo(GameState.PhaseComplete);
+                // If this was the last word, skip PhaseComplete and go straight
+                // to AllComplete so the completion panel appears immediately.
+                if (!PhaseManager.Instance.HasMorePhases)
+                {
+                    leaderboardService.SubmitScore(
+                        PhaseManager.Instance.ActiveProvider?.DisplayName ?? "Unknown",
+                        TimerSystem.Instance.TotalElapsedTime,
+                        PhaseManager.Instance.TotalPhases
+                    );
+                    GameStateManager.Instance.TransitionTo(GameState.AllComplete);
+                }
+                else
+                {
+                    GameStateManager.Instance.TransitionTo(GameState.PhaseComplete);
+                }
                 break;
             case StepResult.Failed:
                 TimerSystem.Instance.PauseTimer();
