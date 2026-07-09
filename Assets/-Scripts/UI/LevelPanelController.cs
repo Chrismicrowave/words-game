@@ -257,6 +257,10 @@ public class LevelPanelController : MonoBehaviour
 
         // Auto-select: restore saved selection or pick first unlocked item
         TryRestoreSelection(providers);
+
+        // Scroll back to top so first row is visible
+        if (levelScrollRect != null)
+            levelScrollRect.normalizedPosition = new Vector2(0, 1);
     }
 
     private bool IsChallengeUnlocked(List<LevelWordListProvider> providers, LevelWordListProvider provider)
