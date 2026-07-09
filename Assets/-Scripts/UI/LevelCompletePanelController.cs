@@ -11,6 +11,7 @@ public class LevelCompletePanelController : MonoBehaviour
 {
     [SerializeField] private TextMeshProUGUI levelResultTMP; // "First Steps Cleared!"
     [SerializeField] private TextMeshProUGUI starsTMP;       // "★★★"
+    [SerializeField] private TextMeshProUGUI timeSpentTMP;   // "Time: 12.34s"
 
     private bool panelActive;
 
