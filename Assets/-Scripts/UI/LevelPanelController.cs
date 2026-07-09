@@ -278,6 +278,26 @@ public class LevelPanelController : MonoBehaviour
         if (btn != null) btn.interactable = unlocked;
     }
 
+    private void SetStarDisplay(GameObject btnObj, List<LevelWordListProvider> providers, LevelWordListProvider provider)
+    {
+        int idx = providers.IndexOf(provider);
+        if (idx < 0) return;
+
+        int stars = ChallengeProgression.GetStarRating(idx);
+        string starText = stars > 0 ? new string('★', stars) : "";
+
+        // Find Stars child
+        foreach (Transform child in btnObj.transform)
+        {
+            if (child.name == "Stars")
+            {
+                var tmp = child.GetComponent<TMPro.TextMeshProUGUI>();
+                if (tmp != null) tmp.text = starText;
+                break;
+            }
+        }
+    }
+
     private void TryRestoreSelection(List<LevelWordListProvider> providers)
     {
         if (providers.Count == 0) return;
