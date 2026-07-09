@@ -114,8 +114,9 @@ public class GameCoordinator : MonoBehaviour
                 break;
             case StepResult.PhaseComplete:
                 TimerSystem.Instance.StopAndAccumulate();
-                // If this was the last word, skip PhaseComplete and go straight
-                // to AllComplete so the completion panel appears immediately.
+                // Always play the word-complete sound via the PhaseComplete event,
+                // even for the last word. Then go straight to AllComplete if done.
+                GameStateManager.Instance.TransitionTo(GameState.PhaseComplete);
                 if (!PhaseManager.Instance.HasMorePhases)
                 {
                     leaderboardService.SubmitScore(
@@ -124,10 +125,6 @@ public class GameCoordinator : MonoBehaviour
                         PhaseManager.Instance.TotalPhases
                     );
                     GameStateManager.Instance.TransitionTo(GameState.AllComplete);
-                }
-                else
-                {
-                    GameStateManager.Instance.TransitionTo(GameState.PhaseComplete);
                 }
                 break;
             case StepResult.Failed:
