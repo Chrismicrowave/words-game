@@ -114,6 +114,11 @@ public class GameCoordinator : MonoBehaviour
         }
     }
 
+    private void HandlePhaseFailed()
+    {
+        PhaseManager.Instance?.RecordFailure();
+    }
+
     private void HandleBackspace()
     {
         var state = GameStateManager.Instance.CurrentState;
