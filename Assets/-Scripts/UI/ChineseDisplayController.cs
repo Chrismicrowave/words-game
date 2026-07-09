@@ -19,8 +19,8 @@ public class ChineseDisplayController : MonoBehaviour
     {
         matchedDisplay?.BuildCells(data);
         targetDisplay?.BuildCells(data);
-        if (SettingsManager.Instance != null)
-            targetDisplay?.SetPinyinVisible(SettingsManager.Instance.ShowPinyin);
+        if (Services.Get<SettingsManager>() != null)
+            targetDisplay?.SetPinyinVisible(Services.Get<SettingsManager>().ShowPinyin);
         IsShowingCells = true;
     }
 
@@ -32,8 +32,8 @@ public class ChineseDisplayController : MonoBehaviour
             if (targetDisplay != null)
             {
                 targetDisplay.BuildMixedCells(parsed);
-                if (SettingsManager.Instance != null)
-                    targetDisplay.SetPinyinVisible(SettingsManager.Instance.ShowPinyin);
+                if (Services.Get<SettingsManager>() != null)
+                    targetDisplay.SetPinyinVisible(Services.Get<SettingsManager>().ShowPinyin);
                 targetDisplay.gameObject.SetActive(true);
                 targetDisplay.SyncFontSizesNextFrame();
             }

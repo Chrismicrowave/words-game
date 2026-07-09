@@ -103,7 +103,6 @@ public class SettingsManager : SingletonBehaviour<SettingsManager>
     protected override void Awake()
     {
         base.Awake();
-        if (Instance != this) return;
 
         Load();
     }
@@ -157,8 +156,9 @@ public class SettingsManager : SingletonBehaviour<SettingsManager>
     
     private void ApplyCRT()
     {
-        if (FilterManager.Instance != null)
-            FilterManager.Instance.SetFilter(0, CRTFilter);
+        var filterManager = Services.Get<FilterManager>();
+        if (filterManager != null)
+            filterManager.SetFilter(0, CRTFilter);
     }
 
  

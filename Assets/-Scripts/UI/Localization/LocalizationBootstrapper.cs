@@ -13,8 +13,8 @@ public class LocalizationBootstrapper : MonoBehaviour
     {
         yield return LocalizationSettings.InitializationOperation;
 
-        string saved = SettingsManager.Instance != null
-            ? SettingsManager.Instance.UILanguageCode
+        string saved = Services.Get<SettingsManager>() != null
+            ? Services.Get<SettingsManager>().UILanguageCode
             : PlayerPrefs.GetString(SettingsManager.KeyUILanguage, "en");
 
         var locale = LocalizationSettings.AvailableLocales.GetLocale(saved);

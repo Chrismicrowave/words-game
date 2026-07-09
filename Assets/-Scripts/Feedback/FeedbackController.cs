@@ -10,25 +10,25 @@ public class FeedbackController : MonoBehaviour
 
     void OnEnable()
     {
-        if (GameStateManager.Instance != null)
+        if (Services.Get<GameStateManager>() != null)
         {
-            GameStateManager.Instance.OnStepProcessed += HandleStepProcessed;
-            GameStateManager.Instance.OnPhaseStarted += HandlePhaseStarted;
-            GameStateManager.Instance.OnPhaseCompleted += HandlePhaseCompleted;
-            GameStateManager.Instance.OnPhaseRestarted += HandleRestart;
-            GameStateManager.Instance.OnGameReset += HandleRestart;
+            Services.Get<GameStateManager>().OnStepProcessed += HandleStepProcessed;
+            Services.Get<GameStateManager>().OnPhaseStarted += HandlePhaseStarted;
+            Services.Get<GameStateManager>().OnPhaseCompleted += HandlePhaseCompleted;
+            Services.Get<GameStateManager>().OnPhaseRestarted += HandleRestart;
+            Services.Get<GameStateManager>().OnGameReset += HandleRestart;
         }
     }
 
     void OnDisable()
     {
-        if (GameStateManager.Instance != null)
+        if (Services.Get<GameStateManager>() != null)
         {
-            GameStateManager.Instance.OnStepProcessed -= HandleStepProcessed;
-            GameStateManager.Instance.OnPhaseStarted -= HandlePhaseStarted;
-            GameStateManager.Instance.OnPhaseCompleted -= HandlePhaseCompleted;
-            GameStateManager.Instance.OnPhaseRestarted -= HandleRestart;
-            GameStateManager.Instance.OnGameReset -= HandleRestart;
+            Services.Get<GameStateManager>().OnStepProcessed -= HandleStepProcessed;
+            Services.Get<GameStateManager>().OnPhaseStarted -= HandlePhaseStarted;
+            Services.Get<GameStateManager>().OnPhaseCompleted -= HandlePhaseCompleted;
+            Services.Get<GameStateManager>().OnPhaseRestarted -= HandleRestart;
+            Services.Get<GameStateManager>().OnGameReset -= HandleRestart;
         }
     }
 
@@ -63,7 +63,7 @@ public class FeedbackController : MonoBehaviour
 
     private void HandlePhaseStarted()
     {
-        if (SettingsManager.Instance.ScreenShake)
+        if (Services.Get<SettingsManager>().ScreenShake)
         { 
             cameraShake.ResetFOV(); 
         }
@@ -74,7 +74,7 @@ public class FeedbackController : MonoBehaviour
         audioKeys.ResetPitch();
         audioResult.PlaySound(audioResult.complete);
 
-        if (SettingsManager.Instance.ScreenShake)
+        if (Services.Get<SettingsManager>().ScreenShake)
         {
             keyboardShake.SetShaking(false);
             keyboardShake.ResetMagnitude();
@@ -88,7 +88,7 @@ public class FeedbackController : MonoBehaviour
         audioKeys.PlaySound(audioKeys.pressed);
 
 
-        if (SettingsManager.Instance.ScreenShake)
+        if (Services.Get<SettingsManager>().ScreenShake)
         { 
             cameraShake.MildShake();
             cameraShake.OverZoomCam();
@@ -102,7 +102,7 @@ public class FeedbackController : MonoBehaviour
     {
         audioKeys.PlaySound(audioKeys.released);
 
-        if (SettingsManager.Instance.ScreenShake)
+        if (Services.Get<SettingsManager>().ScreenShake)
         {
             cameraShake.MildShake();
             keyboardShake.DownMagnitude();
@@ -116,7 +116,7 @@ public class FeedbackController : MonoBehaviour
         audioResult.StopAudio();
         audioResult.PlaySound(audioResult.fail);
 
-        if (SettingsManager.Instance.ScreenShake)
+        if (Services.Get<SettingsManager>().ScreenShake)
         {
             cameraShake.StrongShake();
             keyboardShake.SetShaking(false);
@@ -129,7 +129,7 @@ public class FeedbackController : MonoBehaviour
         audioKeys.SetVolume(1.0f);
         audioKeys.ResetPitch();
 
-        if (SettingsManager.Instance.ScreenShake)
+        if (Services.Get<SettingsManager>().ScreenShake)
         {
             keyboardShake.SetShaking(false);
             keyboardShake.ResetMagnitude();

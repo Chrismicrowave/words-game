@@ -6,7 +6,7 @@ using UnityEngine;
 /// one is active at a time.
 ///
 /// Subscribes in Start when PhaseManager.Awake has already run, ensuring
-/// PhaseManager.Instance is available — OnEnable runs too early.
+/// Services.Get<PhaseManager>() is available — OnEnable runs too early.
 /// </summary>
 public class ModeHUDController : MonoBehaviour
 {
@@ -15,21 +15,21 @@ public class ModeHUDController : MonoBehaviour
 
     void Start()
     {
-        if (PhaseManager.Instance != null)
-            PhaseManager.Instance.OnWordListChanged += Refresh;
+        if (Services.Get<PhaseManager>() != null)
+            Services.Get<PhaseManager>().OnWordListChanged += Refresh;
         Refresh();
     }
 
     void OnDestroy()
     {
-        if (PhaseManager.Instance != null)
-            PhaseManager.Instance.OnWordListChanged -= Refresh;
+        if (Services.Get<PhaseManager>() != null)
+            Services.Get<PhaseManager>().OnWordListChanged -= Refresh;
     }
 
     private void Refresh()
     {
-        LevelMode mode = PhaseManager.Instance != null
-            ? PhaseManager.Instance.CurrentLevelMode
+        LevelMode mode = Services.Get<PhaseManager>() != null
+            ? Services.Get<PhaseManager>().CurrentLevelMode
             : LevelMode.Challenge;
 
         if (challengeHUD != null)

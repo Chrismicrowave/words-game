@@ -18,13 +18,13 @@ public class SettingsPanelController : MonoBehaviour
 
     void OnEnable()
     {
-        if (InputHandler.Instance != null) InputHandler.Instance.SetGameplayBlocked(true);
+        if (Services.Get<InputHandler>() != null) Services.Get<InputHandler>().SetGameplayBlocked(true);
         ShowAudio(); // default to Audio tab
     }
 
     public void Close()
     {
-        if (InputHandler.Instance != null) InputHandler.Instance.SetGameplayBlocked(false);
+        if (Services.Get<InputHandler>() != null) Services.Get<InputHandler>().SetGameplayBlocked(false);
         gameObject.SetActive(false);
     }
 
@@ -54,7 +54,7 @@ public class SettingsPanelController : MonoBehaviour
 
     public void ResetToDefaults()
     {
-        SettingsManager.Instance.ResetToDefaults();
+        Services.Get<SettingsManager>().ResetToDefaults();
         // Sub-panels refresh themselves via SettingsManager in v0.4+
     }
 

@@ -85,7 +85,7 @@ public class LevelPanelController : MonoBehaviour
 
     void OnEnable()
     {
-        if (InputHandler.Instance != null) InputHandler.Instance.SetGameplayBlocked(true);
+        if (Services.Get<InputHandler>() != null) Services.Get<InputHandler>().SetGameplayBlocked(true);
         RefreshAll();
 
         // Restore last selected tab from PlayerPrefs
@@ -98,7 +98,7 @@ public class LevelPanelController : MonoBehaviour
 
     void OnDisable()
     {
-        if (InputHandler.Instance != null) InputHandler.Instance.SetGameplayBlocked(false);
+        if (Services.Get<InputHandler>() != null) Services.Get<InputHandler>().SetGameplayBlocked(false);
     }
 
     private void RefreshAll()
@@ -371,15 +371,15 @@ public class LevelPanelController : MonoBehaviour
         PlayerPrefs.Save();
 
         // Track which mode the player selected
-        PhaseManager.Instance.CurrentLevelMode = currentTab == LevelTab.Challenges
+        Services.Get<PhaseManager>().CurrentLevelMode = currentTab == LevelTab.Challenges
             ? LevelMode.Challenge
             : LevelMode.Custom;
 
-        PhaseManager.Instance.LoadWordList(selectedProvider);
+        Services.Get<PhaseManager>().LoadWordList(selectedProvider);
         // Restart timer and transition to playing
-        TimerSystem.Instance.ResetAll();
-        GameStateManager.Instance.RaiseGameReset();
-        GameStateManager.Instance.TransitionTo(GameState.Playing);
+        Services.Get<TimerSystem>().ResetAll();
+        Services.Get<GameStateManager>().RaiseGameReset();
+        Services.Get<GameStateManager>().TransitionTo(GameState.Playing);
         gameObject.SetActive(false);
     }
 

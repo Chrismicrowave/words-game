@@ -1,20 +1,20 @@
 using UnityEngine;
 
 /// <summary>
-/// Generic MonoBehaviour singleton. Ensures only one instance exists.
-/// Destroys duplicate GameObjects on Awake.
+/// Generic MonoBehaviour singleton using Service Locator.
+/// Registers itself with Services in Awake.
+/// Destroys duplicate GameObjects.
 /// </summary>
 public abstract class SingletonBehaviour<T> : MonoBehaviour where T : MonoBehaviour
 {
-    public static T Instance { get; private set; }
-
     protected virtual void Awake()
     {
-        if (Instance != null && Instance != this)
+        var instance = this as T;
+        if (Services.Get<T>() != null && Services.Get<T>() != instance)
         {
             Destroy(gameObject);
             return;
         }
-        Instance = this as T;
+        Services.Register(instance);
     }
 }

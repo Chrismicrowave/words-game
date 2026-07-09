@@ -21,8 +21,6 @@ public class InputHandler : SingletonBehaviour<InputHandler>
     protected override void Awake()
     {
         base.Awake();
-        if (Instance != this) return;
-
         BuildKeyMap();
     }
 
