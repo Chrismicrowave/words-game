@@ -288,6 +288,11 @@ public class LevelPanelController : MonoBehaviour
     {
         if (selectedProvider == null) return;
 
+        // Persist selection across sessions
+        PlayerPrefs.SetString(LastLevelPathPrefKey, selectedProvider.FilePath);
+        PlayerPrefs.SetString(LastLevelTabPrefKey, currentTab.ToString());
+        PlayerPrefs.Save();
+
         // Track which mode the player selected
         PhaseManager.Instance.CurrentLevelMode = currentTab == LevelTab.Challenges
             ? LevelMode.Challenge
