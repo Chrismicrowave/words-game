@@ -18,6 +18,12 @@ public class PhaseManager : SingletonBehaviour<PhaseManager>
     public LanguageMode CurrentLanguageMode => activeProvider?.LanguageMode ?? LanguageMode.English;
     public LevelMode CurrentLevelMode { get; set; } = LevelMode.Challenge;
 
+    /// <summary>Total failed attempts during the current game session.</summary>
+    public int TotalErrors { get; private set; }
+
+    public void RecordFailure() => TotalErrors++;
+    public void ResetErrors() => TotalErrors = 0;
+
     public event Action<string> OnPhaseWordChanged;
     public event Action OnWordListChanged;
 
