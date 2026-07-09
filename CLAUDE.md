@@ -34,6 +34,12 @@ Architecture details: `docs/architecture.md`
 - **Check before any destructive git op.** Before `git revert`, `git reset`, or similar, run `git diff --stat -- Assets/` and warn the user if `.prefab` or `.unity` files are affected. Get explicit confirmation.
 - **Prompt to commit editor changes first.** If the user has made Inspector tweaks and I need to touch the same prefab/scene file, ask them to commit their changes before I proceed.
 
+## Asset Deletion Safety (STRICT — never violate)
+- **Never delete any file or folder without checking GUID references first.** Run `grep` for every GUID from the target folder against `Assets/Scenes/mainGame.unity` and all prefabs before deleting.
+- **TextMesh Pro `Examples & Extras/` is NOT safe to delete.** It contains font assets (`Electronic Highway Sign SDF`, `Roboto-Bold SDF`) that the main scene references. TMP example scenes, scripts, and materials ARE safe to delete individually — but verify each GUID first.
+- **"Looks like demo content" is never sufficient justification.** The scene may reference assets in unexpected locations. Always check GUIDs via `grep "guid: " Assets/TargetFolder/*.meta` against the scene file.
+- **When restoring deleted assets via git checkout:** Unity's Library/ cache may still hold the "missing" state. Force reimport via `Assets → Reimport All` or delete `Library/` if GUIDs don't reconnect.
+
 ## Conventions
 - Script folder uses dash prefix (`-Scripts`) for sorting at top of Assets
 - Core assembly (`Core.asmdef`) for shared types and systems; UI/Feedback/Audio in Assembly-CSharp
