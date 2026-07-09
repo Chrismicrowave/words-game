@@ -47,9 +47,9 @@ public class GameCoordinator : MonoBehaviour
         }
 
         // Subscribe to input events
-        InputHandler.Instance.OnKeyAction += HandleKeyAction;
-        InputHandler.Instance.OnBackspacePressed += HandleBackspace;
-        InputHandler.Instance.OnEnterPressed += HandleEnter;
+        Services.Get<InputHandler>().OnKeyAction += HandleKeyAction;
+        Services.Get<InputHandler>().OnBackspacePressed += HandleBackspace;
+        Services.Get<InputHandler>().OnEnterPressed += HandleEnter;
 
         // Subscribe to phase changes
         Services.Get<PhaseManager>().OnPhaseWordChanged += HandlePhaseWordChanged;
@@ -69,11 +69,11 @@ public class GameCoordinator : MonoBehaviour
 
     void OnDestroy()
     {
-        if (InputHandler.Instance != null)
+        if (Services.Get<InputHandler>() != null)
         {
-            InputHandler.Instance.OnKeyAction -= HandleKeyAction;
-            InputHandler.Instance.OnBackspacePressed -= HandleBackspace;
-            InputHandler.Instance.OnEnterPressed -= HandleEnter;
+            Services.Get<InputHandler>().OnKeyAction -= HandleKeyAction;
+            Services.Get<InputHandler>().OnBackspacePressed -= HandleBackspace;
+            Services.Get<InputHandler>().OnEnterPressed -= HandleEnter;
         }
         if (Services.Get<PhaseManager>() != null)
         {
