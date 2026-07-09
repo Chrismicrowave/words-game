@@ -26,7 +26,16 @@ public class LevelCompletePanelController : MonoBehaviour
             InputHandler.Instance.OnEnterPressed -= HandleEnter;
     }
 
-    /// <summary>Called by LevelPanelController when a challenge is completed.</summary>
+    /// <summary>Builds a star string with filled + empty stars, e.g. ★★☆ for 2/3.</summary>
+    private static string BuildStarString(int filled)
+    {
+        char[] stars = { '☆', '☆', '☆' };
+        for (int i = 0; i < filled && i < 3; i++)
+            stars[i] = '★';
+        return new string(stars);
+    }
+
+    /// <summary>Called by GameCoordinator when a challenge is completed.</summary>
     public void Show(string levelName, int stars)
     {
         if (levelResultTMP != null)
