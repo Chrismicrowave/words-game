@@ -250,7 +250,7 @@ public class LevelPanelController : MonoBehaviour
         if (idx < 0) return;
 
         int stars = ChallengeProgression.GetStarRating(idx);
-        string starText = stars > 0 ? new string('★', stars) : "";
+        string starText = BuildStarString(stars);
 
         // Find Stars child
         foreach (Transform child in btnObj.transform)
