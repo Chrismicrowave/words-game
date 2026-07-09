@@ -10,22 +10,33 @@ public class WordListTabManager : MonoBehaviour
     private const string MyListPathPrefKey = "MyListPath";
 
     private IWordListProvider myListProvider;
+    private bool subscribed;
 
     void OnEnable()
     {
-        if (PhaseManager.Instance != null)
+        if (PhaseManager.Instance != null && !subscribed)
+        {
             PhaseManager.Instance.OnWordListChanged += OnWordListChanged;
+            subscribed = true;
+        }
         UpdateButtonVisibility();
     }
 
     void OnDisable()
     {
-        if (PhaseManager.Instance != null)
+        if (PhaseManager.Instance != null && subscribed)
+        {
             PhaseManager.Instance.OnWordListChanged -= OnWordListChanged;
+            subscribed = false;
+        }
     }
 
     IEnumerator Start()
     {
+        // Re-subscribe in Start when PhaseManager is guaranteed available
+        OnDisable();
+        OnEnable();
+
         // Init my list provider — restore last imported path if it still exists,
         // otherwise fall back to mylist.json (creating it with defaults if missing).
         string defaultPath = System.IO.Path.Combine(
