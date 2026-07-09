@@ -119,10 +119,10 @@ public class LevelPanelController : MonoBehaviour
             int stars = ChallengeProgression.CalculateStars(PhaseManager.Instance.TotalErrors);
             int challengeIndex = FindChallengeIndex(PhaseManager.Instance.ActiveProvider);
             if (challengeIndex >= 0)
+            {
                 ChallengeProgression.SaveStarRating(challengeIndex, stars);
-
-            // Unlock the next challenge
-            ChallengeProgression.UnlockNext();
+                ChallengeProgression.UnlockNext(challengeIndex);
+            }
         }
     }
 
