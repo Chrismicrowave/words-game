@@ -123,7 +123,6 @@ public class SettingsManager : SingletonBehaviour<SettingsManager>
     {
         ApplyAudio();
         ApplyDisplay();
-        QualitySettings.SetQualityLevel(QualityLevel);
         ApplyCRT();
     }
 
