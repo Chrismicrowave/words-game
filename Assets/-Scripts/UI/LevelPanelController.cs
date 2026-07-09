@@ -139,6 +139,12 @@ public class LevelPanelController : MonoBehaviour
         if (exportBtn != null) exportBtn.gameObject.SetActive(isCustom);
         if (createListBtn != null) createListBtn.gameObject.SetActive(isCustom);
         if (deleteListBtn != null) deleteListBtn.gameObject.SetActive(isCustom);
+
+        // Lock Custom tab until enough challenges are cleared
+        bool customUnlocked = unlockAllFeatures ||
+            (ChallengeProgression.UnlockedCount - 1) >= customUnlockLevels;
+        if (customTabBtn != null)
+            customTabBtn.interactable = customUnlocked;
     }
 
     private void PopulateGrid()
