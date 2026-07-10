@@ -41,8 +41,8 @@ public class LevelPanelController : MonoBehaviour
     [Header("Font")]
     [SerializeField] private TMP_FontAsset chineseFontAsset;
 
-    [Header("Trending Placeholder")]
-    [SerializeField] private GameObject communityPlaceholder;  // "Coming Soon" shown in Trending tab
+    [Header("Community Placeholder")]
+    [SerializeField] private GameObject communityPlaceholder;  // "Coming Soon" shown in Community tab
 
     [Header("Scroll")]
     [SerializeField] private ScrollRect levelScrollRect;  // LevelGrid ScrollRect — reset to top on refresh
