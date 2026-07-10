@@ -11,7 +11,7 @@ using UnityEngine;
 public class ModeHUDController : MonoBehaviour
 {
     [SerializeField] private GameObject challengeHUD; // "Challenge" child
-    [SerializeField] private GameObject customHUD;    // "Custom" child (also used for Trending)
+    [SerializeField] private GameObject customHUD;    // "Custom" child
 
     void Start()
     {
