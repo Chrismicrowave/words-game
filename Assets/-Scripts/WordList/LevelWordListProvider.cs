@@ -142,6 +142,13 @@ public class LevelWordListProvider : IWordListProvider
             }
         }
 
+        // Auto-generate UUID for custom lists that don't have one (upgraded from old format)
+        if (IsEditable && string.IsNullOrEmpty(uuid))
+        {
+            EnsureUUID();
+            Save(); // write UUID header back to file
+        }
+
         // Auto-detect language mode
         bool hasChinese = false;
         foreach (string w in words)
