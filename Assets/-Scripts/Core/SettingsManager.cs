@@ -150,6 +150,7 @@ public class SettingsManager : SingletonBehaviour<SettingsManager>
         PlayerPrefs.DeleteKey(KeyActionPrompts);
         PlayerPrefs.DeleteKey(KeyCRTFilter);
         PlayerPrefs.DeleteKey(KeyScreenShake);
+        PlayerPrefs.DeleteKey(KeyPlayerName);
         PlayerPrefs.Save();
         Load();
         OnSettingsChanged?.Invoke();
