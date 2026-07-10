@@ -63,6 +63,15 @@ public class LevelWordListProvider : IWordListProvider
     /// <summary>Returns the UUID, or null for challenge lists.</summary>
     public string GetUUID() => uuid;
 
+    /// <summary>
+    /// Generates a new UUID for custom lists that were created before the UUID system
+    /// or were imported without one. Writes it to the file header immediately.
+    /// </summary>
+    private void EnsureUUID()
+    {
+        uuid = Guid.NewGuid().ToString("N").Substring(0, 12);
+    }
+
     public void SetWords(List<string> newWords)
     {
         words = new List<string>(newWords);
