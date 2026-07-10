@@ -141,6 +141,7 @@ public class LevelPanelController : MonoBehaviour
         if (exportBtn != null) exportBtn.gameObject.SetActive(isCustom);
         if (createListBtn != null) createListBtn.gameObject.SetActive(isCustom);
         if (deleteListBtn != null) deleteListBtn.gameObject.SetActive(isCustom);
+        if (duplicateListBtn != null) duplicateListBtn.gameObject.SetActive(isCustom);
 
         // Lock Custom tab until enough challenges are cleared
         bool customUnlocked = unlockCustomTab ||
