@@ -85,8 +85,6 @@ public class LevelWordListProvider : IWordListProvider
 
     public void DeleteFile()
     {
-        // Wipe time record before deleting the file
-        ListTimeManager.DeleteTime(GetListKey());
         if (File.Exists(FilePath))
             File.Delete(FilePath);
     }
