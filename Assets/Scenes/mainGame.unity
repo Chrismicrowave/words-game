@@ -30747,7 +30747,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4823148914531571401, guid: ce85ed4ba53c2f84da23784a93bb5435, type: 3}
       propertyPath: m_Name
-      value: TabBtn1 (2)
+      value: TabBtn1 - Community
       objectReference: {fileID: 0}
     - target: {fileID: 6912498796354486393, guid: ce85ed4ba53c2f84da23784a93bb5435, type: 3}
       propertyPath: m_Pivot.x
@@ -30869,17 +30869,6 @@ RectTransform:
   m_CorrespondingSourceObject: {fileID: 6912498796354486393, guid: ce85ed4ba53c2f84da23784a93bb5435, type: 3}
   m_PrefabInstance: {fileID: 1436913294}
   m_PrefabAsset: {fileID: 0}
---- !u!114 &1436913296 stripped
-MonoBehaviour:
-  m_CorrespondingSourceObject: {fileID: 314206479020200349, guid: ce85ed4ba53c2f84da23784a93bb5435, type: 3}
-  m_PrefabInstance: {fileID: 1436913294}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 682038328}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 4e29b1a8efbd4b44bb3f3716e73f07ff, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Button
 --- !u!114 &1436913299
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -36245,7 +36234,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::LevelPanelController
   challengesTabBtn: {fileID: 56562796}
   customTabBtn: {fileID: 1397459706}
-  trendyTabBtn: {fileID: 1436913296}
+  communityTabBtn: {fileID: 0}
   tabActiveColor: {r: 0.72156864, g: 0.46666667, b: 0.3529412, a: 1}
   tabInactiveColor: {r: 0.6117647, g: 0.6117647, b: 0.6117647, a: 1}
   levelGridContent: {fileID: 1589178418}
@@ -36259,7 +36248,7 @@ MonoBehaviour:
   createListBtn: {fileID: 93771690}
   deleteListBtn: {fileID: 1672393878}
   chineseFontAsset: {fileID: 11400000, guid: 428be41dc6b96d74cb9084b697519d27, type: 2}
-  trendyPlaceholder: {fileID: 1718431469}
+  communityPlaceholder: {fileID: 0}
   levelScrollRect: {fileID: 371531129}
   unlockAllChallenges: 0
   customUnlockLevels: 5
@@ -37991,7 +37980,7 @@ GameObject:
   - component: {fileID: 1718431471}
   - component: {fileID: 1718431473}
   m_Layer: 0
-  m_Name: TrendyPlaceholder
+  m_Name: CommunityPlaceholder
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
