@@ -42,7 +42,7 @@ public class LevelPanelController : MonoBehaviour
     [SerializeField] private TMP_FontAsset chineseFontAsset;
 
     [Header("Trending Placeholder")]
-    [SerializeField] private GameObject trendyPlaceholder;  // "Coming Soon" shown in Trending tab
+    [SerializeField] private GameObject communityPlaceholder;  // "Coming Soon" shown in Trending tab
 
     [Header("Scroll")]
     [SerializeField] private ScrollRect levelScrollRect;  // LevelGrid ScrollRect — reset to top on refresh
@@ -118,8 +118,8 @@ public class LevelPanelController : MonoBehaviour
         PopulateGrid();
 
         // Show/hide placeholder for Trending
-        if (trendyPlaceholder != null)
-            trendyPlaceholder.SetActive(tab == LevelTab.Trending);
+        if (communityPlaceholder != null)
+            communityPlaceholder.SetActive(tab == LevelTab.Trending);
     }
 
     private void UpdateTabColors()
