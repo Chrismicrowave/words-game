@@ -78,6 +78,10 @@ public class LevelPanelController : MonoBehaviour
         customTabImage = customTabBtn?.GetComponent<Image>();
         communityTabImage = communityTabBtn?.GetComponent<Image>();
 
+        challengesTabText = challengesTabBtn?.transform.Find("TabNameTMP")?.GetComponent<TextMeshProUGUI>();
+        customTabText = customTabBtn?.transform.Find("TabNameTMP")?.GetComponent<TextMeshProUGUI>();
+        communityTabText = communityTabBtn?.transform.Find("TabNameTMP")?.GetComponent<TextMeshProUGUI>();
+
         if (cancelBtn != null) cancelBtn.onClick.AddListener(OnCancel);
         if (okBtn != null) okBtn.onClick.AddListener(OnOK);
         if (importBtn != null) importBtn.onClick.AddListener(OnImport);
