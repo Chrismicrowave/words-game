@@ -129,7 +129,7 @@ public class LevelPanelController : MonoBehaviour
         if (customTabImage != null)
             customTabImage.color = currentTab == LevelTab.Custom ? tabActiveColor : tabInactiveColor;
         if (communityTabImage != null)
-            communityTabImage.color = currentTab == LevelTab.Trending ? tabActiveColor : tabInactiveColor;
+            communityTabImage.color = currentTab == LevelTab.Community ? tabActiveColor : tabInactiveColor;
     }
 
     private void UpdateButtonVisibility()
