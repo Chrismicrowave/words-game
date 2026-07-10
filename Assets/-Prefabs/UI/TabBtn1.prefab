@@ -132,7 +132,6 @@ GameObject:
   - component: {fileID: 3676599248350717069}
   - component: {fileID: 450522644939062818}
   - component: {fileID: 8825125488294542033}
-  - component: {fileID: 7746719759826998630}
   m_Layer: 0
   m_Name: TabNameTMP
   m_TagString: Untagged
@@ -259,27 +258,3 @@ MonoBehaviour:
   m_hasFontAssetChanged: 0
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
---- !u!114 &7746719759826998630
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 7994845846421549406}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 779ad42f3a3f65345bd329bb7fafe2d5, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::LocalizeText
-  localizedString:
-    m_TableReference:
-      m_TableCollectionName: UI
-    m_TableEntryReference:
-      m_KeyId: 0
-      m_Key: UI.Level.TabChallenges
-    m_FallbackState: 0
-    m_WaitForCompletion: 0
-    m_LocalVariables: []
-  references:
-    version: 2
-    RefIds: []
