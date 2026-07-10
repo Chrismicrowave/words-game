@@ -68,6 +68,9 @@ public class LevelPanelController : MonoBehaviour
     private Image challengesTabImage;
     private Image customTabImage;
     private Image communityTabImage;
+    private TextMeshProUGUI challengesTabText;
+    private TextMeshProUGUI customTabText;
+    private TextMeshProUGUI communityTabText;
 
     void Awake()
     {
