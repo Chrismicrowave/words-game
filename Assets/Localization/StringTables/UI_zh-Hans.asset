@@ -296,6 +296,10 @@ MonoBehaviour:
       :) \uFF09"
     m_Metadata:
       m_Items: []
+  - m_Id: 741335077
+    m_Localized: "\u793E\u533A"
+    m_Metadata:
+      m_Items: []
   references:
     version: 2
     RefIds: []
