@@ -10,7 +10,7 @@ public enum LevelTab
 {
     Challenges,
     Custom,
-    Trending
+    Community
 }
 
 public class LevelPanelController : MonoBehaviour
