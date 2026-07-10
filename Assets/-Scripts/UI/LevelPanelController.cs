@@ -117,9 +117,9 @@ public class LevelPanelController : MonoBehaviour
         UpdateButtonVisibility();
         PopulateGrid();
 
-        // Show/hide placeholder for Trending
+        // Show/hide placeholder for Community
         if (communityPlaceholder != null)
-            communityPlaceholder.SetActive(tab == LevelTab.Trending);
+            communityPlaceholder.SetActive(tab == LevelTab.Community);
     }
 
     private void UpdateTabColors()
