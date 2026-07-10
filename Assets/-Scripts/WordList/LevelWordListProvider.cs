@@ -47,11 +47,16 @@ public class LevelWordListProvider : IWordListProvider
     /// <summary>
     /// Returns the stable key used by ListTimeManager for time records.
     /// Challenge: "chg_{filename}"   Custom: "cst_{uuid}"
+    /// If no UUID exists yet (upgraded from old format), generates one on the spot.
     /// </summary>
     public string GetListKey()
     {
-        if (IsEditable && !string.IsNullOrEmpty(uuid))
+        if (IsEditable)
+        {
+            if (string.IsNullOrEmpty(uuid))
+                EnsureUUID();
             return "cst_" + uuid;
+        }
         return "chg_" + Path.GetFileName(FilePath);
     }
 
