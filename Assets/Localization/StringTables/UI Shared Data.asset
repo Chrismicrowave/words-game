@@ -291,6 +291,10 @@ MonoBehaviour:
     m_Key: UI.Instructions.Body
     m_Metadata:
       m_Items: []
+  - m_Id: 741335105
+    m_Key: UI.Settings.Gameplay.Username
+    m_Metadata:
+      m_Items: []
   m_Metadata:
     m_Items: []
   m_KeyGenerator:
