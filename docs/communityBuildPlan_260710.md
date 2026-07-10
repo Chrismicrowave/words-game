@@ -169,4 +169,49 @@ Phase 5: Advanced
 | `Assets/-Scripts/Core/SettingsManager.cs` | Add `PlayerName` key. |
 | `Assets/-Scripts/WordList/` | New `IWordListProvider` for community lists. |
 
+---
+
+## List Identity & Time Records (Added 2026-07-10)
+
+### Local Time Records
+Pre-launch feature for personal best times, stored locally.
+
+**Identity:**
+- **Custom lists**: UUID stored as `// u:xxxxxxxx` header line in the .txt file. Generated at creation, preserved on edit/save, NEW UUID on duplicate. Survives rename.
+- **Challenge lists**: Keyed by filename (`chg_level_01.txt`). Stable across content updates.
+- **Storage**: `Application.persistentDataPath/ListTimeRecords.json` — separate from editable .txt, prevents casual cheating.
+
+**Lifecycle:**
+| Event | Action |
+|-------|--------|
+| Create custom list | New UUID generated, no time record |
+| Duplicate list | File copied, NEW UUID (starts fresh) |
+| Edit words | Time record wiped |
+| Delete list | Time record deleted |
+| Complete run (any list) | Time saved |
+| New challenge from dev | Gets new filename → new key, no collision |
+
+### Future Leaderboard List Identity
+For leaderboard grouping by word list content, use **MD5 of parsed words**:
+
+```
+listHash = MD5(string.Join("|", parsedWords))
+```
+
+- Computed from **parsed/trimmed words** (`.GetWords()`), NOT raw file → format-proof
+- Fixed-size 32-char hex identifier
+- Two identical lists produce the same hash regardless of filename, creator, or formatting
+- Lightweight: millisecond computation, no server storage concern
+- For leaderboard: `SELECT * FROM scores WHERE list_hash = 'abc...' ORDER BY total_time`
+
+### Leaderboard Schema (Future)
+
+```sql
+ALTER TABLE leaderboard_entries ADD COLUMN list_hash TEXT;
+CREATE INDEX idx_leaderboard_list_hash ON leaderboard_entries(list_hash);
+```
+
+Then leaderboard queries group by `list_hash` instead of `word_list` (name).
+Sync `ListTimeRecords.json` → Supabase when internet is available.
+
 **Cleanup:** 🧹 Delete this file once community features are fully implemented.
