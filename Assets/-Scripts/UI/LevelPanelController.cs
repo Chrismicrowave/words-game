@@ -487,6 +487,8 @@ public class LevelPanelController : MonoBehaviour
     {
         if (selectedProvider == null || currentTab != LevelTab.Custom) return;
 
+        // Delete time record before deleting the file
+        ListTimeManager.DeleteTime(selectedProvider.GetListKey());
         selectedProvider.DeleteFile();
         selectedProvider = null;
         RefreshAll();
