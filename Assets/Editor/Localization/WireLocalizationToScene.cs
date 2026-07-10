@@ -135,36 +135,7 @@ public class WireLocalizationToScene
         foreach (var old in oldList) Object.DestroyImmediate(old);
 
         var lt = go.AddComponent<LocalizeText>();
-
-        // BUG FIX: AddComponent<LocalizeText>() fires Awake, which subscribes
-        // to the DEFAULT (empty) LocalizedString.StringChanged. When we then
-        // assign lt.localizedString = new LocalizedString(...), the field is
-        // REPLACED — the old subscription is on the discarded default struct.
-        // The new LocalizedString has no subscribers, so Apply never fires.
-        //
-        // Fix: use SerializedObject to set the serialized field directly,
-        // THEN re-subscribe the Apply method via reflection on the new value.
-        var so = new SerializedObject(lt);
-        var ls = so.FindProperty("localizedString");
-        ls.FindPropertyRelative("m_TableReference")
-          .FindPropertyRelative("m_TableCollectionName").stringValue = table;
-        ls.FindPropertyRelative("m_TableEntryReference")
-          .FindPropertyRelative("m_Key").stringValue = key;
-        ls.FindPropertyRelative("m_TableEntryReference")
-          .FindPropertyRelative("m_KeyId").longValue = 0;
-        so.ApplyModifiedPropertiesWithoutUndo();
-
-        // Re-subscribe Apply to the new LocalizedString via reflection
-        var applyMethod = typeof(LocalizeText)
-            .GetMethod("Apply", System.Reflection.BindingFlags.NonPublic
-                | System.Reflection.BindingFlags.Instance);
-        if (applyMethod != null)
-        {
-            var action = (System.Action<string>)
-                System.Delegate.CreateDelegate(typeof(System.Action<string>), lt, applyMethod);
-            lt.localizedString.StringChanged += action;
-        }
-
+        lt.localizedString = new LocalizedString(table, key);
         EditorUtility.SetDirty(go);
     }
 
