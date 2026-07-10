@@ -1,5 +1,7 @@
+using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Text;
 using UnityEngine;
 
 /// <summary>
@@ -11,6 +13,11 @@ using UnityEngine;
 ///
 /// Challenge levels are read-only JSON-format .txt files.
 /// Custom levels are read-write plain .txt files (one word per line).
+///
+/// UUID (custom lists only):
+///   A persistent UUID is stored as "// u:xxxxxxxx" header line in the file.
+///   This survives rename, edit, and duplicate operations.
+///   Used as the key for ListTimeManager time records.
 /// </summary>
 public class LevelWordListProvider : IWordListProvider
 {
@@ -21,6 +28,7 @@ public class LevelWordListProvider : IWordListProvider
     public string FilePath { get; private set; }
 
     private List<string> words = new List<string>();
+    private string uuid; // null for challenge lists
 
     public LevelWordListProvider(string filePath, bool isEditable = false)
     {
@@ -36,11 +44,29 @@ public class LevelWordListProvider : IWordListProvider
 
     public List<MixedWordEntry> GetMixedWords() => null;
 
+    /// <summary>
+    /// Returns the stable key used by ListTimeManager for time records.
+    /// Challenge: "chg_{filename}"   Custom: "cst_{uuid}"
+    /// </summary>
+    public string GetListKey()
+    {
+        if (IsEditable && !string.IsNullOrEmpty(uuid))
+            return "cst_" + uuid;
+        return "chg_" + Path.GetFileName(FilePath);
+    }
+
+    /// <summary>Returns the UUID, or null for challenge lists.</summary>
+    public string GetUUID() => uuid;
+
     public void SetWords(List<string> newWords)
     {
         words = new List<string>(newWords);
         if (IsEditable)
+        {
+            // Wipe time record — words changed, old time is invalid
+            ListTimeManager.DeleteTime(GetListKey());
             Save();
+        }
     }
 
     public void Save()
@@ -48,11 +74,23 @@ public class LevelWordListProvider : IWordListProvider
         string dir = Path.GetDirectoryName(FilePath);
         if (!Directory.Exists(dir))
             Directory.CreateDirectory(dir);
-        File.WriteAllLines(FilePath, words);
+
+        var sb = new System.Text.StringBuilder();
+
+        // Preserve UUID header for custom lists
+        if (IsEditable && !string.IsNullOrEmpty(uuid))
+            sb.AppendLine("// u:" + uuid);
+
+        foreach (string w in words)
+            sb.AppendLine(w);
+
+        File.WriteAllText(FilePath, sb.ToString());
     }
 
     public void DeleteFile()
     {
+        // Wipe time record before deleting the file
+        ListTimeManager.DeleteTime(GetListKey());
         if (File.Exists(FilePath))
             File.Delete(FilePath);
     }
@@ -70,7 +108,7 @@ public class LevelWordListProvider : IWordListProvider
 
         if (trimmed.Length > 0 && trimmed[0] == '{')
         {
-            // JSON format
+            // JSON format (challenge levels)
             var data = JsonUtility.FromJson<LevelJsonData>(raw);
             if (data != null)
             {
@@ -81,14 +119,27 @@ public class LevelWordListProvider : IWordListProvider
         }
         else
         {
-            // Plain text: one word per line
+            // Plain text: one word per line, with optional UUID header
             words = new List<string>();
             var lines = raw.Split('\n');
             foreach (string line in lines)
             {
-                string word = line.Trim();
-                if (!string.IsNullOrEmpty(word))
-                    words.Add(word);
+                string trimmedLine = line.Trim();
+                if (string.IsNullOrEmpty(trimmedLine))
+                    continue;
+
+                // Check for UUID header line
+                if (trimmedLine.StartsWith("// u:"))
+                {
+                    uuid = trimmedLine.Substring(5).Trim(); // after "// u:"
+                    continue;
+                }
+
+                // Skip other comment lines
+                if (trimmedLine.StartsWith("//"))
+                    continue;
+
+                words.Add(trimmedLine);
             }
         }
 
@@ -140,7 +191,7 @@ public class LevelWordListProvider : IWordListProvider
     }
 
     /// <summary>
-    /// Creates a new empty custom level txt file with a unique name.
+    /// Creates a new empty custom level txt file with a unique name and UUID.
     /// Returns the provider, or null if creation fails.
     /// </summary>
     public static LevelWordListProvider CreateNewCustom()
@@ -158,7 +209,41 @@ public class LevelWordListProvider : IWordListProvider
             n++;
         } while (File.Exists(path));
 
-        File.WriteAllText(path, "hello world");
+        // Generate UUID and write initial content with header
+        string newUuid = Guid.NewGuid().ToString("N").Substring(0, 12); // short UUID
+        File.WriteAllText(path, "// u:" + newUuid + "\nhello world");
+
         return new LevelWordListProvider(path, true);
+    }
+
+    /// <summary>
+    /// Creates a duplicate of this list with a new UUID but same words.
+    /// Returns the new provider, or null on failure.
+    /// </summary>
+    public LevelWordListProvider Duplicate()
+    {
+        string dir = GetCustomDirectory();
+        if (!Directory.Exists(dir))
+            Directory.CreateDirectory(dir);
+
+        // Find next available name based on source
+        string baseName = Path.GetFileNameWithoutExtension(FilePath);
+        int n = 1;
+        string newPath;
+        do
+        {
+            newPath = Path.Combine(dir, $"{baseName}_copy_{n}.txt");
+            n++;
+        } while (File.Exists(newPath));
+
+        // Write with same words but NEW UUID
+        string newUuid = Guid.NewGuid().ToString("N").Substring(0, 12);
+        var sb = new System.Text.StringBuilder();
+        sb.AppendLine("// u:" + newUuid);
+        foreach (string w in words)
+            sb.AppendLine(w);
+        File.WriteAllText(newPath, sb.ToString());
+
+        return new LevelWordListProvider(newPath, true);
     }
 }
