@@ -1,3 +1,4 @@
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -15,6 +16,10 @@ public class SettingsPanelController : MonoBehaviour
 
     [SerializeField] private Color tabActiveColor   = new Color(1f, 0.5f, 0f, 1f);
     [SerializeField] private Color tabInactiveColor = Color.white;
+
+    [Header("Username")]
+    [SerializeField] private TMP_InputField usernameInput;
+    [SerializeField] private Button usernameOkBtn;
 
     void OnEnable()
     {
