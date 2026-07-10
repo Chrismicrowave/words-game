@@ -21,6 +21,14 @@ public class SettingsPanelController : MonoBehaviour
     [SerializeField] private TMP_InputField usernameInput;
     [SerializeField] private Button usernameOkBtn;
 
+    void Awake()
+    {
+        if (usernameInput != null)
+            usernameInput.characterLimit = 16;
+        if (usernameOkBtn != null)
+            usernameOkBtn.onClick.AddListener(OnUsernameOk);
+    }
+
     void OnEnable()
     {
         if (Services.Get<InputHandler>() != null) Services.Get<InputHandler>().SetGameplayBlocked(true);
