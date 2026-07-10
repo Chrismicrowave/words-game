@@ -78,6 +78,7 @@ public class LevelPanelController : MonoBehaviour
         if (exportBtn != null) exportBtn.onClick.AddListener(OnExport);
         if (createListBtn != null) createListBtn.onClick.AddListener(OnCreateList);
         if (deleteListBtn != null) deleteListBtn.onClick.AddListener(OnDeleteList);
+        if (duplicateListBtn != null) duplicateListBtn.onClick.AddListener(OnDuplicateList);
 
         if (challengesTabBtn != null) challengesTabBtn.onClick.AddListener(() => SwitchTab(LevelTab.Challenges));
         if (customTabBtn != null) customTabBtn.onClick.AddListener(() => SwitchTab(LevelTab.Custom));
