@@ -69,6 +69,9 @@ public class LevelCompletePanelController : MonoBehaviour
         {
             Services.Get<PhaseManager>().CurrentLevelMode = LevelMode.Challenge;
             Services.Get<PhaseManager>().LoadWordList(challenges[nextIdx]);
+            // Persist so game restores this level on next launch
+            PlayerPrefs.SetString("LevelPanel_LastPath", challenges[nextIdx].FilePath);
+            PlayerPrefs.Save();
         }
         else
         {

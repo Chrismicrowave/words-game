@@ -1,16 +1,8 @@
 {
   "name": "Cat Nap",
   "words": [
-    "fish",
-    "bird",
-    "tree",
-    "book",
-    "hand",
-    "star",
-    "moon",
-    "rain",
-    "door",
-    "bell"
+    "dog",
+    "sun"
   ],
   "nameZh": "猫眠"
 }

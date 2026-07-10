@@ -1,16 +1,8 @@
 {
   "name": "River Run",
   "words": [
-    "winter",
-    "summer",
-    "spring",
-    "autumn",
-    "harvest",
-    "journey",
-    "mystery",
-    "crystal",
-    "thunder",
-    "island"
+    "fox",
+    "hat"
   ],
   "nameZh": "河流"
 }

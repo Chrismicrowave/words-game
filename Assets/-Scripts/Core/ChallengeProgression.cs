@@ -34,7 +34,7 @@ public static class ChallengeProgression
             UnlockedCount = next;
     }
 
-    /// <summary>Reset all progress back to level 1 only (unlock + stars).</summary>
+    /// <summary>Reset all progress back to level 1 only (unlock + stars + last level).</summary>
     public static void ResetAll()
     {
         UnlockedCount = 1;
@@ -45,6 +45,8 @@ public static class ChallengeProgression
             if (PlayerPrefs.HasKey(key))
                 PlayerPrefs.DeleteKey(key);
         }
+        // Clear last selected level so game starts at level 1
+        PlayerPrefs.DeleteKey("LevelPanel_LastPath");
         PlayerPrefs.Save();
     }
 

@@ -32,13 +32,17 @@ public class GameCoordinator : MonoBehaviour
 
         uiController = FindAnyObjectByType<UIController>();
 
-        // Load the first challenge as the default word list, so the game
-        // always starts in Challenge mode with level 1's words.
+        // Restore last played challenge, or load the first one
         var challengeDir = LevelWordListProvider.GetChallengeDirectory();
         var challenges = LevelWordListProvider.ScanDirectory(challengeDir);
         if (challenges.Count > 0)
         {
-            Services.Get<PhaseManager>().LoadWordList(challenges[0]);
+            string savedPath = PlayerPrefs.GetString("LevelPanel_LastPath", "");
+            var target = string.IsNullOrEmpty(savedPath) ? null :
+                challenges.Find(c => c.FilePath == savedPath);
+            if (target == null)
+                target = challenges[0]; // fallback to first
+            Services.Get<PhaseManager>().LoadWordList(target);
             Services.Get<PhaseManager>().CurrentLevelMode = LevelMode.Challenge;
         }
         else if (defaultWordList != null)
