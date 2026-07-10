@@ -166,7 +166,7 @@ public class LevelPanelController : MonoBehaviour
             case LevelTab.Custom:
                 providers = customProviders;
                 break;
-            case LevelTab.Trending:
+            case LevelTab.Community:
             default:
                 providers = new List<LevelWordListProvider>();
                 break;
