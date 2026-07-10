@@ -33,7 +33,7 @@ public class SettingsPanelController : MonoBehaviour
         if (usernameInput != null)
         {
             usernameInput.characterLimit = 16;
-            usernameText = usernameInput.textComponent;
+            usernameText = usernameInput.textComponent as TextMeshProUGUI;
             usernameInput.onSelect.AddListener(_ => EnterUsernameEdit());
             usernameInput.onDeselect.AddListener(_ => { /* ignore — OK/Back handle exit */ });
         }
