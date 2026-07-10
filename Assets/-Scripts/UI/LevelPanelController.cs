@@ -63,13 +63,13 @@ public class LevelPanelController : MonoBehaviour
 
     private Image challengesTabImage;
     private Image customTabImage;
-    private Image trendyTabImage;
+    private Image communityTabImage;
 
     void Awake()
     {
         challengesTabImage = challengesTabBtn?.GetComponent<Image>();
         customTabImage = customTabBtn?.GetComponent<Image>();
-        trendyTabImage = communityTabBtn?.GetComponent<Image>();
+        communityTabImage = communityTabBtn?.GetComponent<Image>();
 
         if (cancelBtn != null) cancelBtn.onClick.AddListener(OnCancel);
         if (okBtn != null) okBtn.onClick.AddListener(OnOK);
@@ -128,8 +128,8 @@ public class LevelPanelController : MonoBehaviour
             challengesTabImage.color = currentTab == LevelTab.Challenges ? tabActiveColor : tabInactiveColor;
         if (customTabImage != null)
             customTabImage.color = currentTab == LevelTab.Custom ? tabActiveColor : tabInactiveColor;
-        if (trendyTabImage != null)
-            trendyTabImage.color = currentTab == LevelTab.Trending ? tabActiveColor : tabInactiveColor;
+        if (communityTabImage != null)
+            communityTabImage.color = currentTab == LevelTab.Trending ? tabActiveColor : tabInactiveColor;
     }
 
     private void UpdateButtonVisibility()
