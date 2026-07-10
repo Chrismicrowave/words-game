@@ -50,7 +50,7 @@ public class WireLocalizationToScene
             ("--- UI ---/Menus/SettingsPanel/Card/ContentArea/-DisplayPanel/ResolutionRow/Label",  "UI", "UI.Settings.Display.Resolution"),
             ("--- UI ---/Menus/SettingsPanel/Card/ContentArea/-DisplayPanel/ScreenShakeRow/Label", "UI", "UI.Settings.Display.ScreenShake"),
             ("--- UI ---/Menus/SettingsPanel/Card/ContentArea/-DisplayPanel/ShowPinyinRow/Label",  "UI", "UI.Settings.Display.ShowPinyin"),
-            ("--- UI ---/Menus/SettingsPanel/Card/ContentArea/-GameplayPanel/FullscreenRow/UsernameLabel", "UI", "UI.Settings.Gameplay.Username"),
+            ("--- UI ---/Menus/SettingsPanel/Card/ContentArea/-GameplayPanel/Username/UsernameLabel", "UI", "UI.Settings.Gameplay.Username"),
 
             // Word list panel
             ("--- UI ---/Menus/WordListPanel/MyListPanelBtns/SwapBtn/Text (TMP)", "UI", "UI.WordList.SwapBtn"),
