@@ -1547,7 +1547,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::StableId
   _id: 19dd282bdf6f4e9b81116a85e3431342
---- !u!114 &50738340
+--- !u!114 &50738344
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -11841,7 +11841,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::StableId
   _id: 6bd2f881a1964a459cdefe1c6dec315f
---- !u!114 &540831046
+--- !u!114 &540831050
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -13766,7 +13766,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::StableId
   _id: bea7871eddd84d978d97677c033d3767
---- !u!114 &657611908
+--- !u!114 &657611912
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -13783,7 +13783,7 @@ MonoBehaviour:
       m_TableCollectionName: UI
     m_TableEntryReference:
       m_KeyId: 0
-      m_Key: UI.Level.TabTrendy
+      m_Key: UI.Level.TabCommunity
     m_FallbackState: 0
     m_WaitForCompletion: 0
     m_LocalVariables: []
@@ -29991,7 +29991,7 @@ PrefabInstance:
       addedObject: {fileID: 50738330}
     - targetCorrespondingSourceObject: {fileID: 7994845846421549406, guid: ce85ed4ba53c2f84da23784a93bb5435, type: 3}
       insertIndex: -1
-      addedObject: {fileID: 50738340}
+      addedObject: {fileID: 50738344}
   m_SourcePrefab: {fileID: 100100000, guid: ce85ed4ba53c2f84da23784a93bb5435, type: 3}
 --- !u!224 &1397459705 stripped
 RectTransform:
@@ -30862,13 +30862,24 @@ PrefabInstance:
       addedObject: {fileID: 657611898}
     - targetCorrespondingSourceObject: {fileID: 7994845846421549406, guid: ce85ed4ba53c2f84da23784a93bb5435, type: 3}
       insertIndex: -1
-      addedObject: {fileID: 657611908}
+      addedObject: {fileID: 657611912}
   m_SourcePrefab: {fileID: 100100000, guid: ce85ed4ba53c2f84da23784a93bb5435, type: 3}
 --- !u!224 &1436913295 stripped
 RectTransform:
   m_CorrespondingSourceObject: {fileID: 6912498796354486393, guid: ce85ed4ba53c2f84da23784a93bb5435, type: 3}
   m_PrefabInstance: {fileID: 1436913294}
   m_PrefabAsset: {fileID: 0}
+--- !u!114 &1436913296 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 314206479020200349, guid: ce85ed4ba53c2f84da23784a93bb5435, type: 3}
+  m_PrefabInstance: {fileID: 1436913294}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 682038328}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4e29b1a8efbd4b44bb3f3716e73f07ff, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Button
 --- !u!114 &1436913299
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -36234,7 +36245,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::LevelPanelController
   challengesTabBtn: {fileID: 56562796}
   customTabBtn: {fileID: 1397459706}
-  communityTabBtn: {fileID: 0}
+  communityTabBtn: {fileID: 1436913296}
   tabActiveColor: {r: 0.72156864, g: 0.46666667, b: 0.3529412, a: 1}
   tabInactiveColor: {r: 0.6117647, g: 0.6117647, b: 0.6117647, a: 1}
   levelGridContent: {fileID: 1589178418}
@@ -36248,7 +36259,7 @@ MonoBehaviour:
   createListBtn: {fileID: 93771690}
   deleteListBtn: {fileID: 1672393878}
   chineseFontAsset: {fileID: 11400000, guid: 428be41dc6b96d74cb9084b697519d27, type: 2}
-  communityPlaceholder: {fileID: 0}
+  communityPlaceholder: {fileID: 1718431469}
   levelScrollRect: {fileID: 371531129}
   unlockAllChallenges: 0
   customUnlockLevels: 5
@@ -47404,7 +47415,7 @@ PrefabInstance:
       addedObject: {fileID: 540831036}
     - targetCorrespondingSourceObject: {fileID: 7994845846421549406, guid: ce85ed4ba53c2f84da23784a93bb5435, type: 3}
       insertIndex: -1
-      addedObject: {fileID: 540831046}
+      addedObject: {fileID: 540831050}
   m_SourcePrefab: {fileID: 100100000, guid: ce85ed4ba53c2f84da23784a93bb5435, type: 3}
 --- !u!1001 &7858527363857300424
 PrefabInstance:
