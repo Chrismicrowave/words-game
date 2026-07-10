@@ -175,7 +175,7 @@ public class LevelPanelController : MonoBehaviour
         if (providers.Count == 0)
         {
             // Show empty state
-            okBtn?.gameObject.SetActive(currentTab == LevelTab.Trending ? false : true);
+            okBtn?.gameObject.SetActive(currentTab == LevelTab.Community ? false : true);
             return;
         }
 
