@@ -62,11 +62,7 @@ public class LevelWordListProvider : IWordListProvider
     {
         words = new List<string>(newWords);
         if (IsEditable)
-        {
-            // Wipe time record — words changed, old time is invalid
-            ListTimeManager.DeleteTime(GetListKey());
             Save();
-        }
     }
 
     public void Save()
