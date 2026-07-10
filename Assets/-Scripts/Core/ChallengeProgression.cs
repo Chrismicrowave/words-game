@@ -47,6 +47,8 @@ public static class ChallengeProgression
         }
         // Clear last selected level so game starts at level 1
         PlayerPrefs.DeleteKey("LevelPanel_LastPath");
+        // Clear all time records (challenge + custom best times)
+        ListTimeManager.ClearAll();
         PlayerPrefs.Save();
     }
 
