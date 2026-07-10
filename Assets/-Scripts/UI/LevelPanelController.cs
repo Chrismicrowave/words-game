@@ -294,7 +294,6 @@ public class LevelPanelController : MonoBehaviour
     {
         string listKey = provider.GetListKey();
         var time = ListTimeManager.GetTime(listKey);
-        if (time == null) return; // no record yet
 
         foreach (Transform child in btnObj.transform)
         {
@@ -302,7 +301,17 @@ public class LevelPanelController : MonoBehaviour
             {
                 var tmp = child.GetComponent<TMPro.TextMeshProUGUI>();
                 if (tmp != null)
-                    tmp.text = "Best: " + ListTimeManager.FormatTime(time.Value.TotalTime);
+                {
+                    if (time.HasValue)
+                    {
+                        tmp.text = "Best: " + ListTimeManager.FormatTime(time.Value.TotalTime);
+                        child.gameObject.SetActive(true);
+                    }
+                    else
+                    {
+                        child.gameObject.SetActive(false);
+                    }
+                }
                 break;
             }
         }
