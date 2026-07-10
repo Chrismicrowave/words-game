@@ -78,6 +78,16 @@ public static class ListTimeManager
         return data.entries.Exists(e => e.key == listKey);
     }
 
+    /// <summary>Clear ALL time records (used by ChallengeProgression.ResetAll).</summary>
+    public static void ClearAll()
+    {
+        if (File.Exists(FilePath))
+        {
+            try { File.Delete(FilePath); }
+            catch (Exception e) { Debug.LogWarning($"[ListTimeManager] Failed to clear: {e.Message}"); }
+        }
+    }
+
     /// <summary>Format a time float as "1:02.3" or "45.2s".</summary>
     public static string FormatTime(float totalSeconds)
     {
