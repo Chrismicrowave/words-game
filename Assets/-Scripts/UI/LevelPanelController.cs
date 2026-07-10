@@ -492,4 +492,23 @@ public class LevelPanelController : MonoBehaviour
         RefreshAll();
         SwitchTab(LevelTab.Custom);
     }
+
+    public void OnDuplicateList()
+    {
+        if (selectedProvider == null || currentTab != LevelTab.Custom) return;
+
+        var copy = selectedProvider.Duplicate();
+        if (copy == null) return;
+
+        RefreshAll();
+        SwitchTab(LevelTab.Custom);
+
+        // Auto-select the duplicated list
+        int idx = customProviders.IndexOf(copy);
+        if (idx >= 0 && idx < levelGridContent.childCount)
+        {
+            var dupBtn = levelGridContent.GetChild(idx).gameObject;
+            OnLevelClicked(copy, dupBtn);
+        }
+    }
 }
