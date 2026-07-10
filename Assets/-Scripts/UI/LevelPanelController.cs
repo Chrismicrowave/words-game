@@ -136,12 +136,23 @@ public class LevelPanelController : MonoBehaviour
 
     private void UpdateTabColors()
     {
+        bool isChallenges = currentTab == LevelTab.Challenges;
+        bool isCustom = currentTab == LevelTab.Custom;
+        bool isCommunity = currentTab == LevelTab.Community;
+
         if (challengesTabImage != null)
-            challengesTabImage.color = currentTab == LevelTab.Challenges ? tabActiveColor : tabInactiveColor;
+            challengesTabImage.color = isChallenges ? tabActiveColor : tabInactiveColor;
         if (customTabImage != null)
-            customTabImage.color = currentTab == LevelTab.Custom ? tabActiveColor : tabInactiveColor;
+            customTabImage.color = isCustom ? tabActiveColor : tabInactiveColor;
         if (communityTabImage != null)
-            communityTabImage.color = currentTab == LevelTab.Community ? tabActiveColor : tabInactiveColor;
+            communityTabImage.color = isCommunity ? tabActiveColor : tabInactiveColor;
+
+        if (challengesTabText != null)
+            challengesTabText.color = isChallenges ? tabActiveTextColor : tabInactiveTextColor;
+        if (customTabText != null)
+            customTabText.color = isCustom ? tabActiveTextColor : tabInactiveTextColor;
+        if (communityTabText != null)
+            communityTabText.color = isCommunity ? tabActiveTextColor : tabInactiveTextColor;
     }
 
     private bool IsCustomUnlocked =>
