@@ -93,7 +93,11 @@ public static class ListTimeManager
         try
         {
             string json = File.ReadAllText(FilePath);
-            return JsonUtility.FromJson<TimeRecordData>(json) ?? new TimeRecordData();
+            var data = JsonUtility.FromJson<TimeRecordData>(json) ?? new TimeRecordData();
+            // JsonUtility doesn't run field initializers on deserialization
+            if (data.records == null)
+                data.records = new Dictionary<string, TimeRecord>();
+            return data;
         }
         catch (Exception e)
         {
