@@ -21,6 +21,8 @@ public class LevelPanelController : MonoBehaviour
     [SerializeField] private Button communityTabBtn;
     [SerializeField] private Color tabActiveColor = new Color(1f, 0.5f, 0f, 1f);
     [SerializeField] private Color tabInactiveColor = Color.white;
+    [SerializeField] private Color tabActiveTextColor = Color.white;
+    [SerializeField] private Color tabInactiveTextColor = new Color(0.92f, 0.92f, 0.92f);
 
     [Header("Content Areas")]
     [SerializeField] private Transform levelGridContent;  // The "Content" child inside LevelGrid scroll
