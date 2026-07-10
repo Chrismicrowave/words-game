@@ -235,6 +235,9 @@ public class LevelPanelController : MonoBehaviour
                     }
                 }
             }
+
+            // Show best time if a record exists (for both challenge and custom)
+            SetTimeDisplay(btnObj, provider);
         }
 
         // Auto-select: restore saved selection or pick first unlocked item
