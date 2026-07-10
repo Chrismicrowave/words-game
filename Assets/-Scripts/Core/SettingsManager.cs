@@ -34,6 +34,9 @@ public class SettingsManager : SingletonBehaviour<SettingsManager>
     public const string KeyShowPinyin   = "ShowPinyin";
     public const string KeyUILanguage   = "settings_uiLanguage";
 
+    // Player identity
+    public const string KeyPlayerName   = "PlayerName";
+
     public float MasterVolume
     {
         get => PlayerPrefs.GetFloat(KeyMasterVolume, 0.7f);
