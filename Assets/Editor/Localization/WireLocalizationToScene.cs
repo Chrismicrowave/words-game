@@ -74,7 +74,7 @@ public class WireLocalizationToScene
             ("--- UI ---/Menus/LevelPanel/Card/Title",                                    "UI", "UI.Level.Title"),
             ("--- UI ---/Menus/LevelPanel/Card/TabRows/TabBtn1/TabNameTMP",               "UI", "UI.Level.TabChallenges"),
             ("--- UI ---/Menus/LevelPanel/Card/TabRows/TabBtn1 (1)/TabNameTMP",           "UI", "UI.Level.TabCustom"),
-            ("--- UI ---/Menus/LevelPanel/Card/TabRows/TabBtn1 (2)/TabNameTMP",           "UI", "UI.Level.TabTrendy"),
+            ("--- UI ---/Menus/LevelPanel/Card/TabRows/TabBtn1 - Community/TabNameTMP",   "UI", "UI.Level.TabCommunity"),
             ("--- UI ---/Menus/LevelPanel/Card/ButtonRow/CancelBtn/Text",                 "UI", "UI.Level.CancelBtn"),
             ("--- UI ---/Menus/LevelPanel/Card/ButtonRow/OKBtn/Text",                     "UI", "UI.Level.OKBtn"),
             ("--- UI ---/Menus/LevelPanel/Card/ButtonRow/ImportBtn/Text",                 "UI", "UI.Level.ImportBtn"),
