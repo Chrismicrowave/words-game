@@ -18,7 +18,7 @@ public class LevelPanelController : MonoBehaviour
     [Header("Tab Buttons")]
     [SerializeField] private Button challengesTabBtn;
     [SerializeField] private Button customTabBtn;
-    [SerializeField] private Button trendyTabBtn;
+    [SerializeField] private Button communityTabBtn;
     [SerializeField] private Color tabActiveColor = new Color(1f, 0.5f, 0f, 1f);
     [SerializeField] private Color tabInactiveColor = Color.white;
 
@@ -69,7 +69,7 @@ public class LevelPanelController : MonoBehaviour
     {
         challengesTabImage = challengesTabBtn?.GetComponent<Image>();
         customTabImage = customTabBtn?.GetComponent<Image>();
-        trendyTabImage = trendyTabBtn?.GetComponent<Image>();
+        trendyTabImage = communityTabBtn?.GetComponent<Image>();
 
         if (cancelBtn != null) cancelBtn.onClick.AddListener(OnCancel);
         if (okBtn != null) okBtn.onClick.AddListener(OnOK);
@@ -80,7 +80,7 @@ public class LevelPanelController : MonoBehaviour
 
         if (challengesTabBtn != null) challengesTabBtn.onClick.AddListener(() => SwitchTab(LevelTab.Challenges));
         if (customTabBtn != null) customTabBtn.onClick.AddListener(() => SwitchTab(LevelTab.Custom));
-        if (trendyTabBtn != null) trendyTabBtn.onClick.AddListener(() => SwitchTab(LevelTab.Trending));
+        if (communityTabBtn != null) communityTabBtn.onClick.AddListener(() => SwitchTab(LevelTab.Trending));
     }
 
     void OnEnable()
