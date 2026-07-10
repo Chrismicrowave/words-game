@@ -101,6 +101,23 @@ public class SettingsManager : SingletonBehaviour<SettingsManager>
         }
     }
 
+    /// <summary>Player display name used for leaderboards. Default: "Unnamed User #1234".</summary>
+    public const string DefaultPlayerName = "Unnamed User #1234";
+    public string PlayerName
+    {
+        get => PlayerPrefs.GetString(KeyPlayerName, DefaultPlayerName);
+        set
+        {
+            string cleaned = value?.Trim() ?? DefaultPlayerName;
+            if (string.IsNullOrEmpty(cleaned))
+                cleaned = DefaultPlayerName;
+            if (cleaned.Length > 16)
+                cleaned = cleaned.Substring(0, 16);
+            PlayerPrefs.SetString(KeyPlayerName, cleaned);
+            PlayerPrefs.Save();
+        }
+    }
+
     public event Action OnSettingsChanged;
 
     protected override void Awake()
