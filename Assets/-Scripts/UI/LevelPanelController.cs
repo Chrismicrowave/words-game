@@ -37,6 +37,7 @@ public class LevelPanelController : MonoBehaviour
     [SerializeField] private Button exportBtn;
     [SerializeField] private Button createListBtn;
     [SerializeField] private Button deleteListBtn;
+    [SerializeField] private Button duplicateListBtn;
 
     [Header("Font")]
     [SerializeField] private TMP_FontAsset chineseFontAsset;
