@@ -10824,7 +10824,7 @@ GameObject:
   - component: {fileID: 476136292}
   - component: {fileID: 476136291}
   m_Layer: 0
-  m_Name: Button
+  m_Name: UsernameOkBtn
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -34717,7 +34717,7 @@ GameObject:
   - component: {fileID: 1572103745}
   - component: {fileID: 1572103744}
   m_Layer: 0
-  m_Name: InputField (TMP)
+  m_Name: UsernameInputfield
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -46232,7 +46232,7 @@ GameObject:
   - component: {fileID: 2070522938}
   - component: {fileID: 2070522937}
   m_Layer: 0
-  m_Name: Label
+  m_Name: UsernameLabel
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
