@@ -42,8 +42,9 @@ public class LevelPanelController : MonoBehaviour
     [Header("Font")]
     [SerializeField] private TMP_FontAsset chineseFontAsset;
 
-    [Header("Community Placeholder")]
+    [Header("Placeholders")]
     [SerializeField] private GameObject communityPlaceholder;  // "Coming Soon" shown in Community tab
+    [SerializeField] private GameObject customLockedPlaceholder; // "Clear X challenges" shown when Custom tab locked
 
     [Header("Scroll")]
     [SerializeField] private ScrollRect levelScrollRect;  // LevelGrid ScrollRect — reset to top on refresh
@@ -134,20 +135,21 @@ public class LevelPanelController : MonoBehaviour
             communityTabImage.color = currentTab == LevelTab.Community ? tabActiveColor : tabInactiveColor;
     }
 
+    private bool IsCustomUnlocked =>
+        unlockCustomTab || (ChallengeProgression.UnlockedCount - 1) >= customUnlockLevels;
+
     private void UpdateButtonVisibility()
     {
         bool isCustom = currentTab == LevelTab.Custom;
-        if (importBtn != null) importBtn.gameObject.SetActive(isCustom);
-        if (exportBtn != null) exportBtn.gameObject.SetActive(isCustom);
-        if (createListBtn != null) createListBtn.gameObject.SetActive(isCustom);
-        if (deleteListBtn != null) deleteListBtn.gameObject.SetActive(isCustom);
-        if (duplicateListBtn != null) duplicateListBtn.gameObject.SetActive(isCustom);
+        bool unlocked = IsCustomUnlocked;
+        if (importBtn != null) importBtn.gameObject.SetActive(isCustom && unlocked);
+        if (exportBtn != null) exportBtn.gameObject.SetActive(isCustom && unlocked);
+        if (createListBtn != null) createListBtn.gameObject.SetActive(isCustom && unlocked);
+        if (deleteListBtn != null) deleteListBtn.gameObject.SetActive(isCustom && unlocked);
+        if (duplicateListBtn != null) duplicateListBtn.gameObject.SetActive(isCustom && unlocked);
 
-        // Lock Custom tab until enough challenges are cleared
-        bool customUnlocked = unlockCustomTab ||
-            (ChallengeProgression.UnlockedCount - 1) >= customUnlockLevels;
-        if (customTabBtn != null)
-            customTabBtn.interactable = customUnlocked;
+        if (customLockedPlaceholder != null)
+            customLockedPlaceholder.SetActive(isCustom && !unlocked);
     }
 
     private void PopulateGrid()
@@ -159,6 +161,13 @@ public class LevelPanelController : MonoBehaviour
 
         // Clear word preview too
         ClearWordPreview();
+
+        // If Custom tab is locked, skip grid (placeholder handles the visual)
+        if (currentTab == LevelTab.Custom && !IsCustomUnlocked)
+        {
+            okBtn?.gameObject.SetActive(false);
+            return;
+        }
 
         List<LevelWordListProvider> providers;
         switch (currentTab)

@@ -124,6 +124,7 @@ public class GameCoordinator : MonoBehaviour
                         Services.Get<TimerSystem>().TotalElapsedTime,
                         Services.Get<PhaseManager>().TotalPhases
                     );
+                    Debug.Log($"[TimeDebug] TransitionTo AllComplete");
                     Services.Get<GameStateManager>().TransitionTo(GameState.AllComplete);
                 }
                 break;
@@ -153,14 +154,19 @@ public class GameCoordinator : MonoBehaviour
 
         // Save time record for LevelWordListProvider lists (challenge + custom)
         var provider = Services.Get<PhaseManager>().ActiveProvider;
+        Debug.Log($"[TimeDebug] HandleAllPhasesCompleted, provider type={provider?.GetType()?.Name}, mode={Services.Get<PhaseManager>().CurrentLevelMode}");
         if (provider is LevelWordListProvider lvlProvider)
         {
-            ListTimeManager.SaveTime(
-                lvlProvider.GetListKey(),
-                Services.Get<TimerSystem>().TotalElapsedTime,
-                Services.Get<PhaseManager>().TotalPhases,
-                Services.Get<PhaseManager>().TotalErrors
-            );
+            string key = lvlProvider.GetListKey();
+            float time = Services.Get<TimerSystem>().TotalElapsedTime;
+            int phases = Services.Get<PhaseManager>().TotalPhases;
+            int errors = Services.Get<PhaseManager>().TotalErrors;
+            Debug.Log($"[TimeDebug] Saving: key={key} time={time:F2}s phases={phases} errors={errors}");
+            ListTimeManager.SaveTime(key, time, phases, errors);
+        }
+        else
+        {
+            Debug.LogWarning($"[TimeDebug] NOT a LevelWordListProvider, cannot save time");
         }
 
         if (Services.Get<PhaseManager>().CurrentLevelMode == LevelMode.Challenge)

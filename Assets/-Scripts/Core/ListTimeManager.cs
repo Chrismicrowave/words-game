@@ -27,9 +27,16 @@ public static class ListTimeManager
     }
 
     [Serializable]
+    private class TimeRecordEntry
+    {
+        public string key;
+        public TimeRecord record;
+    }
+
+    [Serializable]
     private class TimeRecordData
     {
-        public Dictionary<string, TimeRecord> records = new Dictionary<string, TimeRecord>();
+        public List<TimeRecordEntry> entries = new List<TimeRecordEntry>();
     }
 
     private static string FilePath => Path.Combine(Application.persistentDataPath, "ListTimeRecords.json");
@@ -38,12 +45,12 @@ public static class ListTimeManager
     public static void SaveTime(string listKey, float totalTime, int phaseCount, int errors)
     {
         var data = LoadAll();
-        data.records[listKey] = new TimeRecord
-        {
-            TotalTime = totalTime,
-            PhaseCount = phaseCount,
-            Errors = errors
-        };
+        // Replace existing entry or add new one
+        int idx = data.entries.FindIndex(e => e.key == listKey);
+        if (idx >= 0)
+            data.entries[idx] = new TimeRecordEntry { key = listKey, record = new TimeRecord { TotalTime = totalTime, PhaseCount = phaseCount, Errors = errors } };
+        else
+            data.entries.Add(new TimeRecordEntry { key = listKey, record = new TimeRecord { TotalTime = totalTime, PhaseCount = phaseCount, Errors = errors } });
         SaveAll(data);
     }
 
@@ -51,16 +58,16 @@ public static class ListTimeManager
     public static TimeRecord? GetTime(string listKey)
     {
         var data = LoadAll();
-        if (data.records.TryGetValue(listKey, out var record))
-            return record;
-        return null;
+        int idx = data.entries.FindIndex(e => e.key == listKey);
+        return idx >= 0 ? data.entries[idx].record : (TimeRecord?)null;
     }
 
     /// <summary>Delete the time record for a list key.</summary>
     public static void DeleteTime(string listKey)
     {
         var data = LoadAll();
-        if (data.records.Remove(listKey))
+        int removed = data.entries.RemoveAll(e => e.key == listKey);
+        if (removed > 0)
             SaveAll(data);
     }
 
@@ -68,7 +75,7 @@ public static class ListTimeManager
     public static bool HasTime(string listKey)
     {
         var data = LoadAll();
-        return data.records.ContainsKey(listKey);
+        return data.entries.Exists(e => e.key == listKey);
     }
 
     /// <summary>Format a time float as "1:02.3" or "45.2s".</summary>
@@ -94,9 +101,9 @@ public static class ListTimeManager
         {
             string json = File.ReadAllText(FilePath);
             var data = JsonUtility.FromJson<TimeRecordData>(json) ?? new TimeRecordData();
-            // JsonUtility doesn't run field initializers on deserialization
-            if (data.records == null)
-                data.records = new Dictionary<string, TimeRecord>();
+            // JsonUtility doesn't run field initializers on deserialization (via Unity 6)
+            if (data.entries == null)
+                data.entries = new List<TimeRecordEntry>();
             return data;
         }
         catch (Exception e)
