@@ -151,17 +151,29 @@ public class GameCoordinator : MonoBehaviour
         if (keyboardShake != null)
             keyboardShake.SetShaking(false);
 
+        // Save time record for LevelWordListProvider lists (challenge + custom)
+        var provider = Services.Get<PhaseManager>().ActiveProvider;
+        if (provider is LevelWordListProvider lvlProvider)
+        {
+            ListTimeManager.SaveTime(
+                lvlProvider.GetListKey(),
+                Services.Get<TimerSystem>().TotalElapsedTime,
+                Services.Get<PhaseManager>().TotalPhases,
+                Services.Get<PhaseManager>().TotalErrors
+            );
+        }
+
         if (Services.Get<PhaseManager>().CurrentLevelMode == LevelMode.Challenge)
         {
             int stars = ChallengeProgression.CalculateStars(Services.Get<PhaseManager>().TotalErrors);
-            int challengeIndex = FindChallengeIndex(Services.Get<PhaseManager>().ActiveProvider);
+            int challengeIndex = FindChallengeIndex(provider);
             if (challengeIndex >= 0)
             {
                 ChallengeProgression.SaveStarRating(challengeIndex, stars);
                 ChallengeProgression.UnlockNext(challengeIndex);
             }
 
-            string levelName = Services.Get<PhaseManager>().ActiveProvider?.DisplayName ?? "Level";
+            string levelName = provider?.DisplayName ?? "Level";
             if (levelCompletePanel != null)
                 levelCompletePanel.Show(levelName, stars, Services.Get<TimerSystem>().TotalElapsedTime);
         }
