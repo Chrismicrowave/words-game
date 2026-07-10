@@ -290,6 +290,24 @@ public class LevelPanelController : MonoBehaviour
         }
     }
 
+    private void SetTimeDisplay(GameObject btnObj, LevelWordListProvider provider)
+    {
+        string listKey = provider.GetListKey();
+        var time = ListTimeManager.GetTime(listKey);
+        if (time == null) return; // no record yet
+
+        foreach (Transform child in btnObj.transform)
+        {
+            if (child.name == "Time")
+            {
+                var tmp = child.GetComponent<TMPro.TextMeshProUGUI>();
+                if (tmp != null)
+                    tmp.text = "Best: " + ListTimeManager.FormatTime(time.Value.TotalTime);
+                break;
+            }
+        }
+    }
+
     private void TryRestoreSelection(List<LevelWordListProvider> providers)
     {
         if (providers.Count == 0) return;
