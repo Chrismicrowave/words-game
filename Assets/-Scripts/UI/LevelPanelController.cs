@@ -92,7 +92,7 @@ public class LevelPanelController : MonoBehaviour
         LevelTab restoreTab = LevelTab.Challenges;
         string savedTab = PlayerPrefs.GetString(LastLevelTabPrefKey, "Challenges");
         if (savedTab == "Custom") restoreTab = LevelTab.Custom;
-        else if (savedTab == "Trending") restoreTab = LevelTab.Trending;
+        else if (savedTab == "Community") restoreTab = LevelTab.Community;
         SwitchTab(restoreTab);
     }
 
