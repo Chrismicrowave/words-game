@@ -57,6 +57,25 @@ public class SettingsPanelController : MonoBehaviour
     {
         SetActive(gameplayPanel, audioPanel, displayPanel, customPanel);
         SetTabColors(gameplayTabBtn, audioTabBtn, displayTabBtn, customTabBtn);
+        RefreshUsername();
+    }
+
+    private void RefreshUsername()
+    {
+        if (usernameInput != null)
+            usernameInput.text = Services.Get<SettingsManager>()?.PlayerName ?? "Unnamed User #1234";
+    }
+
+    private void OnUsernameOk()
+    {
+        if (Services.Get<SettingsManager>() == null) return;
+        string name = usernameInput?.text?.Trim();
+        if (string.IsNullOrEmpty(name))
+            name = "Unnamed User #1234";
+        if (name.Length > 16)
+            name = name.Substring(0, 16);
+        Services.Get<SettingsManager>().PlayerName = name;
+        RefreshUsername();
     }
 
     public void ShowCustom()
