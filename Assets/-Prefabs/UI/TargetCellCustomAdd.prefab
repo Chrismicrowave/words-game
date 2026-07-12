@@ -11,6 +11,7 @@ GameObject:
   - component: {fileID: 6435627257564194221}
   - component: {fileID: 1480076335547961661}
   - component: {fileID: 8800687401072231028}
+  - component: {fileID: 1178465717931836233}
   m_Layer: 0
   m_Name: CharLabel
   m_TagString: Untagged
@@ -137,6 +138,19 @@ MonoBehaviour:
   m_hasFontAssetChanged: 0
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
+--- !u!114 &1178465717931836233
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4130788766131416125}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fd84856d67206fc45a7bbca33bfb5584, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::StableId
+  _id: ad971321551544dbb7b69ccf182a07c8
 --- !u!1 &4779975435093931920
 GameObject:
   m_ObjectHideFlags: 0
@@ -148,6 +162,7 @@ GameObject:
   - component: {fileID: 1949468655120602606}
   - component: {fileID: 3211841513653785507}
   - component: {fileID: 355032716984280758}
+  - component: {fileID: 2368680619950898705}
   m_Layer: 0
   m_Name: PinyinLabel
   m_TagString: Untagged
@@ -274,6 +289,19 @@ MonoBehaviour:
   m_hasFontAssetChanged: 0
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
+--- !u!114 &2368680619950898705
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4779975435093931920}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fd84856d67206fc45a7bbca33bfb5584, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::StableId
+  _id: 7d54fe5036a24a94b91e3e8122976df1
 --- !u!1 &8127532070943617958
 GameObject:
   m_ObjectHideFlags: 0
@@ -285,6 +313,7 @@ GameObject:
   - component: {fileID: 765576491980805392}
   - component: {fileID: 4778700480230112363}
   - component: {fileID: 5768846056776928936}
+  - component: {fileID: 4021621221272147958}
   m_Layer: 0
   m_Name: TargetCellCustomAdd
   m_TagString: Untagged
@@ -353,3 +382,16 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::TargetCell
   pinyinLabel: {fileID: 355032716984280758}
   charLabel: {fileID: 8800687401072231028}
+--- !u!114 &4021621221272147958
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8127532070943617958}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fd84856d67206fc45a7bbca33bfb5584, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::StableId
+  _id: 647d0f5b5e8f4f2982b00dc90d89b164

@@ -12,6 +12,7 @@ GameObject:
   - component: {fileID: 5685072449748330371}
   - component: {fileID: 8728897729259233044}
   - component: {fileID: 6075093321184068549}
+  - component: {fileID: 6885832322491671958}
   m_Layer: 0
   m_Name: LetterLabel
   m_TagString: Untagged
@@ -158,6 +159,19 @@ MonoBehaviour:
   m_FlexibleWidth: -1
   m_FlexibleHeight: -1
   m_LayoutPriority: 1
+--- !u!114 &6885832322491671958
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3733166178970222730}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fd84856d67206fc45a7bbca33bfb5584, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::StableId
+  _id: e243fe4747a442ae9a7d0e6a1f1443ae
 --- !u!1 &4297585409971575013
 GameObject:
   m_ObjectHideFlags: 0
@@ -169,6 +183,7 @@ GameObject:
   - component: {fileID: 1097712776441005445}
   - component: {fileID: 2611564107254696471}
   - component: {fileID: 674422663389617499}
+  - component: {fileID: 8318424126060831641}
   m_Layer: 0
   m_Name: CharacterCell
   m_TagString: Untagged
@@ -237,6 +252,19 @@ MonoBehaviour:
   m_ChildScaleWidth: 0
   m_ChildScaleHeight: 0
   m_ReverseArrangement: 0
+--- !u!114 &8318424126060831641
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4297585409971575013}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fd84856d67206fc45a7bbca33bfb5584, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::StableId
+  _id: 550bec3cdd36430bb3ad3558ade25815
 --- !u!1 &6446885342152055114
 GameObject:
   m_ObjectHideFlags: 0
@@ -249,6 +277,7 @@ GameObject:
   - component: {fileID: 310355867575643598}
   - component: {fileID: 8836607856324497074}
   - component: {fileID: 1712493728518095698}
+  - component: {fileID: 5320428188230352503}
   m_Layer: 0
   m_Name: CharLabel
   m_TagString: Untagged
@@ -395,3 +424,16 @@ MonoBehaviour:
   m_FlexibleWidth: -1
   m_FlexibleHeight: -1
   m_LayoutPriority: 1
+--- !u!114 &5320428188230352503
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6446885342152055114}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fd84856d67206fc45a7bbca33bfb5584, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::StableId
+  _id: 0edfb13080444bd598bee6cd465670ce
