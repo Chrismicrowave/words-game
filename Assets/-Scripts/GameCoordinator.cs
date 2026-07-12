@@ -131,7 +131,9 @@ public class GameCoordinator : MonoBehaviour
             ? wordEngine.CurrentStep
             : wordEngine.CurrentStep - 1;
 
-        Step step = wordEngine.Steps[stepIndex];
+        Step step = (stepIndex >= 0 && stepIndex < wordEngine.Steps.Count)
+            ? wordEngine.Steps[stepIndex]
+            : default;
         Services.Get<GameStateManager>().RaiseStepProcessed(result, step);
 
         switch (result)
