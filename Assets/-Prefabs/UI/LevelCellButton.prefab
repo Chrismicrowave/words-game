@@ -616,6 +616,7 @@ GameObject:
   - component: {fileID: 7219675453417611796}
   - component: {fileID: 247341985888572791}
   - component: {fileID: 579850093073590023}
+  - component: {fileID: 82580962552997038}
   m_Layer: 0
   m_Name: Unlocks
   m_TagString: Untagged
@@ -755,6 +756,30 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::StableId
   _id: a0e556482ecd471086eb19afb68e4f0c
+--- !u!114 &82580962552997038
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6337347314092575105}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 779ad42f3a3f65345bd329bb7fafe2d5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LocalizeText
+  localizedString:
+    m_TableReference:
+      m_TableCollectionName: 
+    m_TableEntryReference:
+      m_KeyId: 0
+      m_Key: 
+    m_FallbackState: 0
+    m_WaitForCompletion: 0
+    m_LocalVariables: []
+  references:
+    version: 2
+    RefIds: []
 --- !u!1 &8544830857244354133
 GameObject:
   m_ObjectHideFlags: 0
