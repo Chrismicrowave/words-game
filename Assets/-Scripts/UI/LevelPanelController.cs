@@ -54,7 +54,9 @@ public class LevelPanelController : MonoBehaviour
     [Header("Debug")]
     [SerializeField] private bool unlockAllChallenges;  // bypass all challenge level locks
     [SerializeField] private int customUnlockLevels = 5;  // challenges to clear before Custom tab unlocks
+    [SerializeField] private int communityUnlockLevels = 10;  // challenges to clear before Community tab unlocks
     [SerializeField] private bool unlockCustomTab;  // bypass Custom tab lock
+    [SerializeField] private bool unlockCommunityTab;  // bypass Community tab lock
 
     private const string LastLevelPathPrefKey = "LevelPanel_LastPath";
     private const string LastLevelTabPrefKey  = "LevelPanel_LastTab";
