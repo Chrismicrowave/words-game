@@ -35326,7 +35326,7 @@ MonoBehaviour:
   m_StartCorner: 0
   m_StartAxis: 0
   m_CellSize: {x: 270, y: 270}
-  m_Spacing: {x: 0, y: 0}
+  m_Spacing: {x: 5, y: 5}
   m_Constraint: 1
   m_ConstraintCount: 4
 --- !u!114 &1589178420
@@ -37431,7 +37431,9 @@ MonoBehaviour:
   levelScrollRect: {fileID: 371531129}
   unlockAllChallenges: 0
   customUnlockLevels: 5
+  communityUnlockLevels: 10
   unlockCustomTab: 0
+  unlockCommunityTab: 0
 --- !u!114 &1634712221
 MonoBehaviour:
   m_ObjectHideFlags: 0
