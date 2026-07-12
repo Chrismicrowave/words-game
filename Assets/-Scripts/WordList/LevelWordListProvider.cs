@@ -165,6 +165,8 @@ public class LevelWordListProvider : IWordListProvider
                 DisplayNameZh = data.nameZh;
                 words = data.words != null ? new List<string>(data.words) : new List<string>();
                 mixedWords = data.mixedWords ?? new List<MixedWordEntry>();
+                // Set language mode based on mixed word data
+                LanguageMode = mixedWords.Count > 0 ? LanguageMode.Mixed : LanguageMode.English;
                 return;
             }
         }
