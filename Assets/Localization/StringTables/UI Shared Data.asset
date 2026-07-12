@@ -295,6 +295,14 @@ MonoBehaviour:
     m_Key: UI.Settings.Gameplay.Username
     m_Metadata:
       m_Items: []
+  - m_Id: 1103553958502400
+    m_Key: UI.Level.UnlockCustom
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1103554025611264
+    m_Key: UI.Level.UnlockCommunity
+    m_Metadata:
+      m_Items: []
   m_Metadata:
     m_Items: []
   m_KeyGenerator:

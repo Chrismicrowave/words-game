@@ -322,6 +322,14 @@ MonoBehaviour:
     m_Localized: '*Unlocks Community List (coming soon)'
     m_Metadata:
       m_Items: []
+  - m_Id: 1103553958502400
+    m_Localized: '*Unlocks Custom List'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1103554025611264
+    m_Localized: '*Unlocks Community List (coming soon)'
+    m_Metadata:
+      m_Items: []
   references:
     version: 2
     RefIds: []
