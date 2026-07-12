@@ -326,37 +326,28 @@ public class LevelPanelController : MonoBehaviour
 
     private void SetUnlockDisplay(GameObject btnObj, int levelNum)
     {
-        string key = null;
-        if (levelNum == customUnlockLevels)
-            key = "UI.Level.UnlockCustom";
-        else if (levelNum == communityUnlockLevels)
-            key = "UI.Level.UnlockCommunity";
+        bool isCustomUnlock = levelNum == customUnlockLevels;
+        bool isCommunityUnlock = levelNum == communityUnlockLevels;
 
         foreach (Transform child in btnObj.transform)
         {
             if (child.name == "Unlocks")
             {
-                var tmp = child.GetComponent<TMPro.TextMeshProUGUI>();
-                if (tmp != null)
+                if (isCustomUnlock || isCommunityUnlock)
                 {
-                    if (key != null)
+                    if (isCommunityUnlock)
                     {
-                        try
-                        {
-                            tmp.text = LocalizationService.Get("UI", key);
-                        }
-                        catch
-                        {
-                            tmp.text = key == "UI.Level.UnlockCustom"
-                                ? "*Unlocks Custom List"
-                                : "*Unlocks Community List (coming soon)";
-                        }
-                        child.gameObject.SetActive(true);
+                        // Level 10+ shows community unlock — switch from default key
+                        var localizeText = child.GetComponent<LocalizeText>();
+                        if (localizeText != null)
+                            localizeText.localizedString.SetReference("UI", "UI.Level.UnlockCommunity");
                     }
-                    else
-                    {
-                        child.gameObject.SetActive(false);
-                    }
+                    // Level 5+ or default: LocalizeText on prefab already resolves "UI.Level.UnlockCustom"
+                    child.gameObject.SetActive(true);
+                }
+                else
+                {
+                    child.gameObject.SetActive(false);
                 }
                 break;
             }
