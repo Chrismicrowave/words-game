@@ -139,42 +139,57 @@ public class LevelWordListProvider : IWordListProvider
         string raw = File.ReadAllText(FilePath);
         string trimmed = raw.TrimStart();
 
-        if (trimmed.Length > 0 && trimmed[0] == '{')
+        // Strip UUID header if present (for custom lists with "// u:xxx")
+        string jsonContent = trimmed;
+        if (jsonContent.StartsWith("// u:"))
         {
-            // JSON format (challenge levels)
-            var data = JsonUtility.FromJson<LevelJsonData>(raw);
+            int nl = jsonContent.IndexOf('\n');
+            if (nl >= 0)
+            {
+                uuid = jsonContent.Substring(5, nl - 5).Trim(); // after "// u:"
+                jsonContent = jsonContent.Substring(nl + 1).TrimStart();
+            }
+            else
+            {
+                jsonContent = "";
+            }
+        }
+
+        if (jsonContent.Length > 0 && jsonContent[0] == '{')
+        {
+            // JSON format (challenge levels or custom with mixed data)
+            var data = JsonUtility.FromJson<LevelJsonData>(jsonContent);
             if (data != null)
             {
                 DisplayName = data.name ?? DisplayName;
                 DisplayNameZh = data.nameZh;
                 words = data.words != null ? new List<string>(data.words) : new List<string>();
                 mixedWords = data.mixedWords ?? new List<MixedWordEntry>();
+                return;
             }
         }
-        else
+
+        // Plain text: one word per line, with optional UUID header
+        words = new List<string>();
+        var lines = raw.Split('\n');
+        foreach (string line in lines)
         {
-            // Plain text: one word per line, with optional UUID header
-            words = new List<string>();
-            var lines = raw.Split('\n');
-            foreach (string line in lines)
+            string trimmedLine = line.Trim();
+            if (string.IsNullOrEmpty(trimmedLine))
+                continue;
+
+            // UUID already extracted above for JSON-header files; also handle raw plain-text headers
+            if (trimmedLine.StartsWith("// u:"))
             {
-                string trimmedLine = line.Trim();
-                if (string.IsNullOrEmpty(trimmedLine))
-                    continue;
-
-                // Check for UUID header line
-                if (trimmedLine.StartsWith("// u:"))
-                {
-                    uuid = trimmedLine.Substring(5).Trim(); // after "// u:"
-                    continue;
-                }
-
-                // Skip other comment lines
-                if (trimmedLine.StartsWith("//"))
-                    continue;
-
-                words.Add(trimmedLine);
+                uuid = trimmedLine.Substring(5).Trim();
+                continue;
             }
+
+            // Skip other comment lines
+            if (trimmedLine.StartsWith("//"))
+                continue;
+
+            words.Add(trimmedLine);
         }
 
         // Auto-generate UUID for custom lists that don't have one (upgraded from old format)
