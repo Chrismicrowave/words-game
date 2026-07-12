@@ -770,10 +770,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::LocalizeText
   localizedString:
     m_TableReference:
-      m_TableCollectionName: 
+      m_TableCollectionName: UI
     m_TableEntryReference:
       m_KeyId: 0
-      m_Key: 
+      m_Key: UI.Level.UnlockCustom
     m_FallbackState: 0
     m_WaitForCompletion: 0
     m_LocalVariables: []
