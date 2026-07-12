@@ -336,16 +336,27 @@ public class LevelPanelController : MonoBehaviour
         {
             if (child.name == "Unlocks")
             {
-                if (key != null)
+                var tmp = child.GetComponent<TMPro.TextMeshProUGUI>();
+                if (tmp != null)
                 {
-                    var localizeText = child.GetComponent<LocalizeText>();
-                    if (localizeText != null)
-                        localizeText.localizedString.SetReference("UI", key);
-                    child.gameObject.SetActive(true);
-                }
-                else
-                {
-                    child.gameObject.SetActive(false);
+                    if (key != null)
+                    {
+                        try
+                        {
+                            tmp.text = LocalizationService.Get("UI", key);
+                        }
+                        catch
+                        {
+                            tmp.text = key == "UI.Level.UnlockCustom"
+                                ? "*Unlocks Custom List"
+                                : "*Unlocks Community List (coming soon)";
+                        }
+                        child.gameObject.SetActive(true);
+                    }
+                    else
+                    {
+                        child.gameObject.SetActive(false);
+                    }
                 }
                 break;
             }
