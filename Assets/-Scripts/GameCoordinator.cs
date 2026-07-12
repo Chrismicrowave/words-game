@@ -32,22 +32,44 @@ public class GameCoordinator : MonoBehaviour
 
         uiController = FindAnyObjectByType<UIController>();
 
-        // Restore last played challenge, or load the first one
-        var challengeDir = LevelWordListProvider.GetChallengeDirectory();
-        var challenges = LevelWordListProvider.ScanDirectory(challengeDir);
-        if (challenges.Count > 0)
+        // Restore last played list — challenge or custom
+        string savedPath = PlayerPrefs.GetString("LevelPanel_LastPath", "");
+        IWordListProvider target = null;
+        LevelMode restoreMode = LevelMode.Challenge;
+
+        if (!string.IsNullOrEmpty(savedPath))
         {
-            string savedPath = PlayerPrefs.GetString("LevelPanel_LastPath", "");
-            var target = string.IsNullOrEmpty(savedPath) ? null :
-                challenges.Find(c => c.FilePath == savedPath);
+            // Try challenge directory first
+            var challenges = LevelWordListProvider.ScanDirectory(
+                LevelWordListProvider.GetChallengeDirectory());
+            target = challenges.Find(c => c.FilePath == savedPath);
+
+            // Try custom directory if not found
             if (target == null)
-                target = challenges[0]; // fallback to first
-            Services.Get<PhaseManager>().LoadWordList(target);
-            Services.Get<PhaseManager>().CurrentLevelMode = LevelMode.Challenge;
+            {
+                var customs = LevelWordListProvider.ScanDirectory(
+                    LevelWordListProvider.GetCustomDirectory(), true);
+                target = customs.Find(c => c.FilePath == savedPath);
+                if (target != null)
+                    restoreMode = LevelMode.Custom;
+            }
         }
-        else if (defaultWordList != null)
+
+        // Fallback: first challenge, or default word list
+        if (target == null)
         {
-            Services.Get<PhaseManager>().LoadWordList(defaultWordList);
+            var challenges = LevelWordListProvider.ScanDirectory(
+                LevelWordListProvider.GetChallengeDirectory());
+            if (challenges.Count > 0)
+                target = challenges[0];
+            else if (defaultWordList != null)
+                target = defaultWordList;
+        }
+
+        if (target != null)
+        {
+            Services.Get<PhaseManager>().LoadWordList(target);
+            Services.Get<PhaseManager>().CurrentLevelMode = restoreMode;
         }
 
         // Subscribe to input events
