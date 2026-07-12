@@ -207,86 +207,6 @@ MonoBehaviour:
     m_Key: UI.Level.DeleteListBtn
     m_Metadata:
       m_Items: []
-  - m_Id: 741335084
-    m_Key: First Steps
-    m_Metadata:
-      m_Items: []
-  - m_Id: 741335085
-    m_Key: Cat Nap
-    m_Metadata:
-      m_Items: []
-  - m_Id: 741335086
-    m_Key: Rain Drop
-    m_Metadata:
-      m_Items: []
-  - m_Id: 741335087
-    m_Key: Star Light
-    m_Metadata:
-      m_Items: []
-  - m_Id: 741335088
-    m_Key: River Run
-    m_Metadata:
-      m_Items: []
-  - m_Id: 741335089
-    m_Key: Mountain
-    m_Metadata:
-      m_Items: []
-  - m_Id: 741335090
-    m_Key: Ocean Blue
-    m_Metadata:
-      m_Items: []
-  - m_Id: 741335091
-    m_Key: Sky High
-    m_Metadata:
-      m_Items: []
-  - m_Id: 741335092
-    m_Key: Wind Song
-    m_Metadata:
-      m_Items: []
-  - m_Id: 741335093
-    m_Key: Fire Dance
-    m_Metadata:
-      m_Items: []
-  - m_Id: 741335094
-    m_Key: Crystal
-    m_Metadata:
-      m_Items: []
-  - m_Id: 741335095
-    m_Key: Iron Will
-    m_Metadata:
-      m_Items: []
-  - m_Id: 741335096
-    m_Key: Silver Lining
-    m_Metadata:
-      m_Items: []
-  - m_Id: 741335097
-    m_Key: Golden Hour
-    m_Metadata:
-      m_Items: []
-  - m_Id: 741335098
-    m_Key: Dark Night
-    m_Metadata:
-      m_Items: []
-  - m_Id: 741335099
-    m_Key: Thunder
-    m_Metadata:
-      m_Items: []
-  - m_Id: 741335100
-    m_Key: Storm Chaser
-    m_Metadata:
-      m_Items: []
-  - m_Id: 741335101
-    m_Key: Moon Walker
-    m_Metadata:
-      m_Items: []
-  - m_Id: 741335102
-    m_Key: Sun Seeker
-    m_Metadata:
-      m_Items: []
-  - m_Id: 741335103
-    m_Key: Final Boss
-    m_Metadata:
-      m_Items: []
   - m_Id: 741335104
     m_Key: UI.Instructions.Body
     m_Metadata:
@@ -301,6 +221,12 @@ MonoBehaviour:
       m_Items: []
   - m_Id: 1103554025611264
     m_Key: UI.Level.UnlockCommunity
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1139348652154880
+    m_Key: 'UI.Level.CopyListBtn
+
+'
     m_Metadata:
       m_Items: []
   m_Metadata:

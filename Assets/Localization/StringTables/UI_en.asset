@@ -210,86 +210,6 @@ MonoBehaviour:
     m_Localized: Delete
     m_Metadata:
       m_Items: []
-  - m_Id: 741335084
-    m_Localized: First Steps
-    m_Metadata:
-      m_Items: []
-  - m_Id: 741335085
-    m_Localized: Cat Nap
-    m_Metadata:
-      m_Items: []
-  - m_Id: 741335086
-    m_Localized: Rain Drop
-    m_Metadata:
-      m_Items: []
-  - m_Id: 741335087
-    m_Localized: Star Light
-    m_Metadata:
-      m_Items: []
-  - m_Id: 741335088
-    m_Localized: River Run
-    m_Metadata:
-      m_Items: []
-  - m_Id: 741335089
-    m_Localized: Mountain
-    m_Metadata:
-      m_Items: []
-  - m_Id: 741335090
-    m_Localized: Ocean Blue
-    m_Metadata:
-      m_Items: []
-  - m_Id: 741335091
-    m_Localized: Sky High
-    m_Metadata:
-      m_Items: []
-  - m_Id: 741335092
-    m_Localized: Wind Song
-    m_Metadata:
-      m_Items: []
-  - m_Id: 741335093
-    m_Localized: Fire Dance
-    m_Metadata:
-      m_Items: []
-  - m_Id: 741335094
-    m_Localized: Crystal
-    m_Metadata:
-      m_Items: []
-  - m_Id: 741335095
-    m_Localized: Iron Will
-    m_Metadata:
-      m_Items: []
-  - m_Id: 741335096
-    m_Localized: Silver Lining
-    m_Metadata:
-      m_Items: []
-  - m_Id: 741335097
-    m_Localized: Golden Hour
-    m_Metadata:
-      m_Items: []
-  - m_Id: 741335098
-    m_Localized: Dark Night
-    m_Metadata:
-      m_Items: []
-  - m_Id: 741335099
-    m_Localized: Thunder
-    m_Metadata:
-      m_Items: []
-  - m_Id: 741335100
-    m_Localized: Storm Chaser
-    m_Metadata:
-      m_Items: []
-  - m_Id: 741335101
-    m_Localized: Moon Walker
-    m_Metadata:
-      m_Items: []
-  - m_Id: 741335102
-    m_Localized: Sun Seeker
-    m_Metadata:
-      m_Items: []
-  - m_Id: 741335103
-    m_Localized: Final Boss
-    m_Metadata:
-      m_Items: []
   - m_Id: 741335104
     m_Localized: 'Rules:
 
@@ -316,6 +236,10 @@ MonoBehaviour:
       m_Items: []
   - m_Id: 1103554025611264
     m_Localized: '*Unlocks Community List (coming soon)'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1139348652154880
+    m_Localized: Copy
     m_Metadata:
       m_Items: []
   references:

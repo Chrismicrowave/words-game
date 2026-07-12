@@ -34872,10 +34872,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::LocalizeText
   localizedString:
     m_TableReference:
-      m_TableCollectionName: UI
+      m_TableCollectionName: GUID:b0610b34cc9b175479751017d50609a0
     m_TableEntryReference:
-      m_KeyId: 0
-      m_Key: UI.Level.CreateListBtn
+      m_KeyId: 1139348652154880
+      m_Key: 
     m_FallbackState: 0
     m_WaitForCompletion: 0
     m_LocalVariables: []
