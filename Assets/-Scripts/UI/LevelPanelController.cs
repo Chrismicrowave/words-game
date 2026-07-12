@@ -263,6 +263,9 @@ public class LevelPanelController : MonoBehaviour
                         break;
                     }
                 }
+
+                // Show unlock description on special levels
+                SetUnlockDisplay(btnObj, levelNum);
             }
 
             // Show best time if a record exists (for both challenge and custom)
