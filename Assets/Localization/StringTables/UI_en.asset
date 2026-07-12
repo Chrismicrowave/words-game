@@ -63,7 +63,7 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 741335047
-    m_Localized: Reset
+    m_Localized: Reset Defaults
     m_Metadata:
       m_Items: []
   - m_Id: 741335048
@@ -308,6 +308,18 @@ MonoBehaviour:
       m_Items: []
   - m_Id: 741335105
     m_Localized: Username
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1100399548293120
+    m_Localized: Trending
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1100399644762112
+    m_Localized: '*Unlocks Custom List'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1100399644762113
+    m_Localized: '*Unlocks Community List (coming soon)'
     m_Metadata:
       m_Items: []
   references:
