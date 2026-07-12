@@ -13,6 +13,6 @@ public class EnglishCell : MonoBehaviour
 
     public void SetText(string text)
     {
-        if (label != null) label.text = text;
+        if (label != null) label.text = $"<font=\"Oswald Bold SDF\">{text}</font>";
     }
 }

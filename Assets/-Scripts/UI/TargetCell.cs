@@ -13,7 +13,8 @@ public class TargetCell : MonoBehaviour
     public void Init(string chineseChar, string pinyin, bool pinyinVisible)
     {
         if (charLabel != null) charLabel.text = chineseChar;
-        if (pinyinLabel != null) pinyinLabel.text = pinyin;
+        if (pinyinLabel != null)
+            pinyinLabel.text = string.IsNullOrEmpty(pinyin) ? "" : $"<font=\"Oswald Bold SDF\">{pinyin}</font>";
         SetPinyinVisible(pinyinVisible);
     }
 
