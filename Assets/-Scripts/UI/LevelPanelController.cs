@@ -322,6 +322,41 @@ public class LevelPanelController : MonoBehaviour
         }
     }
 
+    private void SetUnlockDisplay(GameObject btnObj, int levelNum)
+    {
+        string unlockText = null;
+        switch (levelNum)
+        {
+            case 5:
+                unlockText = "*Unlocks Custom List";
+                break;
+            case 10:
+                unlockText = "*Unlocks Community List (coming soon)";
+                break;
+        }
+
+        foreach (Transform child in btnObj.transform)
+        {
+            if (child.name == "Unlocks")
+            {
+                var tmp = child.GetComponent<TMPro.TextMeshProUGUI>();
+                if (tmp != null)
+                {
+                    if (unlockText != null)
+                    {
+                        tmp.text = unlockText;
+                        child.gameObject.SetActive(true);
+                    }
+                    else
+                    {
+                        child.gameObject.SetActive(false);
+                    }
+                }
+                break;
+            }
+        }
+    }
+
     private void SetTimeDisplay(GameObject btnObj, LevelWordListProvider provider)
     {
         string listKey = provider.GetListKey();
