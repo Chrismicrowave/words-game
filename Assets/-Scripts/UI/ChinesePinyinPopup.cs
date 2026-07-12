@@ -17,7 +17,6 @@ public class ChinesePinyinPopup : MonoBehaviour
     [SerializeField] private GameObject targetCellPrefab;
     [SerializeField] private GameObject englishTargetCellPrefab;  // same prefab as ChineseTargetDisplay uses
     [SerializeField] private TMP_FontAsset chineseFontAsset;      // NotoSansSC — for non-ASCII segments (Chinese punctuation)
-    [SerializeField] private TMP_FontAsset englishFontAsset;      // Oswald Bold — for ASCII English segments
 
     [Header("UI References")]
     [SerializeField] private Transform previewContainer;      // HorizontalLayoutGroup row
@@ -133,9 +132,6 @@ public class ChinesePinyinPopup : MonoBehaviour
                         // Apply Chinese font for non-ASCII characters (Chinese punctuation, fullwidth)
                         if (chineseFontAsset != null && HasNonAscii(text) && cell.Label != null)
                             cell.Label.font = chineseFontAsset;
-                        // Apply English font (Oswald Bold) for ASCII segments
-                        else if (englishFontAsset != null && cell.Label != null)
-                            cell.Label.font = englishFontAsset;
                         _previewEnglishCells.Add(cell);
                     }
                 }

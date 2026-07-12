@@ -14,7 +14,6 @@ public class ChineseTargetDisplay : MonoBehaviour
     [SerializeField] private Transform cellContainer;
     [SerializeField] private bool showPinyin = true;
     [SerializeField] private TMPro.TMP_FontAsset chineseFontAsset; // NotoSansSC — for non-ASCII English segments
-    [SerializeField] private TMPro.TMP_FontAsset englishFontAsset; // Oswald Bold — for ASCII English segments
 
     private readonly List<TargetCell> cells = new List<TargetCell>();
     private readonly List<EnglishCell> englishCells = new List<EnglishCell>();
@@ -64,12 +63,9 @@ public class ChineseTargetDisplay : MonoBehaviour
                 if (cell != null)
                 {
                     cell.SetText(seg.text);
-                    // Apply Chinese font for non-ASCII segments (e.g. Chinese punctuation)
+                    // Apply Chinese font when segment contains non-ASCII characters (e.g. 。，、)
                     if (chineseFontAsset != null && PinyinLookup.HasNonAscii(seg.text) && cell.Label != null)
                         cell.Label.font = chineseFontAsset;
-                    // Apply English font (Oswald Bold) for ASCII segments
-                    else if (englishFontAsset != null && cell.Label != null)
-                        cell.Label.font = englishFontAsset;
                     englishCells.Add(cell);
                 }
             }
