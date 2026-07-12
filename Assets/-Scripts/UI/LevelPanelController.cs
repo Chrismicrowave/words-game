@@ -326,15 +326,26 @@ public class LevelPanelController : MonoBehaviour
 
     private void SetUnlockDisplay(GameObject btnObj, int levelNum)
     {
+        string key = null;
+        if (levelNum == customUnlockLevels)
+            key = "UI.Level.UnlockCustom";
+        else if (levelNum == communityUnlockLevels)
+            key = "UI.Level.UnlockCommunity";
+
         string unlockText = null;
-        switch (levelNum)
+        if (key != null)
         {
-            case 5:
-                unlockText = "*Unlocks Custom List";
-                break;
-            case 10:
-                unlockText = "*Unlocks Community List (coming soon)";
-                break;
+            try
+            {
+                unlockText = LocalizationService.Get("UI", key);
+            }
+            catch
+            {
+                // Fallback in case localization isn't initialized
+                unlockText = key == "UI.Level.UnlockCustom"
+                    ? "*Unlocks Custom List"
+                    : "*Unlocks Community List (coming soon)";
+            }
         }
 
         foreach (Transform child in btnObj.transform)
