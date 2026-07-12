@@ -154,6 +154,8 @@ public class SetupLocalizationTables
         E(col, "UI.Level.ExportBtn",        "Export",     "导出");
         E(col, "UI.Level.CreateListBtn",    "Create",     "创建");
         E(col, "UI.Level.DeleteListBtn",    "Delete",     "删除");
+        E(col, "UI.Level.UnlockCustom",     "*Unlocks Custom List",     "*解锁自定义列表");
+        E(col, "UI.Level.UnlockCommunity",  "*Unlocks Community List (coming soon)", "*解锁社区列表（即将推出）");
 
         // Instructions
         E(col, "UI.Instructions.Body",
