@@ -156,6 +156,8 @@ public class PhaseManager : SingletonBehaviour<PhaseManager>
             }
             if (activeProvider is FileWordListProvider fp)
                 fp.SetLanguageMode(LanguageMode.Mixed);
+            else if (activeProvider is LevelWordListProvider lvlp)
+                lvlp.SetLanguageMode(LanguageMode.Mixed);
         }
 
         mixedWords.Insert(0, entry);
@@ -205,7 +207,14 @@ public class PhaseManager : SingletonBehaviour<PhaseManager>
 
     public void SaveCurrentList()
     {
-        if (activeProvider is FileWordListProvider fileProvider)
+        if (activeProvider is LevelWordListProvider lvlProvider)
+        {
+            lvlProvider.SetWords(words);
+            if (CurrentLanguageMode == LanguageMode.Mixed)
+                lvlProvider.SetMixedWords(mixedWords);
+            lvlProvider.Save();
+        }
+        else if (activeProvider is FileWordListProvider fileProvider)
         {
             fileProvider.SetWords(words);
             if (CurrentLanguageMode == LanguageMode.Mixed)

@@ -37432,7 +37432,7 @@ MonoBehaviour:
   unlockAllChallenges: 0
   customUnlockLevels: 5
   communityUnlockLevels: 10
-  unlockCustomTab: 0
+  unlockCustomTab: 1
   unlockCommunityTab: 0
 --- !u!114 &1634712221
 MonoBehaviour:

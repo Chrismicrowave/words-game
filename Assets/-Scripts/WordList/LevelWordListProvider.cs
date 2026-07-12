@@ -28,6 +28,7 @@ public class LevelWordListProvider : IWordListProvider
     public string FilePath { get; private set; }
 
     private List<string> words = new List<string>();
+    private List<MixedWordEntry> mixedWords = new List<MixedWordEntry>();
     private string uuid; // null for challenge lists
 
     public LevelWordListProvider(string filePath, bool isEditable = false)
@@ -42,7 +43,14 @@ public class LevelWordListProvider : IWordListProvider
 
     public List<ChineseWordEntry> GetChineseWords() => null;
 
-    public List<MixedWordEntry> GetMixedWords() => null;
+    public List<MixedWordEntry> GetMixedWords() =>
+        mixedWords != null ? new List<MixedWordEntry>(mixedWords) : null;
+
+    public void SetMixedWords(List<MixedWordEntry> mw) =>
+        mixedWords = new List<MixedWordEntry>(mw);
+
+    public void SetLanguageMode(LanguageMode mode) =>
+        LanguageMode = mode;
 
     /// <summary>
     /// Returns the stable key used by ListTimeManager for time records.
@@ -85,16 +93,33 @@ public class LevelWordListProvider : IWordListProvider
         if (!Directory.Exists(dir))
             Directory.CreateDirectory(dir);
 
-        var sb = new System.Text.StringBuilder();
-
-        // Preserve UUID header for custom lists
-        if (IsEditable && !string.IsNullOrEmpty(uuid))
-            sb.AppendLine("// u:" + uuid);
-
-        foreach (string w in words)
-            sb.AppendLine(w);
-
-        File.WriteAllText(FilePath, sb.ToString());
+        if (mixedWords != null && mixedWords.Count > 0)
+        {
+            // Save as JSON with mixed word data
+            var data = new LevelJsonData
+            {
+                name = DisplayName,
+                nameZh = DisplayNameZh,
+                words = words.ToArray(),
+                mixedWords = mixedWords
+            };
+            string json = JsonUtility.ToJson(data, true);
+            // Prepend UUID header for custom lists
+            if (IsEditable && !string.IsNullOrEmpty(uuid))
+                File.WriteAllText(FilePath, "// u:" + uuid + "\n" + json);
+            else
+                File.WriteAllText(FilePath, json);
+        }
+        else
+        {
+            // Plain text: one word per line
+            var sb = new System.Text.StringBuilder();
+            if (IsEditable && !string.IsNullOrEmpty(uuid))
+                sb.AppendLine("// u:" + uuid);
+            foreach (string w in words)
+                sb.AppendLine(w);
+            File.WriteAllText(FilePath, sb.ToString());
+        }
     }
 
     public void DeleteFile()
@@ -123,6 +148,7 @@ public class LevelWordListProvider : IWordListProvider
                 DisplayName = data.name ?? DisplayName;
                 DisplayNameZh = data.nameZh;
                 words = data.words != null ? new List<string>(data.words) : new List<string>();
+                mixedWords = data.mixedWords ?? new List<MixedWordEntry>();
             }
         }
         else
@@ -177,6 +203,7 @@ public class LevelWordListProvider : IWordListProvider
         public string name;
         public string nameZh;
         public string[] words;
+        public List<MixedWordEntry> mixedWords;
     }
 
     public static string GetChallengeDirectory()
