@@ -10,13 +10,10 @@ public class TargetCell : MonoBehaviour
     [SerializeField] private TextMeshProUGUI pinyinLabel;   // small label above, e.g. "ni"
     [SerializeField] private TextMeshProUGUI charLabel;     // large label, e.g. "你"
 
-    private const string OswaldBoldTag = "<font=\"Oswald Bold SDF\">";
-
     public void Init(string chineseChar, string pinyin, bool pinyinVisible)
     {
         if (charLabel != null) charLabel.text = chineseChar;
-        if (pinyinLabel != null)
-            pinyinLabel.text = string.IsNullOrEmpty(pinyin) ? pinyin : $"{OswaldBoldTag}{pinyin}</font>";
+        if (pinyinLabel != null) pinyinLabel.text = pinyin;
         SetPinyinVisible(pinyinVisible);
     }
 

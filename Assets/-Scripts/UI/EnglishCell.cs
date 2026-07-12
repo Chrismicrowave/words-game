@@ -11,10 +11,8 @@ public class EnglishCell : MonoBehaviour
 
     public TextMeshProUGUI Label => label;
 
-    private const string OswaldBoldTag = "<font=\"Oswald Bold SDF\">";
-
     public void SetText(string text)
     {
-        if (label != null) label.text = $"{OswaldBoldTag}{text}</font>";
+        if (label != null) label.text = text;
     }
 }
