@@ -236,7 +236,7 @@ public class LevelPanelController : MonoBehaviour
                 }
                 tmp.text = displayName;
 
-                if (chineseFontAsset != null && provider.LanguageMode == LanguageMode.Mixed)
+                if (chineseFontAsset != null && PinyinLookup.ContainsChinese(displayName))
                     tmp.font = chineseFontAsset;
             }
 
@@ -254,20 +254,21 @@ public class LevelPanelController : MonoBehaviour
                 SetChallengeLockState(btnObj, btn, unlocked);
                 SetStarDisplay(btnObj, providers, provider);
 
-                // Show level number (1-20) on challenge buttons
-                int levelNum = providers.IndexOf(provider) + 1;
-                foreach (Transform child in btnObj.transform)
-                {
-                    if (child.name == "LevelNumTMP")
-                    {
-                        var numTmp = child.GetComponent<TMPro.TextMeshProUGUI>();
-                        if (numTmp != null) numTmp.text = levelNum.ToString();
-                        break;
-                    }
-                }
-
                 // Show unlock description on special levels
+                int levelNum = providers.IndexOf(provider) + 1;
                 SetUnlockDisplay(btnObj, levelNum);
+            }
+
+            // Show level number (01, 02, etc.) for all tabs
+            int cellIndex = providers.IndexOf(provider) + 1;
+            foreach (Transform child in btnObj.transform)
+            {
+                if (child.name == "LevelNumTMP")
+                {
+                    var numTmp = child.GetComponent<TMPro.TextMeshProUGUI>();
+                    if (numTmp != null) numTmp.text = cellIndex.ToString("D2");
+                    break;
+                }
             }
 
             // Show best time if a record exists (for both challenge and custom)
