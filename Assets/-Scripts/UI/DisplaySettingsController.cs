@@ -31,7 +31,7 @@ public class DisplaySettingsController : MonoBehaviour
 
         bool fs = Services.Get<SettingsManager>() != null
             ? Services.Get<SettingsManager>().Fullscreen
-            : PlayerPrefs.GetInt(SettingsManager.KeyFullscreen, 1) == 1;
+            : PlayerPrefs.GetInt(SettingsManager.KeyFullscreen, 0) == 1;
 
         bool crt = Services.Get<SettingsManager>() != null
             ? Services.Get<SettingsManager>().CRTFilter

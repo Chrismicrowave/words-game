@@ -15,6 +15,23 @@ public enum LevelTab
 
 public class LevelPanelController : MonoBehaviour
 {
+    [Header("Demo Mode")]
+    [Tooltip("Enable demo restrictions: hides custom-list CRUD, caps lists and words per list.")]
+    public bool isDemo = false;
+    [Tooltip("Max number of custom word lists in demo mode.")]
+    public int maxCustomLists = 1;
+    [Tooltip("Max number of words/phases per list in demo mode.")]
+    public int maxWordsPerList = 3;
+
+    [Header("Debug")]
+    [SerializeField] private bool unlockAllChallenges;  // bypass all challenge level locks
+    [SerializeField] private int customUnlockLevels = 5;  // challenges to clear before Custom tab unlocks
+    [SerializeField] private int communityUnlockLevels = 10;  // challenges to clear before Community tab unlocks
+    [SerializeField] private bool unlockCustomTab;  // bypass Custom tab lock
+    [SerializeField] private bool unlockCommunityTab;  // bypass Community tab lock
+
+    public static LevelPanelController Instance { get; private set; }
+
     [Header("Tab Buttons")]
     [SerializeField] private Button challengesTabBtn;
     [SerializeField] private Button customTabBtn;
@@ -51,12 +68,11 @@ public class LevelPanelController : MonoBehaviour
     [Header("Scroll")]
     [SerializeField] private ScrollRect levelScrollRect;  // LevelGrid ScrollRect — reset to top on refresh
 
-    [Header("Debug")]
-    [SerializeField] private bool unlockAllChallenges;  // bypass all challenge level locks
-    [SerializeField] private int customUnlockLevels = 5;  // challenges to clear before Custom tab unlocks
-    [SerializeField] private int communityUnlockLevels = 10;  // challenges to clear before Community tab unlocks
-    [SerializeField] private bool unlockCustomTab;  // bypass Custom tab lock
-    [SerializeField] private bool unlockCommunityTab;  // bypass Community tab lock
+    [Header("Demo Limit Prompt")]
+    [SerializeField] private GameObject demoCustomLimitPrompt;
+    [SerializeField] private float demoPromptDuration = 2f;
+
+    
 
     private const string LastLevelPathPrefKey = "LevelPanel_LastPath";
     private const string LastLevelTabPrefKey  = "LevelPanel_LastTab";
@@ -76,6 +92,7 @@ public class LevelPanelController : MonoBehaviour
 
     void Awake()
     {
+        Instance = this;
         challengesTabImage = challengesTabBtn?.GetComponent<Image>();
         customTabImage = customTabBtn?.GetComponent<Image>();
         communityTabImage = communityTabBtn?.GetComponent<Image>();
@@ -164,11 +181,12 @@ public class LevelPanelController : MonoBehaviour
     {
         bool isCustom = currentTab == LevelTab.Custom;
         bool unlocked = IsCustomUnlocked;
-        if (importBtn != null) importBtn.gameObject.SetActive(isCustom && unlocked);
-        if (exportBtn != null) exportBtn.gameObject.SetActive(isCustom && unlocked);
-        if (createListBtn != null) createListBtn.gameObject.SetActive(isCustom && unlocked);
-        if (deleteListBtn != null) deleteListBtn.gameObject.SetActive(isCustom && unlocked);
-        if (duplicateListBtn != null) duplicateListBtn.gameObject.SetActive(isCustom && unlocked);
+        bool showExtraBtns = isCustom && unlocked && !isDemo;
+        if (importBtn != null) importBtn.gameObject.SetActive(showExtraBtns);
+        if (exportBtn != null) exportBtn.gameObject.SetActive(showExtraBtns);
+        if (createListBtn != null) createListBtn.gameObject.SetActive(showExtraBtns);
+        if (deleteListBtn != null) deleteListBtn.gameObject.SetActive(showExtraBtns);
+        if (duplicateListBtn != null) duplicateListBtn.gameObject.SetActive(showExtraBtns);
 
         if (customLockedPlaceholder != null)
             customLockedPlaceholder.SetActive(isCustom && !unlocked);
@@ -495,6 +513,12 @@ public class LevelPanelController : MonoBehaviour
 
     public void OnImport()
     {
+        if (isDemo && customProviders.Count >= maxCustomLists)
+        {
+            ShowDemoLimitPrompt($"Max {maxCustomLists} custom list in demo");
+            return;
+        }
+
         var ext = new[] { new ExtensionFilter("Text Files", "txt") };
         StandaloneFileBrowser.OpenFilePanelAsync("Import Word List", "", ext, false, paths =>
         {
@@ -544,6 +568,12 @@ public class LevelPanelController : MonoBehaviour
 
     public void OnCreateList()
     {
+        if (isDemo && customProviders.Count >= maxCustomLists)
+        {
+            ShowDemoLimitPrompt($"Max {maxCustomLists} custom list in demo");
+            return;
+        }
+
         var provider = LevelWordListProvider.CreateNewCustom();
         RefreshAll();
         SwitchTab(LevelTab.Custom);
@@ -573,6 +603,12 @@ public class LevelPanelController : MonoBehaviour
     {
         if (selectedProvider == null || currentTab != LevelTab.Custom) return;
 
+        if (isDemo && customProviders.Count >= maxCustomLists)
+        {
+            ShowDemoLimitPrompt($"Max {maxCustomLists} custom list in demo");
+            return;
+        }
+
         var copy = selectedProvider.Duplicate();
         if (copy == null) return;
 
@@ -586,5 +622,22 @@ public class LevelPanelController : MonoBehaviour
             var dupBtn = levelGridContent.GetChild(idx).gameObject;
             OnLevelClicked(copy, dupBtn);
         }
+    }
+
+    private void ShowDemoLimitPrompt(string message)
+    {
+        if (demoCustomLimitPrompt == null) return;
+        var tmp = demoCustomLimitPrompt.GetComponentInChildren<TMPro.TextMeshProUGUI>();
+        if (tmp != null) tmp.text = message;
+        demoCustomLimitPrompt.SetActive(true);
+        if (this.isActiveAndEnabled)
+            StartCoroutine(HideDemoLimitPrompt());
+    }
+
+    private System.Collections.IEnumerator HideDemoLimitPrompt()
+    {
+        yield return new WaitForSeconds(demoPromptDuration);
+        if (demoCustomLimitPrompt != null)
+            demoCustomLimitPrompt.SetActive(false);
     }
 }

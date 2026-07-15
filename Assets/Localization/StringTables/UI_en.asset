@@ -111,11 +111,11 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 741335059
-    m_Localized: <
+    m_Localized: '>'
     m_Metadata:
       m_Items: []
   - m_Id: 741335060
-    m_Localized: '>'
+    m_Localized: <
     m_Metadata:
       m_Items: []
   - m_Id: 741335061

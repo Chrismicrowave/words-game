@@ -29,8 +29,14 @@ public class PhaseListUIManager : MonoBehaviour
     {
         if (phaseListContent == null || phaseButtonPrefab == null) return;
 
-        foreach (Transform child in phaseListContent)
-            Destroy(child.gameObject);
+        // DestroyImmediate so old children are gone before we create new ones —
+        // Destroy (deferred) would leave stale entries in the hierarchy that throw
+        // off the index when SetSelectedPhaseIndex re-highlights after a move.
+        while (phaseListContent.childCount > 0)
+        {
+            var child = phaseListContent.GetChild(0);
+            DestroyImmediate(child.gameObject);
+        }
 
         bool isChinese = Services.Get<PhaseManager>().CurrentLanguageMode == LanguageMode.Chinese;
         var words = Services.Get<PhaseManager>().Words;

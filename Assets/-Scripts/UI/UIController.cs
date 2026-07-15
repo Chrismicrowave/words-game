@@ -50,9 +50,6 @@ public class UIController : MonoBehaviour
     [SerializeField] private Button importBtn;
     [SerializeField] private Button exportBtn;
 
-    [Header("Config")]
-    [SerializeField] private GameConfig config;
-
     [Header("Sub-managers")]
     [SerializeField] private PhaseListUIManager phaseListUIManager;
     [SerializeField] private WordListTabManager wordListTabManager;
@@ -62,6 +59,10 @@ public class UIController : MonoBehaviour
 
     [Header("Level Panel")]
     [SerializeField] private GameObject levelPanel;
+
+    [Header("Demo Limit Prompt")]
+    [SerializeField] private GameObject demoCustomLimitPrompt;
+    [SerializeField] private float demoPromptDuration = 2f;
 
     private const int    MaxWordLength    = 140;
     private const string WordsPanelPrefKey = "WordsPanelOn";
@@ -104,9 +105,9 @@ public class UIController : MonoBehaviour
         OnDisable();
         OnEnable();
 
-        if (config != null)
+        if (LevelPanelController.Instance != null)
         {
-            bool showImportExport = !config.isDemo;
+            bool showImportExport = !LevelPanelController.Instance.isDemo;
             if (importBtn != null) importBtn.gameObject.SetActive(showImportExport);
             if (exportBtn != null) exportBtn.gameObject.SetActive(showImportExport);
         }
@@ -115,7 +116,16 @@ public class UIController : MonoBehaviour
         if (wordsPanelAnim != null)
         {
             bool wordsOn = PlayerPrefs.GetInt(WordsPanelPrefKey, 0) == 1;
-            if (wordsOn) wordsPanelAnim.On(); else wordsPanelAnim.Off();
+            if (wordsOn)
+            {
+                wordsPanelAnim.On();
+                if (EventSystem.current != null)
+                    EventSystem.current.SetSelectedGameObject(null);
+            }
+            else
+            {
+                wordsPanelAnim.Off();
+            }
         }
 
         // Restore Timer panel state
@@ -265,6 +275,13 @@ public class UIController : MonoBehaviour
 
     public void OnAddPhaseClicked()
     {
+        if (LevelPanelController.Instance.isDemo
+            && Services.Get<PhaseManager>().TotalPhases >= LevelPanelController.Instance.maxWordsPerList)
+        {
+            ShowDemoLimitPrompt($"Max {LevelPanelController.Instance.maxWordsPerList} words per list in demo");
+            return;
+        }
+
         string text = phaseInputField.text.Trim();
         if (string.IsNullOrEmpty(text)) return;
 
@@ -279,7 +296,7 @@ public class UIController : MonoBehaviour
                 Services.Get<PhaseManager>().AddMixedPhase(entry);
                 Services.Get<PhaseManager>().SaveCurrentList();
                 phaseInputField.text = "";
-                EventSystem.current.SetSelectedGameObject(null);
+                if (EventSystem.current != null) EventSystem.current.SetSelectedGameObject(null);
             }, () => { /* cancelled — leave input as-is */ });
         }
         else
@@ -287,8 +304,25 @@ public class UIController : MonoBehaviour
             Services.Get<PhaseManager>().AddPhase(text, 0);
             Services.Get<PhaseManager>().SaveCurrentList();
             phaseInputField.text = "";
-            EventSystem.current.SetSelectedGameObject(null);
+            if (EventSystem.current != null) EventSystem.current.SetSelectedGameObject(null);
         }
+    }
+
+    private void ShowDemoLimitPrompt(string message)
+    {
+        if (demoCustomLimitPrompt == null) return;
+        var tmp = demoCustomLimitPrompt.GetComponentInChildren<TMPro.TextMeshProUGUI>();
+        if (tmp != null) tmp.text = message;
+        demoCustomLimitPrompt.SetActive(true);
+        if (this.isActiveAndEnabled)
+            StartCoroutine(HideDemoLimitPrompt());
+    }
+
+    private System.Collections.IEnumerator HideDemoLimitPrompt()
+    {
+        yield return new WaitForSeconds(demoPromptDuration);
+        if (demoCustomLimitPrompt != null)
+            demoCustomLimitPrompt.SetActive(false);
     }
 
     public void OnDeletePhaseClicked()
@@ -312,6 +346,7 @@ public class UIController : MonoBehaviour
         if (phaseListUIManager == null || phaseListUIManager.SelectedPhaseIndex <= 0) return;
         int idx = phaseListUIManager.SelectedPhaseIndex;
         Services.Get<PhaseManager>().MovePhase(idx, idx - 1);
+        Services.Get<PhaseManager>().SaveCurrentList();
         // RefreshPhaseList has already run (via OnWordListChanged); re-highlight at new position
         phaseListUIManager.SetSelectedPhaseIndex(idx - 1);
     }
@@ -322,6 +357,7 @@ public class UIController : MonoBehaviour
             || phaseListUIManager.SelectedPhaseIndex >= Services.Get<PhaseManager>().TotalPhases - 1) return;
         int idx = phaseListUIManager.SelectedPhaseIndex;
         Services.Get<PhaseManager>().MovePhase(idx, idx + 1);
+        Services.Get<PhaseManager>().SaveCurrentList();
         // RefreshPhaseList has already run (via OnWordListChanged); re-highlight at new position
         phaseListUIManager.SetSelectedPhaseIndex(idx + 1);
     }
@@ -335,6 +371,12 @@ public class UIController : MonoBehaviour
         bool isOn = wordsPanelAnim.GetComponent<Animator>().GetBool("ON");
         PlayerPrefs.SetInt(WordsPanelPrefKey, isOn ? 1 : 0);
         PlayerPrefs.Save();
+
+        // Prevent auto-focus on the input field when the panel opens.
+        // InputHandler.IsUIFocused() already handles blocking game input
+        // while the input field is focused — no panel-level block needed.
+        if (isOn && EventSystem.current != null)
+            EventSystem.current.SetSelectedGameObject(null);
     }
 
     public void OnToggleTimerClicked()

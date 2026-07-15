@@ -13,6 +13,7 @@ public class GameCoordinator : MonoBehaviour
     [Header("Config")]
     [SerializeField] private GameConfig config;
 
+
     [Header("Word List")]
     [SerializeField] private FixedWordListProvider defaultWordList;
 

@@ -57,7 +57,7 @@ public class SettingsManager : SingletonBehaviour<SettingsManager>
 
     public bool Fullscreen
     {
-        get => PlayerPrefs.GetInt(KeyFullscreen, 1) == 1;
+        get => PlayerPrefs.GetInt(KeyFullscreen, 0) == 1;
         set { PlayerPrefs.SetInt(KeyFullscreen, value ? 1 : 0); ApplyDisplay(); }
     }
 
