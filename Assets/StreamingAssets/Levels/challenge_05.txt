@@ -2,10 +2,11 @@
   "name": "World Tour",
   "words": [
     "rome",
-    "paris",
+    "tokyo",
     "dubai",
+    "shanghai",
     "bangkok",
-    "prague",
-    "new york"
+    "new york",
+    "melbourne"
   ]
 }
