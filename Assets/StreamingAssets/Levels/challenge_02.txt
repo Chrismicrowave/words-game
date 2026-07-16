@@ -1,11 +1,11 @@
 {
-  "name": "Cat's Meow",
+  "name": "Foodie",
   "words": [
-    "cat",
-    "siamese",
-    "abyssinian",
-    "ragdoll",
-    "sphynx",
-    "british shorthair"
+    "pasta",
+    "ramen",
+    "tacos",
+    "carbonara",
+    "biryani",
+    "croissant"
   ]
 }

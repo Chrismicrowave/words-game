@@ -1,12 +1,11 @@
 {
-  "name": "Animal Friends",
-  "nameZh": "动物朋友",
+  "name": "Wildlife",
   "words": [
-    "dog",
-    "poodle",
-    "akita",
-    "beagle",
-    "siamese",
-    "labrador"
+    "duck",
+    "koala",
+    "parrot",
+    "octopus",
+    "penguin",
+    "elephant"
   ]
 }

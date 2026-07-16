@@ -1,12 +1,11 @@
 {
-  "name": "World Tour",
+  "name": "Currency",
   "words": [
-    "rome",
-    "tokyo",
-    "dubai",
-    "shanghai",
-    "bangkok",
-    "new york",
-    "melbourne"
+    "yen",
+    "euro",
+    "dollar",
+    "pound",
+    "dinar",
+    "us dollar"
   ]
 }

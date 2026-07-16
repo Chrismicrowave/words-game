@@ -1,11 +1,11 @@
 {
-  "name": "Foodie",
+  "name": "Common Ground",
   "words": [
-    "pasta",
-    "ramen",
-    "tacos",
-    "carbonara",
-    "biryani",
-    "croissant"
+    "sam jones",
+    "oliver wilson",
+    "emily davis",
+    "david jackson",
+    "ben harrison",
+    "thomas brown"
   ]
 }

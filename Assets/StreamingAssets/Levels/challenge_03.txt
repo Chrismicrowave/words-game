@@ -1,11 +1,12 @@
 {
-  "name": "Common Ground",
+  "name": "World Tour",
   "words": [
-    "sam jones",
-    "oliver wilson",
-    "emily davis",
-    "david jackson",
-    "ben harrison",
-    "thomas brown"
+    "rome",
+    "tokyo",
+    "dubai",
+    "shanghai",
+    "bangkok",
+    "new york",
+    "melbourne"
   ]
 }
