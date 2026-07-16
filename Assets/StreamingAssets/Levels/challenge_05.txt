@@ -1,11 +1,11 @@
 {
-  "name": "Gaming",
+  "name": "Beverages",
   "words": [
-    "rpg",
-    "arcade",
-    "fighting",
-    "sports",
-    "racing",
-    "action"
+    "tea",
+    "wine",
+    "juice",
+    "mocha",
+    "whisky",
+    "smoothie"
   ]
 }
