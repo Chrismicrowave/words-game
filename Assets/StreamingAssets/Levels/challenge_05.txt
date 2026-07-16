@@ -1,11 +1,11 @@
 {
   "name": "World Tour",
   "words": [
-    "oslo",
-    "lima",
-    "seoul",
+    "rome",
+    "paris",
     "dubai",
-    "madrid",
-    "berlin"
+    "bangkok",
+    "prague",
+    "new york"
   ]
 }
