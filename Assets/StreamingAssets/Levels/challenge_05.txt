@@ -1,8 +1,11 @@
 {
-  "name": "River Run",
+  "name": "World Tour",
   "words": [
-    "fox",
-    "hat"
-  ],
-  "nameZh": "河流"
+    "oslo",
+    "lima",
+    "seoul",
+    "dubai",
+    "madrid",
+    "berlin"
+  ]
 }

@@ -1,8 +1,11 @@
 {
-  "name": "Star Light",
+  "name": "Foodie",
   "words": [
-    "cup",
-    "pen"
-  ],
-  "nameZh": "星光"
+    "ham",
+    "milk",
+    "pasta",
+    "bread",
+    "burger",
+    "orange"
+  ]
 }
