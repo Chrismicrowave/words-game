@@ -1,11 +1,11 @@
 {
   "name": "Beverages",
   "words": [
-    "ale",
-    "pale ale",
-    "cider",
-    "mojito",
-    "martini",
+    "water",
+    "matcha",
+    "bubble tea",
+    "iced tea",
+    "smoothie",
     "cappuccino"
   ]
 }
