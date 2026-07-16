@@ -1,11 +1,11 @@
 {
   "name": "Common Ground",
   "words": [
-    "sam",
-    "jones",
-    "wilson",
-    "thompson",
-    "anderson",
-    "jackson"
+    "sam jones",
+    "oliver wilson",
+    "emily davis",
+    "david jackson",
+    "ben harrison",
+    "thomas brown"
   ]
 }
