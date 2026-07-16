@@ -2,10 +2,10 @@
   "name": "Common Ground",
   "words": [
     "sam",
-    "david",
-    "emily",
-    "grace",
-    "oliver",
-    "thomas"
+    "jones",
+    "wilson",
+    "thompson",
+    "anderson",
+    "jackson"
   ]
 }
