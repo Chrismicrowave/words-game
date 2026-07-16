@@ -1,0 +1,12 @@
+{
+  "name": "Meme Lord",
+  "words": [
+    "bruh",
+    "skill issue",
+    "six seven",
+    "scuba scuba",
+    "the goat",
+    "lets cook",
+    "aura farming"
+  ]
+}
