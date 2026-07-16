@@ -93,17 +93,20 @@ public class InputHandler : SingletonBehaviour<InputHandler>
         // Check all mapped keys for press and release
         if (!_gameplayBlocked)
         {
+            // Check presses first — alphabetical order meant C-release hid G-press
+            // when both happened the same frame (C < G in dictionary).
             foreach (var kvp in keyToKeyCode)
             {
-                KeyControl keyControl = keyboard[kvp.Key];
-
-                if (keyControl.wasPressedThisFrame)
+                if (keyboard[kvp.Key].wasPressedThisFrame)
                 {
                     OnKeyAction?.Invoke(kvp.Value, true);
-                    return; // process one key event per frame
+                    return;
                 }
-
-                if (keyControl.wasReleasedThisFrame)
+            }
+            // Then check releases
+            foreach (var kvp in keyToKeyCode)
+            {
+                if (keyboard[kvp.Key].wasReleasedThisFrame)
                 {
                     OnKeyAction?.Invoke(kvp.Value, false);
                     return;
