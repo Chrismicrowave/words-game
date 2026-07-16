@@ -140,10 +140,17 @@ public class LevelPanelController : MonoBehaviour
             LevelWordListProvider.GetCustomDirectory(), true);
     }
 
+    private void UpdateOkButtonState()
+    {
+        if (okBtn != null)
+            okBtn.interactable = selectedProvider != null;
+    }
+
     private void SwitchTab(LevelTab tab)
     {
         currentTab = tab;
         selectedProvider = null;
+        UpdateOkButtonState();
         UpdateTabColors();
         UpdateButtonVisibility();
         PopulateGrid();
@@ -299,6 +306,7 @@ public class LevelPanelController : MonoBehaviour
 
         // Auto-select: restore saved selection or pick first unlocked item
         TryRestoreSelection(providers);
+        UpdateOkButtonState();
 
         // Scroll back to top so first row is visible
         if (levelScrollRect != null)
@@ -455,6 +463,7 @@ public class LevelPanelController : MonoBehaviour
         if (selectedImg != null) selectedImg.color = tabActiveColor;
 
         selectedProvider = provider;
+        UpdateOkButtonState();
         ShowWordPreview(provider);
     }
 
