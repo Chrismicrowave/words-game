@@ -1,8 +1,12 @@
 {
-  "name": "First Steps",
+  "name": "Animal Friends",
+  "nameZh": "动物朋友",
   "words": [
-    "the",
-    "cat"
-  ],
-  "nameZh": "起步"
+    "dog",
+    "poodle",
+    "akita",
+    "beagle",
+    "siamese",
+    "labrador"
+  ]
 }
