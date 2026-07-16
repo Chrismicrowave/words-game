@@ -4,8 +4,8 @@
     "rpg",
     "arcade",
     "fighting",
-    "stealth",
+    "sports",
     "racing",
-    "beat em up"
+    "action"
   ]
 }
