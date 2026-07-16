@@ -1,11 +1,11 @@
 {
-  "name": "Mashups",
+  "name": "Names",
   "words": [
-    "bill cook",
-    "jeff jobs",
-    "steve gates",
-    "bill musk",
-    "steve jobs",
-    "elon gates"
+    "sam",
+    "noah",
+    "liam",
+    "james",
+    "oliver",
+    "sophie"
   ]
 }
