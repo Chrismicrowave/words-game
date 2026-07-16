@@ -1,8 +1,8 @@
 {
   "name": "Wildlife",
   "words": [
-    "fox",
-    "wolf",
+    "duck",
+    "koala",
     "parrot",
     "octopus",
     "penguin",
