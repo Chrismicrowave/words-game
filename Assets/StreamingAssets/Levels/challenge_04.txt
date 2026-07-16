@@ -1,11 +1,11 @@
 {
   "name": "Names",
   "words": [
-    "sam",
-    "noah",
-    "liam",
-    "james",
-    "oliver",
-    "sophie"
+    "olivia",
+    "amelia",
+    "samantha",
+    "isabella",
+    "victoria",
+    "charlotte"
   ]
 }
