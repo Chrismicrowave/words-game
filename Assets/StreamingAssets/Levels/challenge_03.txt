@@ -1,8 +1,11 @@
 {
-  "name": "Rain Drop",
+  "name": "Common Ground",
   "words": [
-    "red",
-    "big"
-  ],
-  "nameZh": "雨滴"
+    "sam",
+    "david",
+    "emily",
+    "grace",
+    "oliver",
+    "thomas"
+  ]
 }
