@@ -1,11 +1,11 @@
 {
-  "name": "Common Ground",
+  "name": "Mashups",
   "words": [
-    "sam jones",
-    "oliver wilson",
-    "emily davis",
-    "david jackson",
-    "ben harrison",
-    "thomas brown"
+    "bill cook",
+    "jeff jobs",
+    "steve gates",
+    "bill musk",
+    "steve jobs",
+    "elon gates"
   ]
 }
