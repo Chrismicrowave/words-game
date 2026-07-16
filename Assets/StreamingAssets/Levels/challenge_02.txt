@@ -1,11 +1,11 @@
 {
   "name": "Cat's Meow",
   "words": [
-    "tabby",
-    "manx",
-    "bombay",
-    "korat",
-    "javanese",
-    "savannah"
+    "cat",
+    "siamese",
+    "abyssinian",
+    "ragdoll",
+    "sphynx",
+    "british shorthair"
   ]
 }
