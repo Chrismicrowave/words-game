@@ -1,11 +1,11 @@
 {
-  "name": "Wardrobe",
+  "name": "Gaming",
   "words": [
-    "tie",
-    "belt",
-    "shoes",
-    "shirt",
-    "t shirt",
-    "jacket"
+    "rpg",
+    "arcade",
+    "fighting",
+    "stealth",
+    "racing",
+    "beat em up"
   ]
 }
