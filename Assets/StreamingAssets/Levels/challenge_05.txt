@@ -1,11 +1,11 @@
 {
-  "name": "Currency",
+  "name": "Wardrobe",
   "words": [
-    "yen",
-    "euro",
-    "dollar",
-    "pound",
-    "dinar",
-    "us dollar"
+    "tie",
+    "belt",
+    "shoes",
+    "shirt",
+    "t shirt",
+    "jacket"
   ]
 }
