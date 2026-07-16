@@ -1,11 +1,11 @@
 {
   "name": "Foodie",
   "words": [
-    "ham",
-    "milk",
     "pasta",
-    "bread",
-    "burger",
-    "orange"
+    "ramen",
+    "tacos",
+    "carbonara",
+    "biryani",
+    "croissant"
   ]
 }
