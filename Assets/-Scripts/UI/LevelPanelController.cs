@@ -202,10 +202,14 @@ public class LevelPanelController : MonoBehaviour
         // Clear word preview too
         ClearWordPreview();
 
+        // Ensure OK/Cancel buttons are visible by default
+        if (okBtn != null) okBtn.gameObject.SetActive(true);
+        if (cancelBtn != null) cancelBtn.gameObject.SetActive(true);
+
         // If Custom tab is locked, skip grid (placeholder handles the visual)
         if (currentTab == LevelTab.Custom && !IsCustomUnlocked)
         {
-            okBtn?.gameObject.SetActive(false);
+            if (okBtn != null) okBtn.gameObject.SetActive(false);
             return;
         }
 
@@ -227,7 +231,7 @@ public class LevelPanelController : MonoBehaviour
         if (providers.Count == 0)
         {
             // Show empty state
-            okBtn?.gameObject.SetActive(currentTab == LevelTab.Community ? false : true);
+            if (okBtn != null) okBtn.gameObject.SetActive(currentTab == LevelTab.Community ? false : true);
             return;
         }
 
