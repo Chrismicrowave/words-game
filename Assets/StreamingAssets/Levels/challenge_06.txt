@@ -1,16 +1,11 @@
 {
-  "name": "Mountain",
+  "name": "Wildlife",
   "words": [
-    "adventure",
-    "butterfly",
-    "chocolate",
-    "elephant",
-    "festival",
-    "goldfish",
-    "horizon",
-    "lantern",
-    "mountain",
-    "notebook"
-  ],
-  "nameZh": "山峰"
+    "fox",
+    "wolf",
+    "parrot",
+    "octopus",
+    "penguin",
+    "elephant"
+  ]
 }
