@@ -134,6 +134,7 @@ public class LevelPanelController : MonoBehaviour
 
     private void RefreshAll()
     {
+        LevelWordListProvider.SeedCustomDirectoryIfEmpty();
         challengeProviders = LevelWordListProvider.ScanDirectory(
             LevelWordListProvider.GetChallengeDirectory());
         customProviders = LevelWordListProvider.ScanDirectory(
