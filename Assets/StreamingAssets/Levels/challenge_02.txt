@@ -1,8 +1,11 @@
 {
-  "name": "Cat Nap",
+  "name": "Cat's Meow",
   "words": [
-    "dog",
-    "sun"
-  ],
-  "nameZh": "猫眠"
+    "tabby",
+    "manx",
+    "bombay",
+    "korat",
+    "javanese",
+    "savannah"
+  ]
 }
