@@ -95,11 +95,33 @@ public class ChineseTargetDisplay : MonoBehaviour
 
     /// <summary>
     /// Call after the GameObject is active. Layout handles cell positioning.
-    /// Animates cells popping in from scale 0 one by one with landing sound.
+    /// If total width exceeds container, scales down to fit.
+    /// Then animates cells popping in from scale 0 one by one.
     /// </summary>
     public void PlayEntryAnimation()
     {
         if (cells.Count == 0 || !gameObject.activeInHierarchy) return;
+
+        // Force layout to calculate natural cell positions
+        var ctRt = cellContainer.GetComponent<RectTransform>();
+        if (ctRt != null)
+            UnityEngine.UI.LayoutRebuilder.ForceRebuildLayoutImmediate(ctRt);
+
+        // Measure total row width and scale down if it overflows the container
+        float lastRight = 0f;
+        foreach (var cell in cells)
+        {
+            float halfW = cell.GetComponent<RectTransform>().rect.width * 0.5f;
+            float right = cell.transform.localPosition.x + halfW;
+            if (right > lastRight) lastRight = right;
+        }
+        float visibleHalf = ctRt != null ? ctRt.rect.width * 0.5f : 600f;
+        if (lastRight > visibleHalf)
+        {
+            float scale = visibleHalf / lastRight;
+            cellContainer.localScale = Vector3.one * scale;
+        }
+
         StartCoroutine(AnimateCellsIn());
     }
 
