@@ -138,48 +138,42 @@ public class ChineseMatchedDisplay : MonoBehaviour
     /// </summary>
     public void PlayEntryAnimation()
     {
-        // Count all children (cells + English labels) in container
         int totalCells = cellContainer.childCount;
         if (totalCells == 0 || !gameObject.activeInHierarchy) return;
 
-        // Prefab natural size — never overridden by grid
+        // Prefab dimensions
         float prefabW = cells[0].GetComponent<RectTransform>().rect.width;
         float prefabH = cells[0].GetComponent<RectTransform>().rect.height;
         if (prefabW < 30f) prefabW = 45f;
         if (prefabH < 30f) prefabH = 60f;
 
-        // Find maxCols/rows that fit cells in container within maxRows
-        float cellScale = 1f;
+        // Find scale that fits cells within maxRows: 100% → 75% → 50%
+        float scale = 1f;
         int maxCols, rows;
         do
         {
-            float scaledW = prefabW * cellScale;
-            maxCols = Mathf.FloorToInt((containerWidth + spacingX) / (scaledW + spacingX));
+            maxCols = Mathf.FloorToInt((containerWidth + spacingX) / (prefabW * scale + spacingX));
             if (maxCols < 1) maxCols = 1;
             if (maxCols > Mathf.CeilToInt(48f / maxRows)) maxCols = Mathf.CeilToInt(48f / maxRows);
             rows = Mathf.CeilToInt((float)totalCells / maxCols);
             if (maxRows > 0 && rows > maxRows)
-                cellScale *= 0.95f;
+                scale *= 0.95f;
             else
                 break;
-        } while (cellScale > 0.3f);
-
-        // Cell dimensions that fit container exactly
-        float cellW = maxCols > 0 ? (containerWidth - (maxCols - 1) * spacingX) / maxCols : 1f;
-        float cellH = cellW;
+        } while (scale > 0.3f);
         float t = Mathf.Clamp01((float)(rows - 1) / Mathf.Max(1, maxRows - 1));
-        float scale = Mathf.Lerp(1f, 0.5f, t);
+        scale = Mathf.Lerp(1f, 0.5f, t);
 
-        // Grid cellSize = actual display size
+        // Grid cellSize = prefab × row scale (keeps prefab aspect ratio)
         var grid = cellContainer.GetComponent<UnityEngine.UI.GridLayoutGroup>();
         if (grid != null)
         {
-            grid.cellSize = new Vector2(cellW, cellH);
+            grid.cellSize = new Vector2(prefabW * scale, prefabH * scale);
             grid.spacing = new Vector2(spacingX, spacingY);
             grid.constraintCount = maxCols;
         }
 
-        // Font sizes scale with row count, no auto-sizing
+        // Font sizes = prefab base × scale, children scale with cell
         float pinBase = cells[0].LetterLabel != null ? cells[0].LetterLabel.fontSize : 18f;
         float chrBase = cells[0].CharLabel   != null ? cells[0].CharLabel.fontSize   : 32f;
 
