@@ -46,7 +46,8 @@ public class ChineseMatchedDisplay : MonoBehaviour
     public void BuildCells(ChinesePhaseData data)
     {
         Clear();
-        for (int i = 0; i < data.characters.Length; i++)
+        int count = Mathf.Min(data.characters.Length, 48);
+        for (int i = 0; i < count; i++)
         {
             GameObject go = Instantiate(characterCellPrefab, cellContainer);
             var cell = go.GetComponent<CharacterCell>();
@@ -64,11 +65,12 @@ public class ChineseMatchedDisplay : MonoBehaviour
     public void BuildMixedCells(MixedPhaseParser.MixedPhaseResult parsed)
     {
         Clear();
+        int total = 0;
         foreach (var seg in parsed.segments)
         {
             if (seg.type == MixedPhaseParser.SegmentType.Chinese)
             {
-                for (int i = 0; i < seg.characters.Length; i++)
+                for (int i = 0; i < seg.characters.Length && total < 48; i++)
                 {
                     GameObject go = Instantiate(characterCellPrefab, cellContainer);
                     var cell = go.GetComponent<CharacterCell>();
@@ -77,6 +79,7 @@ public class ChineseMatchedDisplay : MonoBehaviour
                         int prevBoundary = i == 0 ? seg.typeStart : seg.boundaries[i - 1];
                         cell.Init(seg.characters[i], parsed.typeTarget, prevBoundary, seg.boundaries[i]);
                         cells.Add(cell);
+                        total++;
                     }
                 }
             }
