@@ -94,9 +94,10 @@ public class ChineseTargetDisplay : MonoBehaviour
     }
 
     /// <summary>
-    /// Call after the GameObject is active. Ensures 16-column grid, calculates
-    /// row count, then scales each cell's transform (1 row = 100%, 2 = 75%,
-    /// 3 = 50%) and animates them popping in.
+    /// Call after the GameObject is active. Sets GridLayoutGroup cellSize based
+    /// on row count and viewport width: 1 row = full prefab size (scale down if
+    /// 16 cols exceed viewport), 2 rows = 75%, 3 rows = 50%.
+    /// Height scales proportionally with width.
     /// </summary>
     public void PlayEntryAnimation()
     {
@@ -108,23 +109,49 @@ public class ChineseTargetDisplay : MonoBehaviour
         // Fixed 16 columns — matches GridLayoutGroup constraint in the scene
         grid.constraintCount = 16;
 
-        // Row-count based scale on the prefab transform (grid cellSize stays at 100x100)
-        int rows = Mathf.CeilToInt((float)cells.Count / 16);
-        float scale = rows switch
-        {
-            1 => 1f,
-            2 => 0.75f,
-            _ => 0.5f // 3 rows (max 48 chars)
-        };
+        // Measure viewport width (parent of cellContainer)
+        var viewportRt = cellContainer.parent as RectTransform;
+        float viewportWidth = viewportRt != null ? viewportRt.rect.width : 1920f;
+        float spacing = grid.spacing.x;
 
-        StartCoroutine(AnimateCellsIn(scale));
+        // Prefab default size
+        float baseSize = 100f;
+
+        int rows = Mathf.CeilToInt((float)cells.Count / 16);
+        float cellSize;
+
+        if (rows == 1)
+        {
+            // Full prefab size if 16 cols fit, otherwise scale down to fit
+            float totalWidth = 16f * baseSize + 15f * spacing;
+            cellSize = totalWidth <= viewportWidth
+                ? baseSize
+                : (viewportWidth - 15f * spacing) / 16f;
+        }
+        else if (rows == 2)
+        {
+            cellSize = baseSize * 0.75f;
+        }
+        else
+        {
+            cellSize = baseSize * 0.5f; // 3 rows (max 48 chars)
+        }
+
+        // Clamp so 16 cols always fit in viewport
+        float maxFit = (viewportWidth - 15f * spacing) / 16f;
+        if (cellSize > maxFit) cellSize = maxFit;
+        if (cellSize < 10f) cellSize = 10f;
+
+        grid.cellSize = new Vector2(cellSize, cellSize);
+
+        StartCoroutine(AnimateCellsIn());
     }
 
     /// <summary>
-    /// Pops each cell in from scale 0 to targetScale with easeOutBack, fade,
-    /// and landing sound. Layout stays on — positions are never touched.
+    /// Pops each cell in from scale 0 to 1 with easeOutBack, fade, and landing sound.
+    /// Layout stays on — positions are never touched.
     /// </summary>
-    private IEnumerator AnimateCellsIn(float targetScale)
+    private IEnumerator AnimateCellsIn()
     {
         // Start all cells at scale 0
         foreach (var cell in cells)
@@ -137,8 +164,6 @@ public class ChineseTargetDisplay : MonoBehaviour
             audioSrc = gameObject.AddComponent<AudioSource>();
             audioSrc.playOnAwake = false;
         }
-
-        Vector3 target = Vector3.one * targetScale;
 
         // Pop in one by one
         for (int i = 0; i < cells.Count; i++)
@@ -154,11 +179,11 @@ public class ChineseTargetDisplay : MonoBehaviour
                 float c1 = 1.70158f;
                 float c3 = c1 + 1f;
                 float eased = 1f + c3 * Mathf.Pow(p - 1f, 3f) + c1 * Mathf.Pow(p - 1f, 2f);
-                t.localScale = target * Mathf.Max(0f, eased);
+                t.localScale = Vector3.one * Mathf.Max(0f, eased);
 
                 yield return null;
             }
-            t.localScale = target;
+            t.localScale = Vector3.one;
 
             // Landing sound
             if (landingSound != null && audioSrc != null)
