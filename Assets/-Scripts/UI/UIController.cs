@@ -213,11 +213,8 @@ public class UIController : MonoBehaviour
 
         if (useCellDisplay)
         {
+            matchedTextUI.gameObject.SetActive(false);
             targetTextUI.gameObject.SetActive(false);
-            // Matched text shows Chinese characters building up (like English ___ → apple)
-            matchedTextUI.gameObject.SetActive(true);
-            matchedTextUI.text = wordEngine.GetCharacterBuildDisplay();
-            // Cell display stays for per-character holding feedback
             chineseDisplay.SetVisible(true);
             chineseDisplay.UpdateProgress(wordEngine.MatchedLength);
         }

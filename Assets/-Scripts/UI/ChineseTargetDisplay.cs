@@ -6,8 +6,8 @@ using TMPro;
 /// <summary>
 /// Displays the target Chinese phrase, one TargetCell per character.
 /// Each cell shows the character below and optionally the pinyin above.
-/// All characters are visible immediately — matched display handles
-/// character-by-character progression.
+/// Cells animate in sequentially from scale 0 with a landing sound,
+/// matching the CurText fly-in feel for English letters.
 /// </summary>
 public class ChineseTargetDisplay : MonoBehaviour
 {
@@ -16,6 +16,14 @@ public class ChineseTargetDisplay : MonoBehaviour
     [SerializeField] private Transform cellContainer;
     [SerializeField] private bool showPinyin = true;
     [SerializeField] private TMPro.TMP_FontAsset chineseFontAsset; // NotoSansSC — for non-ASCII English segments
+
+    [Header("Entry Animation")]
+    [SerializeField] private Vector3 offsetStartPosition = new Vector3(50f, 100f, 0f);
+    [SerializeField] private float delayBetweenCells = 0.03f;
+    [SerializeField] private float transitionSpeed = 20f;
+    [SerializeField] private AudioClip landingSound;
+    [Range(0, 1)] [SerializeField] private float landingSoundVolume = 0.4f;
+    [Range(0.5f, 2f)] [SerializeField] private float landingSoundPitchRandomization = 1.1f;
 
     private readonly List<TargetCell> cells = new List<TargetCell>();
     private readonly List<EnglishCell> englishCells = new List<EnglishCell>();
@@ -33,6 +41,7 @@ public class ChineseTargetDisplay : MonoBehaviour
                 cells.Add(cell);
             }
         }
+        PrepareEntryAnimation();
     }
 
     /// <summary>
@@ -71,6 +80,96 @@ public class ChineseTargetDisplay : MonoBehaviour
                     englishCells.Add(cell);
                 }
             }
+        }
+        PrepareEntryAnimation();
+    }
+
+    /// <summary>
+    /// Disables layout and sets cells to their start offset — call after building.
+    /// Then PlayEntryAnimation() starts the fly-in coroutine once the GO is active.
+    /// </summary>
+    private void PrepareEntryAnimation()
+    {
+        if (cells.Count == 0) return;
+
+        // Disable layout so we can move cells freely
+        var layout = cellContainer.GetComponent<UnityEngine.UI.HorizontalLayoutGroup>();
+        if (layout != null) layout.enabled = false;
+    }
+
+    /// <summary>
+    /// Call after the GameObject is active. Animates each TargetCell flying in
+    /// from offset position with fade-in and landing sound, matching CurText.
+    /// </summary>
+    public void PlayEntryAnimation()
+    {
+        if (cells.Count == 0 || !gameObject.activeInHierarchy) return;
+        StartCoroutine(AnimateCellsIn());
+    }
+
+    /// <summary>
+    /// Animates each Chinese TargetCell flying in from an offset position,
+    /// with fade-in and landing sound — matching CurText's letter animation.
+    /// </summary>
+    private IEnumerator AnimateCellsIn()
+    {
+        yield return null; // wait one frame so layout positions are final
+
+        // Store final positions; set start positions to offset
+        var finalPositions = new Vector3[cells.Count];
+        for (int i = 0; i < cells.Count; i++)
+        {
+            var t = cells[i].transform;
+            finalPositions[i] = t.localPosition;
+            t.localPosition = finalPositions[i] + offsetStartPosition;
+        }
+
+        // Ensure we have an audio source
+        var audioSrc = GetComponent<AudioSource>();
+        if (audioSrc == null && landingSound != null)
+        {
+            audioSrc = gameObject.AddComponent<AudioSource>();
+            audioSrc.playOnAwake = false;
+        }
+
+        // Animate one by one (same as CurText: move + fade in + landing sound)
+        for (int i = 0; i < cells.Count; i++)
+        {
+            var t = cells[i].transform;
+            float elapsed = 0f;
+            while (elapsed < 1f)
+            {
+                elapsed += Time.deltaTime * transitionSpeed;
+                float progress = Mathf.Clamp01(elapsed);
+
+                t.localPosition = Vector3.Lerp(finalPositions[i] + offsetStartPosition, finalPositions[i], progress);
+
+                // Fade in the cell contents (pinyin + char label alpha)
+                var canvasGroup = t.GetComponent<UnityEngine.CanvasGroup>();
+                if (canvasGroup == null)
+                {
+                    // Add one dynamically for fade control
+                    canvasGroup = t.gameObject.AddComponent<UnityEngine.CanvasGroup>();
+                }
+                canvasGroup.alpha = progress;
+
+                yield return null;
+            }
+            t.localPosition = finalPositions[i];
+
+            // Ensure fully opaque
+            var cg = t.GetComponent<UnityEngine.CanvasGroup>();
+            if (cg != null) cg.alpha = 1f;
+
+            // Landing sound (same pitch randomization as CurText)
+            if (landingSound != null && audioSrc != null)
+            {
+                audioSrc.pitch = Random.Range(1f / landingSoundPitchRandomization, landingSoundPitchRandomization);
+                audioSrc.PlayOneShot(landingSound, landingSoundVolume);
+            }
+
+            if (i < cells.Count - 1)
+                yield return new WaitForSeconds(delayBetweenCells);
         }
     }
 
@@ -119,6 +218,7 @@ public class ChineseTargetDisplay : MonoBehaviour
 
     public void Clear()
     {
+        StopAllCoroutines();
         foreach (Transform child in cellContainer)
             Destroy(child.gameObject);
         cells.Clear();
