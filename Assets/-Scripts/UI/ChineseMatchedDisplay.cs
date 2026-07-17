@@ -173,8 +173,8 @@ public class ChineseMatchedDisplay : MonoBehaviour
         }
 
         // Uniform sizing — disable VLG, one font size fits all pinyin in this phase
-        float pinH = cellH * 0.4f;
-        float chrH = cellH * 0.6f;
+        float pinH = cellH * 0.475f;
+        float chrH = cellH * 0.475f;
         float pinMaxW = cellW;
         float pinMaxFont = pinH * 0.8f;
 
@@ -207,7 +207,7 @@ public class ChineseMatchedDisplay : MonoBehaviour
                 var rt = cell.LetterLabel.GetComponent<RectTransform>();
                 rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);
                 rt.sizeDelta = new Vector2(pinMaxW, pinH);
-                rt.anchoredPosition = new Vector2(0, cellH * 0.3f);
+                rt.anchoredPosition = new Vector2(0, cellH * 0.2625f);
                 cell.LetterLabel.enableAutoSizing = false;
                 cell.LetterLabel.fontSize = uniformFont;
                 cell.LetterLabel.textWrappingMode = TMPro.TextWrappingModes.NoWrap;
@@ -218,7 +218,7 @@ public class ChineseMatchedDisplay : MonoBehaviour
                 var rt = cell.CharLabel.GetComponent<RectTransform>();
                 rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);
                 rt.sizeDelta = new Vector2(cellW, chrH);
-                rt.anchoredPosition = new Vector2(0, cellH * -0.25f);
+                rt.anchoredPosition = new Vector2(0, cellH * -0.2625f);
                 cell.CharLabel.enableAutoSizing = false;
                 cell.CharLabel.fontSize = chrH * 0.8f;
             }
