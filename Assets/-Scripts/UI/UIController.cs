@@ -275,10 +275,11 @@ public class UIController : MonoBehaviour
 
     public void OnAddPhaseClicked()
     {
-        if (LevelPanelController.Instance.isDemo
-            && Services.Get<PhaseManager>().TotalPhases >= LevelPanelController.Instance.maxWordsPerList)
+        var lp = LevelPanelController.Instance;
+        if (lp != null && lp.isDemo
+            && Services.Get<PhaseManager>().TotalPhases >= lp.maxWordsPerList)
         {
-            ShowDemoLimitPrompt($"Max {LevelPanelController.Instance.maxWordsPerList} words per list in demo");
+            ShowDemoLimitPrompt($"Max {lp.maxWordsPerList} words per list in demo");
             return;
         }
 
