@@ -255,6 +255,7 @@ public class ChineseMatchedDisplay : MonoBehaviour
             float elapsed = 0f;
             while (elapsed < 1f)
             {
+                if (t == null) break;
                 elapsed += Time.deltaTime * transitionSpeed;
                 float p = Mathf.Clamp01(elapsed);
                 float c1 = 1.70158f;
@@ -263,9 +264,9 @@ public class ChineseMatchedDisplay : MonoBehaviour
                 t.localScale = Vector3.one * Mathf.Max(0f, eased);
                 yield return null;
             }
-            t.localScale = Vector3.one;
+            if (t != null) t.localScale = Vector3.one;
 
-            if (landingSound != null && audioSrc != null)
+            if (t != null && landingSound != null && audioSrc != null)
             {
                 audioSrc.pitch = Random.Range(1f / landingSoundPitchRandomization, landingSoundPitchRandomization);
                 audioSrc.PlayOneShot(landingSound, landingSoundVolume);
