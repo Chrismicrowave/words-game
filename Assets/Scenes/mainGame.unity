@@ -6528,7 +6528,7 @@ MonoBehaviour:
   chineseFontAsset: {fileID: 11400000, guid: 428be41dc6b96d74cb9084b697519d27, type: 2}
   maxRows: 3
   containerWidth: 1200
-  spacingX: 20
+  spacingX: 5
   spacingY: 0
   transitionSpeed: 20
   delayBetweenCells: 0.03
@@ -6553,7 +6553,7 @@ RectTransform:
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
   m_AnchoredPosition: {x: 0, y: -75}
-  m_SizeDelta: {x: 1200, y: 120}
+  m_SizeDelta: {x: 1200, y: 150}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &258928776
 MonoBehaviour:
@@ -33634,7 +33634,7 @@ MonoBehaviour:
   chineseFontAsset: {fileID: 11400000, guid: 428be41dc6b96d74cb9084b697519d27, type: 2}
   maxRows: 3
   containerWidth: 1200
-  spacingX: 20
+  spacingX: 10
   spacingY: 30
   delayBetweenCells: 0.03
   transitionSpeed: 20
