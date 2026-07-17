@@ -211,23 +211,7 @@ public class ChineseTargetDisplay : MonoBehaviour
     /// </summary>
     public void SyncPinyinFontSize()
     {
-        if (cells.Count == 0) return;
-        float min = float.MaxValue;
-        foreach (var c in cells)
-            min = Mathf.Min(min, c.PinyinFontSize);
-        if (min >= float.MaxValue) return;
-        // Cap max font size without disabling auto-sizing on the label
-        foreach (var c in cells)
-        {
-            var labels = c.GetComponentsInChildren<TMPro.TextMeshProUGUI>(true);
-            foreach (var lbl in labels)
-            {
-                if (lbl.gameObject.name == "PinyinLabel")
-                {
-                    lbl.fontSizeMax = min;
-                }
-            }
-        }
+        // Prefab auto-sizing handles this — no manual override needed.
     }
 
     /// <summary>
