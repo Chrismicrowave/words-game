@@ -104,37 +104,47 @@ public class ChineseTargetDisplay : MonoBehaviour
     {
         if (cells.Count == 0 || !gameObject.activeInHierarchy) return;
 
-        // Measure natural cell size from the first cell's prefab
-        float maxCellWidth = cells[0].GetComponent<RectTransform>().rect.width;
-        float cellHeight = cells[0].GetComponent<RectTransform>().rect.height;
-        if (maxCellWidth < 60f) maxCellWidth = 60f;
-        if (cellHeight < 60f) cellHeight = 300f;
+        // Prefab natural size — never overridden by grid
+        float prefabW = cells[0].GetComponent<RectTransform>().rect.width;
+        float prefabH = cells[0].GetComponent<RectTransform>().rect.height;
+        if (prefabW < 60f) prefabW = 100f;
+        if (prefabH < 60f) prefabH = 200f;
 
-        // Columns = 48/maxRows (16), cell width fits container
-        int maxCols = Mathf.CeilToInt(48f / Mathf.Max(1, maxRows));
-        if (maxCols > 16) maxCols = 16;
-        if (maxCols < 1) maxCols = 1;
-
-        int rows = Mathf.CeilToInt((float)cells.Count / maxCols);
-        float cellWidth = maxCols > 0 ? (containerWidth - (maxCols - 1) * spacing) / maxCols : 100f;
-        if (maxRows > 0 && rows > maxRows)
+        // Find the size scale that fits all cells within maxRows
+        // Start at 100%, shrink until rows <= maxRows
+        float scale = 1f;
+        int maxCols, rows;
+        do
         {
-            int neededCols = Mathf.CeilToInt((float)cells.Count / maxRows);
-            cellWidth = (containerWidth - (neededCols - 1) * spacing) / neededCols;
-            maxCols = neededCols;
-            // maxCols is naturally bounded by container width
-        }
+            float scaledW = prefabW * scale;
+            maxCols = Mathf.FloorToInt((containerWidth + spacing) / (scaledW + spacing));
+            if (maxCols < 1) maxCols = 1;
+            rows = Mathf.CeilToInt((float)cells.Count / maxCols);
+            if (maxRows > 0 && rows > maxRows)
+                scale *= 0.95f; // shrink slightly and retry
+            else
+                break;
+        } while (scale > 0.3f);
 
-        // Apply to GridLayoutGroup — scale height proportionally when width shrinks
+        // Apply same scale to width and height (100%/75%/50% per row progression)
+        float t = Mathf.Clamp01((float)(rows - 1) / Mathf.Max(1, maxRows - 1));
+        scale = Mathf.Lerp(1f, 0.5f, t);
+        float cellW = prefabW * scale;
+        float cellH = prefabH * scale;
+
+        // Grid uses prefab defaults — cells sized via localScale only
         var grid = cellContainer.GetComponent<UnityEngine.UI.GridLayoutGroup>();
         if (grid != null)
         {
-            float t = Mathf.Clamp01((float)(rows - 1) / Mathf.Max(1, maxRows - 1));
-            float scaledHeight = cellHeight * Mathf.Lerp(1f, 0.5f, t);
-            if (scaledHeight < 60f) scaledHeight = 60f;
-            grid.cellSize = new Vector2(cellWidth, scaledHeight);
+            grid.cellSize = new Vector2(prefabW, prefabH);
             grid.spacing = new Vector2(spacing, spacing);
             grid.constraintCount = maxCols;
+        }
+
+        // Apply visual scale to cells
+        for (int i = 0; i < cells.Count; i++)
+        {
+            cells[i].transform.localScale = new Vector3(scale, scale, 1f);
         }
 
         StartCoroutine(AnimateCellsIn());
@@ -146,9 +156,13 @@ public class ChineseTargetDisplay : MonoBehaviour
     /// </summary>
     private IEnumerator AnimateCellsIn()
     {
-        // Start all cells at scale 0
-        foreach (var cell in cells)
-            cell.transform.localScale = Vector3.zero;
+        // Store target scale (set by PlayEntryAnimation), start at 0
+        var targetScales = new Vector3[cells.Count];
+        for (int i = 0; i < cells.Count; i++)
+        {
+            targetScales[i] = cells[i].transform.localScale;
+            cells[i].transform.localScale = Vector3.zero;
+        }
 
         // Audio source setup
         var audioSrc = GetComponent<AudioSource>();
@@ -158,25 +172,26 @@ public class ChineseTargetDisplay : MonoBehaviour
             audioSrc.playOnAwake = false;
         }
 
-        // Pop in one by one
+        // Pop in one by one to target scale
         for (int i = 0; i < cells.Count; i++)
         {
             var t = cells[i].transform;
+            Vector3 target = targetScales[i];
             float elapsed = 0f;
             while (elapsed < 1f)
             {
                 elapsed += Time.deltaTime * transitionSpeed;
                 float p = Mathf.Clamp01(elapsed);
 
-                // EaseOutBack: overshoot then settle (same feel as CurText's bounce)
+                // EaseOutBack: overshoot then settle
                 float c1 = 1.70158f;
                 float c3 = c1 + 1f;
                 float eased = 1f + c3 * Mathf.Pow(p - 1f, 3f) + c1 * Mathf.Pow(p - 1f, 2f);
-                t.localScale = Vector3.one * Mathf.Max(0f, eased);
+                t.localScale = target * Mathf.Max(0f, eased);
 
                 yield return null;
             }
-            t.localScale = Vector3.one;
+            t.localScale = target;
 
             // Landing sound
             if (landingSound != null && audioSrc != null)
