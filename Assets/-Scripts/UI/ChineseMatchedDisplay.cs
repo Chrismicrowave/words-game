@@ -159,7 +159,8 @@ public class ChineseMatchedDisplay : MonoBehaviour
         if (grid != null)
         {
             float scaleRatio = cellWidth / maxCellWidth;
-            float scaledHeight = cellHeight * scaleRatio * 0.5f;
+            float scaledHeight = cellHeight * scaleRatio;
+            if (scaleRatio < 1f) scaledHeight *= (float)maxRows / rows;
             if (scaledHeight < 30f) scaledHeight = 30f;
             grid.cellSize = new Vector2(cellWidth, scaledHeight);
             grid.constraintCount = maxCols;
