@@ -179,6 +179,8 @@ public class ChineseMatchedDisplay : MonoBehaviour
             {
                 cell.LetterLabel.enableAutoSizing = false;
                 cell.LetterLabel.fontSize = cellH * 0.6f;
+                cell.LetterLabel.overflowMode = TMPro.TextOverflowModes.Overflow;
+                cell.LetterLabel.textWrappingMode = TMPro.TextWrappingModes.NoWrap;
             }
             if (cell.CharLabel != null)
             {
