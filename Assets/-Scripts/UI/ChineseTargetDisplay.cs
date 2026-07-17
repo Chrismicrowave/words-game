@@ -113,7 +113,7 @@ public class ChineseTargetDisplay : MonoBehaviour
             if (h > cellHeight) cellHeight = h;
         }
         if (maxCellWidth < 60f) maxCellWidth = 60f;
-        if (cellHeight < 60f) cellHeight = 300f;
+        if (cellHeight < 60f) cellHeight = 150f;
 
         // Calculate columns: fit maxCellWidth cells into 1200px container with 20px spacing
         float containerWidth = 1200f;
@@ -133,11 +133,14 @@ public class ChineseTargetDisplay : MonoBehaviour
             if (maxCols > 12) maxCols = 12;
         }
 
-        // Apply to GridLayoutGroup
+        // Apply to GridLayoutGroup — scale height proportionally when width shrinks
         var grid = cellContainer.GetComponent<UnityEngine.UI.GridLayoutGroup>();
         if (grid != null)
         {
-            grid.cellSize = new Vector2(cellWidth, cellHeight);
+            float scaleRatio = cellWidth / maxCellWidth;
+            float scaledHeight = cellHeight * scaleRatio;
+            if (scaledHeight < 60f) scaledHeight = 60f;
+            grid.cellSize = new Vector2(cellWidth, scaledHeight);
             grid.constraintCount = maxCols;
         }
 
