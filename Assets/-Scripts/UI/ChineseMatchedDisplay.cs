@@ -161,30 +161,22 @@ public class ChineseMatchedDisplay : MonoBehaviour
         float t = Mathf.Clamp01((float)(rows - 1) / Mathf.Max(1, maxRows - 1));
         scale = Mathf.Lerp(1f, 0.5f, t);
 
-        // Grid uses prefab defaults
+        // Grid cellSize = actual display size, cells fit perfectly in container
         var grid = cellContainer.GetComponent<UnityEngine.UI.GridLayoutGroup>();
         if (grid != null)
         {
-            grid.cellSize = new Vector2(prefabW, prefabH);
+            grid.cellSize = new Vector2(prefabW * scale, prefabH * scale);
             grid.spacing = new Vector2(spacing, spacing);
             grid.constraintCount = maxCols;
         }
-
-        // Apply visual scale
-        for (int i = 0; i < cells.Count; i++)
-            cells[i].transform.localScale = new Vector3(scale, scale, 1f);
 
         StartCoroutine(AnimateCellsIn());
     }
 
     private IEnumerator AnimateCellsIn()
     {
-        var targetScales = new Vector3[cells.Count];
-        for (int i = 0; i < cells.Count; i++)
-        {
-            targetScales[i] = cells[i].transform.localScale;
-            cells[i].transform.localScale = Vector3.zero;
-        }
+        foreach (var cell in cells)
+            cell.transform.localScale = Vector3.zero;
 
         var audioSrc = GetComponent<AudioSource>();
         if (audioSrc == null && landingSound != null)
@@ -195,8 +187,7 @@ public class ChineseMatchedDisplay : MonoBehaviour
 
         for (int i = 0; i < cells.Count; i++)
         {
-            var tr = cells[i].transform;
-            Vector3 target = targetScales[i];
+            var t = cells[i].transform;
             float elapsed = 0f;
             while (elapsed < 1f)
             {
@@ -205,10 +196,10 @@ public class ChineseMatchedDisplay : MonoBehaviour
                 float c1 = 1.70158f;
                 float c3 = c1 + 1f;
                 float eased = 1f + c3 * Mathf.Pow(p - 1f, 3f) + c1 * Mathf.Pow(p - 1f, 2f);
-                tr.localScale = target * Mathf.Max(0f, eased);
+                t.localScale = Vector3.one * Mathf.Max(0f, eased);
                 yield return null;
             }
-            tr.localScale = target;
+            t.localScale = Vector3.one;
 
             if (landingSound != null && audioSrc != null)
             {
