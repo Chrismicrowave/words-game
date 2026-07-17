@@ -172,29 +172,13 @@ public class ChineseMatchedDisplay : MonoBehaviour
             grid.constraintCount = maxCols;
         }
 
-        // Uniform sizing — disable VLG, one font size fits all pinyin in this phase
+        // Read prefab base font sizes, scale by row scale only, no auto-sizing
+        float pinBase = cells[0].LetterLabel != null ? cells[0].LetterLabel.fontSize : 18f;
+        float chrBase = cells[0].CharLabel   != null ? cells[0].CharLabel.fontSize   : 32f;
+        float rowScale = scale;
+
         float pinH = cellH * 0.475f;
         float chrH = cellH * 0.475f;
-        float pinMaxW = cellW;
-        float pinMaxFont = pinH * 0.8f;
-
-        // Measure widest pinyin at max font, scale down uniformly if needed
-        float maxPrefW = 0f;
-        foreach (var cell in cells)
-        {
-            if (cell.LetterLabel != null && !string.IsNullOrEmpty(cell.FullPinyin))
-            {
-                string saved = cell.LetterLabel.text;
-                cell.LetterLabel.text = cell.FullPinyin;
-                cell.LetterLabel.enableAutoSizing = false;
-                cell.LetterLabel.fontSize = pinMaxFont;
-                cell.LetterLabel.ForceMeshUpdate();
-                float w = cell.LetterLabel.preferredWidth;
-                if (w > maxPrefW) maxPrefW = w;
-                cell.LetterLabel.text = saved;
-            }
-        }
-        float uniformFont = maxPrefW > pinMaxW ? pinMaxFont * pinMaxW / maxPrefW : pinMaxFont;
 
         foreach (var cell in cells)
         {
@@ -206,10 +190,10 @@ public class ChineseMatchedDisplay : MonoBehaviour
             {
                 var rt = cell.LetterLabel.GetComponent<RectTransform>();
                 rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);
-                rt.sizeDelta = new Vector2(pinMaxW, pinH);
+                rt.sizeDelta = new Vector2(cellW, pinH);
                 rt.anchoredPosition = new Vector2(0, cellH * 0.2625f);
                 cell.LetterLabel.enableAutoSizing = false;
-                cell.LetterLabel.fontSize = uniformFont;
+                cell.LetterLabel.fontSize = pinBase * rowScale;
                 cell.LetterLabel.textWrappingMode = TMPro.TextWrappingModes.NoWrap;
                 cell.LetterLabel.overflowMode = TMPro.TextOverflowModes.Overflow;
             }
@@ -220,7 +204,7 @@ public class ChineseMatchedDisplay : MonoBehaviour
                 rt.sizeDelta = new Vector2(cellW, chrH);
                 rt.anchoredPosition = new Vector2(0, cellH * -0.2625f);
                 cell.CharLabel.enableAutoSizing = false;
-                cell.CharLabel.fontSize = chrH * 0.8f;
+                cell.CharLabel.fontSize = chrBase * rowScale;
             }
         }
 
