@@ -6526,7 +6526,8 @@ MonoBehaviour:
   englishCellPrefab: {fileID: 8127532070943617958, guid: c51e0c1828f4c3846869360da83f0dfc, type: 3}
   cellContainer: {fileID: 308885397}
   chineseFontAsset: {fileID: 11400000, guid: 428be41dc6b96d74cb9084b697519d27, type: 2}
-  maxRows: 4
+  maxChars: 48
+  maxRows: 3
   transitionSpeed: 20
   delayBetweenCells: 0.03
   landingSound: {fileID: 8300000, guid: 582bc5b5837a6674286b4ff36ad129d5, type: 3}
@@ -33629,6 +33630,7 @@ MonoBehaviour:
   cellContainer: {fileID: 78683134}
   showPinyin: 1
   chineseFontAsset: {fileID: 11400000, guid: 428be41dc6b96d74cb9084b697519d27, type: 2}
+  maxChars: 48
   maxRows: 3
   delayBetweenCells: 0.03
   transitionSpeed: 20
