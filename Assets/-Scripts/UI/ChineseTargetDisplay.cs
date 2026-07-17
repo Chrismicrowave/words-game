@@ -97,10 +97,21 @@ public class ChineseTargetDisplay : MonoBehaviour
     /// <summary>
     /// Call after the GameObject is active. Animates each TargetCell flying in
     /// from offset position with fade-in and landing sound, matching CurText.
+    /// Forces layout synchronously first so cell positions are correct.
     /// </summary>
     public void PlayEntryAnimation()
     {
         if (cells.Count == 0 || !gameObject.activeInHierarchy) return;
+
+        // Force layout calculation immediately (cells are now active and laid out)
+        var cellRt = cellContainer.GetComponent<RectTransform>();
+        if (cellRt != null)
+            UnityEngine.UI.LayoutRebuilder.ForceRebuildLayoutImmediate(cellRt);
+
+        // Disable layout so we can move cells freely without recalculation
+        var layout = cellContainer.GetComponent<UnityEngine.UI.HorizontalLayoutGroup>();
+        if (layout != null) layout.enabled = false;
+
         StartCoroutine(AnimateCellsIn());
     }
 
@@ -110,14 +121,7 @@ public class ChineseTargetDisplay : MonoBehaviour
     /// </summary>
     private IEnumerator AnimateCellsIn()
     {
-        // Let layout calculate cell positions before disabling it
-        Canvas.ForceUpdateCanvases();
-
-        // Disable layout so we can move cells freely
-        var layout = cellContainer.GetComponent<UnityEngine.UI.HorizontalLayoutGroup>();
-        if (layout != null) layout.enabled = false;
-
-        yield return null; // wait a frame for positions to settle
+        yield return null; // wait one frame for positions to settle
 
         // Store final positions; set start positions to offset
         var finalPositions = new Vector3[cells.Count];
