@@ -20,7 +20,8 @@ public class ChineseMatchedDisplay : MonoBehaviour
     [Header("Grid")]
     [SerializeField] private int maxRows = 3;
     [SerializeField] private float containerWidth = 1200f;
-    [SerializeField] private float spacing = 20f;
+    [SerializeField] private float spacingX = 20f;
+    [SerializeField] private float spacingY = 0f;
     [Header("Entry Animation")]
     [SerializeField] private float transitionSpeed = 20f;
     [SerializeField] private float delayBetweenCells = 0.03f;
@@ -148,7 +149,7 @@ public class ChineseMatchedDisplay : MonoBehaviour
         do
         {
             float scaledW = prefabW * scale;
-            maxCols = Mathf.FloorToInt((containerWidth + spacing) / (scaledW + spacing));
+            maxCols = Mathf.FloorToInt((containerWidth + spacingX) / (scaledW + spacingX));
             if (maxCols < 1) maxCols = 1;
             rows = Mathf.CeilToInt((float)cells.Count / maxCols);
             if (maxRows > 0 && rows > maxRows)
@@ -168,7 +169,7 @@ public class ChineseMatchedDisplay : MonoBehaviour
         if (grid != null)
         {
             grid.cellSize = new Vector2(cellW, cellH);
-            grid.spacing = new Vector2(spacing, spacing);
+            grid.spacing = new Vector2(spacingX, spacingY);
             grid.constraintCount = maxCols;
         }
 
