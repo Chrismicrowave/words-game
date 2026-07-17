@@ -4,14 +4,15 @@ using UnityEngine;
 /// <summary>
 /// Shows when a challenge level is fully cleared.
 /// Activated by LevelPanelController when AllPhasesCompleted fires.
-/// Displays "Level Name Cleared!" + star rating.
+/// Displays "Level 01 - Wildlife\ncleared!" + star rating + retries.
 /// Only Enter is accepted — loads the next challenge.
 /// </summary>
 public class LevelCompletePanelController : MonoBehaviour
 {
-    [SerializeField] private TextMeshProUGUI levelResultTMP; // "First Steps Cleared!"
+    [SerializeField] private TextMeshProUGUI levelResultTMP; // "Level 01 - Wildlife\ncleared!"
     [SerializeField] private TextMeshProUGUI starsTMP;       // "★★★"
     [SerializeField] private TextMeshProUGUI timeSpentTMP;   // "Time: 12.34s"
+    [SerializeField] private TextMeshProUGUI retriesTMP;     // "retries: 3"
 
     private bool panelActive;
 
@@ -28,14 +29,16 @@ public class LevelCompletePanelController : MonoBehaviour
     }
 
     /// <summary>Called by GameCoordinator when a challenge is completed.</summary>
-    public void Show(string levelName, int stars, float totalTime)
+    public void Show(string levelName, int stars, float totalTime, int challengeIndex, int totalErrors)
     {
         if (levelResultTMP != null)
-            levelResultTMP.text = $"{levelName} Cleared!";
+            levelResultTMP.text = $"Level {challengeIndex + 1:D2} - {levelName}\ncleared!";
         if (starsTMP != null)
             starsTMP.text = ChallengeProgression.GetStarDisplay(stars);
         if (timeSpentTMP != null)
             timeSpentTMP.text = $"Time: {totalTime:F2}s";
+        if (retriesTMP != null)
+            retriesTMP.text = $"retries: {totalErrors}";
 
         gameObject.SetActive(true);
         panelActive = true;

@@ -111,11 +111,11 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 741335059
-    m_Localized: '>'
+    m_Localized: <
     m_Metadata:
       m_Items: []
   - m_Id: 741335060
-    m_Localized: <
+    m_Localized: '>'
     m_Metadata:
       m_Items: []
   - m_Id: 741335061
@@ -240,6 +240,10 @@ MonoBehaviour:
       m_Items: []
   - m_Id: 1139348652154880
     m_Localized: Copy
+    m_Metadata:
+      m_Items: []
+  - m_Id: 2525605609332736
+    m_Localized: Trending
     m_Metadata:
       m_Items: []
   references:

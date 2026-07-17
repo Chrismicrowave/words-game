@@ -210,7 +210,7 @@ public class GameCoordinator : MonoBehaviour
 
             string levelName = provider?.DisplayName ?? "Level";
             if (levelCompletePanel != null)
-                levelCompletePanel.Show(levelName, stars, Services.Get<TimerSystem>().TotalElapsedTime);
+                levelCompletePanel.Show(levelName, stars, Services.Get<TimerSystem>().TotalElapsedTime, challengeIndex, Services.Get<PhaseManager>().TotalErrors);
         }
     }
 
