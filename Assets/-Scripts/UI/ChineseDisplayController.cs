@@ -35,7 +35,6 @@ public class ChineseDisplayController : MonoBehaviour
                 if (Services.Get<SettingsManager>() != null)
                     targetDisplay.SetPinyinVisible(Services.Get<SettingsManager>().ShowPinyin);
                 targetDisplay.gameObject.SetActive(true);
-                targetDisplay.PlayEntryAnimation();
                 targetDisplay.SyncFontSizesNextFrame();
             }
             IsShowingCells = true;

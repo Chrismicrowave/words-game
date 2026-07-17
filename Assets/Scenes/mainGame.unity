@@ -33655,14 +33655,6 @@ MonoBehaviour:
   cellContainer: {fileID: 78683134}
   showPinyin: 1
   chineseFontAsset: {fileID: 11400000, guid: 428be41dc6b96d74cb9084b697519d27, type: 2}
-  cellWidth: 65
-  cellSpacing: 20
-  offsetStartPosition: {x: 50, y: 100, z: 0}
-  delayBetweenCells: 0.03
-  transitionSpeed: 20
-  landingSound: {fileID: 8300000, guid: 582bc5b5837a6674286b4ff36ad129d5, type: 3}
-  landingSoundVolume: 0.4
-  landingSoundPitchRandomization: 1.1
 --- !u!224 &1504769737
 RectTransform:
   m_ObjectHideFlags: 0
