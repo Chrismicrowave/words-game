@@ -142,13 +142,12 @@ public class ChineseMatchedDisplay : MonoBehaviour
         if (maxCellWidth < 30f) maxCellWidth = 30f;
         if (cellHeight < 30f) cellHeight = 60f;
 
-        int maxCols = Mathf.FloorToInt((containerWidth + spacing) / (maxCellWidth + spacing));
-        int systemMaxCols = Mathf.CeilToInt(48f / Mathf.Max(1, maxRows));
-        if (maxCols > systemMaxCols) maxCols = systemMaxCols;
+        int maxCols = Mathf.CeilToInt(48f / Mathf.Max(1, maxRows));
+        if (maxCols > 16) maxCols = 16;
         if (maxCols < 1) maxCols = 1;
 
         int rows = Mathf.CeilToInt((float)cells.Count / maxCols);
-        float cellWidth = maxCellWidth;
+        float cellWidth = maxCols > 0 ? (containerWidth - (maxCols - 1) * spacing) / maxCols : 45f;
         if (maxRows > 0 && rows > maxRows)
         {
             int neededCols = Mathf.CeilToInt((float)cells.Count / maxRows);

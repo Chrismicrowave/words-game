@@ -110,15 +110,13 @@ public class ChineseTargetDisplay : MonoBehaviour
         if (maxCellWidth < 60f) maxCellWidth = 60f;
         if (cellHeight < 60f) cellHeight = 300f;
 
-        // Max columns: fit prefab width into container, cap at 48/3 = 16
-        int maxCols = Mathf.FloorToInt((containerWidth + spacing) / (maxCellWidth + spacing));
-        int systemMaxCols = Mathf.CeilToInt(48f / Mathf.Max(1, maxRows));
-        if (maxCols > systemMaxCols) maxCols = systemMaxCols;
+        // Columns = 48/maxRows (16), cell width fits container
+        int maxCols = Mathf.CeilToInt(48f / Mathf.Max(1, maxRows));
+        if (maxCols > 16) maxCols = 16;
         if (maxCols < 1) maxCols = 1;
 
-        // If rows exceed maxRows, shrink cell width to fit
         int rows = Mathf.CeilToInt((float)cells.Count / maxCols);
-        float cellWidth = maxCellWidth;
+        float cellWidth = maxCols > 0 ? (containerWidth - (maxCols - 1) * spacing) / maxCols : 100f;
         if (maxRows > 0 && rows > maxRows)
         {
             int neededCols = Mathf.CeilToInt((float)cells.Count / maxRows);
