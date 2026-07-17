@@ -2360,7 +2360,7 @@ MonoBehaviour:
   m_CellSize: {x: 160, y: 300}
   m_Spacing: {x: 0, y: 10}
   m_Constraint: 1
-  m_ConstraintCount: 12
+  m_ConstraintCount: 16
 --- !u!1 &91941636
 GameObject:
   m_ObjectHideFlags: 0
@@ -6526,6 +6526,7 @@ MonoBehaviour:
   englishCellPrefab: {fileID: 8127532070943617958, guid: c51e0c1828f4c3846869360da83f0dfc, type: 3}
   cellContainer: {fileID: 308885397}
   chineseFontAsset: {fileID: 11400000, guid: 428be41dc6b96d74cb9084b697519d27, type: 2}
+  maxRows: 4
   transitionSpeed: 20
   delayBetweenCells: 0.03
   landingSound: {fileID: 8300000, guid: 582bc5b5837a6674286b4ff36ad129d5, type: 3}
@@ -7738,8 +7739,8 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 308885397}
-  - component: {fileID: 308885398}
   - component: {fileID: 308885399}
+  - component: {fileID: 308885400}
   m_Layer: 0
   m_Name: Content
   m_TagString: Untagged
@@ -7766,32 +7767,6 @@ RectTransform:
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
---- !u!114 &308885398
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 308885396}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 30649d3a9faa99c48a7b1166b86bf2a0, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.HorizontalLayoutGroup
-  m_Padding:
-    m_Left: 0
-    m_Right: 0
-    m_Top: 0
-    m_Bottom: 0
-  m_ChildAlignment: 7
-  m_Spacing: 0
-  m_ChildForceExpandWidth: 0
-  m_ChildForceExpandHeight: 0
-  m_ChildControlWidth: 0
-  m_ChildControlHeight: 0
-  m_ChildScaleWidth: 0
-  m_ChildScaleHeight: 0
-  m_ReverseArrangement: 0
 --- !u!114 &308885399
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -7805,6 +7780,30 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::StableId
   _id: b1d021e4054243fabc75641b3e4651c8
+--- !u!114 &308885400
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 308885396}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8a8695521f0d02e499659fee002a26c2, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.GridLayoutGroup
+  m_Padding:
+    m_Left: 0
+    m_Right: 0
+    m_Top: 0
+    m_Bottom: 0
+  m_ChildAlignment: 4
+  m_StartCorner: 0
+  m_StartAxis: 0
+  m_CellSize: {x: 120, y: 120}
+  m_Spacing: {x: 0, y: 5}
+  m_Constraint: 1
+  m_ConstraintCount: 16
 --- !u!224 &322055655 stripped
 RectTransform:
   m_CorrespondingSourceObject: {fileID: 7966597645748556987, guid: ead1259944d3e314f8e430618c01d5cc, type: 3}
@@ -33630,8 +33629,7 @@ MonoBehaviour:
   cellContainer: {fileID: 78683134}
   showPinyin: 1
   chineseFontAsset: {fileID: 11400000, guid: 428be41dc6b96d74cb9084b697519d27, type: 2}
-  cellSpacing: 20
-  offsetStartPosition: {x: 50, y: 100, z: 0}
+  maxRows: 3
   delayBetweenCells: 0.03
   transitionSpeed: 20
   landingSound: {fileID: 8300000, guid: 582bc5b5837a6674286b4ff36ad129d5, type: 3}

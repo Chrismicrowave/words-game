@@ -18,8 +18,7 @@ public class ChineseTargetDisplay : MonoBehaviour
     [SerializeField] private TMPro.TMP_FontAsset chineseFontAsset; // NotoSansSC — for non-ASCII English segments
 
     [Header("Entry Animation")]
-    [SerializeField] private float cellSpacing = 20f;
-    [SerializeField] private Vector3 offsetStartPosition = new Vector3(50f, 100f, 0f);
+    [SerializeField] private int maxRows = 4;
     [SerializeField] private float delayBetweenCells = 0.03f;
     [SerializeField] private float transitionSpeed = 20f;
     [SerializeField] private AudioClip landingSound;
@@ -101,17 +100,9 @@ public class ChineseTargetDisplay : MonoBehaviour
     {
         if (cells.Count == 0 || !gameObject.activeInHierarchy) return;
 
-        // Measure natural cell widths from char content, pick the widest
-        float maxCellWidth = 0f;
-        float cellHeight = 0f;
-        foreach (var cell in cells)
-        {
-            var rt = cell.GetComponent<RectTransform>();
-            float w = rt.rect.width;
-            float h = rt.rect.height;
-            if (w > maxCellWidth) maxCellWidth = w;
-            if (h > cellHeight) cellHeight = h;
-        }
+        // Measure natural cell size from the first cell's prefab
+        float maxCellWidth = cells[0].GetComponent<RectTransform>().rect.width;
+        float cellHeight = cells[0].GetComponent<RectTransform>().rect.height;
         if (maxCellWidth < 60f) maxCellWidth = 60f;
         if (cellHeight < 60f) cellHeight = 300f;
 
@@ -125,9 +116,9 @@ public class ChineseTargetDisplay : MonoBehaviour
         // If more than 4 rows, shrink cell width to fit
         int rows = Mathf.CeilToInt((float)cells.Count / maxCols);
         float cellWidth = maxCellWidth;
-        if (rows > 4)
+        if (maxRows > 0 && rows > maxRows)
         {
-            int neededCols = Mathf.CeilToInt((float)cells.Count / 4f);
+            int neededCols = Mathf.CeilToInt((float)cells.Count / maxRows);
             cellWidth = (containerWidth - (neededCols - 1) * spacing) / neededCols;
             maxCols = neededCols;
             if (maxCols > 12) maxCols = 12;

@@ -18,6 +18,7 @@ public class ChineseMatchedDisplay : MonoBehaviour
     [SerializeField] private TMPro.TMP_FontAsset chineseFontAsset; // NotoSansSC — for non-ASCII English segments
 
     [Header("Entry Animation")]
+    [SerializeField] private int maxRows = 4;
     [SerializeField] private float transitionSpeed = 20f;
     [SerializeField] private float delayBetweenCells = 0.03f;
     [SerializeField] private AudioClip landingSound;
@@ -132,17 +133,9 @@ public class ChineseMatchedDisplay : MonoBehaviour
     {
         if (cells.Count == 0 || !gameObject.activeInHierarchy) return;
 
-        // Measure natural cell width from prefab
-        float maxCellWidth = 45f;
-        float cellHeight = 60f;
-        foreach (var cell in cells)
-        {
-            var rt = cell.GetComponent<RectTransform>();
-            float w = rt.rect.width;
-            float h = rt.rect.height;
-            if (w > maxCellWidth) maxCellWidth = w;
-            if (h > cellHeight) cellHeight = h;
-        }
+        // Measure natural cell width from first cell's prefab
+        float maxCellWidth = cells[0].GetComponent<RectTransform>().rect.width;
+        float cellHeight = cells[0].GetComponent<RectTransform>().rect.height;
         if (maxCellWidth < 30f) maxCellWidth = 30f;
         if (cellHeight < 30f) cellHeight = 60f;
 
@@ -154,9 +147,9 @@ public class ChineseMatchedDisplay : MonoBehaviour
 
         int rows = Mathf.CeilToInt((float)cells.Count / maxCols);
         float cellWidth = maxCellWidth;
-        if (rows > 4)
+        if (maxRows > 0 && rows > maxRows)
         {
-            int neededCols = Mathf.CeilToInt((float)cells.Count / 4f);
+            int neededCols = Mathf.CeilToInt((float)cells.Count / maxRows);
             cellWidth = (containerWidth - (neededCols - 1) * spacing) / neededCols;
             maxCols = neededCols;
             if (maxCols > 12) maxCols = 12;
