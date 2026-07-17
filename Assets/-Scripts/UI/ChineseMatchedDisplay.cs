@@ -144,11 +144,13 @@ public class ChineseMatchedDisplay : MonoBehaviour
         int totalCells = cellContainer.childCount;
         if (totalCells == 0 || !gameObject.activeInHierarchy) return;
 
-        // Cache prefab dimensions on first load
+        // Cache prefab dims + font bases on first load
         if (!_prefabCached)
         {
             var rt = cells[0].GetComponent<RectTransform>();
             _prefabSize = new Vector2(rt.rect.width, rt.rect.height);
+            _cachedPinBase = cells[0].LetterLabel != null ? cells[0].LetterLabel.fontSize : 18f;
+            _cachedChrBase = cells[0].CharLabel   != null ? cells[0].CharLabel.fontSize   : 32f;
             _prefabCached = true;
         }
         float prefabW = _prefabSize.x;
@@ -171,21 +173,20 @@ public class ChineseMatchedDisplay : MonoBehaviour
         float t = Mathf.Clamp01((float)(rows - 1) / Mathf.Max(1, maxRows - 1));
         scale = Mathf.Lerp(1f, 0.5f, t);
 
-        // Grid cellSize = prefab × row scale (keeps prefab aspect ratio)
+        // Grid cellSize = prefab (never override — prevents prefab dirt)
+        // Cells scaled visually via localScale
         var grid = cellContainer.GetComponent<UnityEngine.UI.GridLayoutGroup>();
         if (grid != null)
         {
-            grid.cellSize = new Vector2(prefabW * scale, prefabH * scale);
-            grid.spacing = new Vector2(spacingX, spacingY);
+            grid.cellSize = new Vector2(prefabW, prefabH);
+            grid.spacing = new Vector2(spacingX / scale, spacingY / scale);
             grid.constraintCount = maxCols;
         }
 
-        // Cache font bases on first load (prefab gets dirtied by grid/autosize)
-        if (!_prefabCached)
-        {
-            _cachedPinBase = cells[0].LetterLabel != null ? cells[0].LetterLabel.fontSize : 18f;
-            _cachedChrBase = cells[0].CharLabel   != null ? cells[0].CharLabel.fontSize   : 32f;
-        }
+        // Apply scale to all cells
+        foreach (Transform child in cellContainer)
+            child.localScale = new Vector3(scale, scale, 1f);
+
         float pinBase = _cachedPinBase;
         float chrBase = _cachedChrBase;
 
