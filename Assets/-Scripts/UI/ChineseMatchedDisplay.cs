@@ -17,8 +17,11 @@ public class ChineseMatchedDisplay : MonoBehaviour
     [SerializeField] private Transform cellContainer;
     [SerializeField] private TMPro.TMP_FontAsset chineseFontAsset; // NotoSansSC — for non-ASCII English segments
 
-    [Header("Grid & Entry Animation")]
-    [SerializeField] private int maxRows = 4;
+    [Header("Grid")]
+    [SerializeField] private int maxRows = 3;
+    [SerializeField] private float containerWidth = 1200f;
+    [SerializeField] private float spacing = 20f;
+    [Header("Entry Animation")]
     [SerializeField] private float transitionSpeed = 20f;
     [SerializeField] private float delayBetweenCells = 0.03f;
     [SerializeField] private AudioClip landingSound;
@@ -139,11 +142,10 @@ public class ChineseMatchedDisplay : MonoBehaviour
         if (maxCellWidth < 30f) maxCellWidth = 30f;
         if (cellHeight < 30f) cellHeight = 60f;
 
-        float containerWidth = 1200f;
-        float spacing = 20f;
         int maxCols = Mathf.FloorToInt((containerWidth + spacing) / (maxCellWidth + spacing));
+        int systemMaxCols = Mathf.CeilToInt(48f / Mathf.Max(1, maxRows));
+        if (maxCols > systemMaxCols) maxCols = systemMaxCols;
         if (maxCols < 1) maxCols = 1;
-        // maxCols is naturally bounded by container width
 
         int rows = Mathf.CeilToInt((float)cells.Count / maxCols);
         float cellWidth = maxCellWidth;

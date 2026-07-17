@@ -17,8 +17,12 @@ public class ChineseTargetDisplay : MonoBehaviour
     [SerializeField] private bool showPinyin = true;
     [SerializeField] private TMPro.TMP_FontAsset chineseFontAsset; // NotoSansSC — for non-ASCII English segments
 
-    [Header("Grid & Entry Animation")]
-    [SerializeField] private int maxRows = 4;
+    [Header("Grid")]
+    [SerializeField] private int maxRows = 3;
+    [SerializeField] private float containerWidth = 1200f;
+    [SerializeField] private float spacing = 20f;
+
+    [Header("Entry Animation")]
     [SerializeField] private float delayBetweenCells = 0.03f;
     [SerializeField] private float transitionSpeed = 20f;
     [SerializeField] private AudioClip landingSound;
@@ -106,14 +110,13 @@ public class ChineseTargetDisplay : MonoBehaviour
         if (maxCellWidth < 60f) maxCellWidth = 60f;
         if (cellHeight < 60f) cellHeight = 300f;
 
-        // Calculate columns: fit maxCellWidth cells into 1200px container with 20px spacing
-        float containerWidth = 1200f;
-        float spacing = 20f;
+        // Max columns: fit prefab width into container, cap at 48/3 = 16
         int maxCols = Mathf.FloorToInt((containerWidth + spacing) / (maxCellWidth + spacing));
+        int systemMaxCols = Mathf.CeilToInt(48f / Mathf.Max(1, maxRows));
+        if (maxCols > systemMaxCols) maxCols = systemMaxCols;
         if (maxCols < 1) maxCols = 1;
-        // maxCols is naturally bounded by container width
 
-        // If more than 4 rows, shrink cell width to fit
+        // If rows exceed maxRows, shrink cell width to fit
         int rows = Mathf.CeilToInt((float)cells.Count / maxCols);
         float cellWidth = maxCellWidth;
         if (maxRows > 0 && rows > maxRows)
