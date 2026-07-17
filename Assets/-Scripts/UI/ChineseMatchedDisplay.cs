@@ -176,27 +176,6 @@ public class ChineseMatchedDisplay : MonoBehaviour
         float pinH = cellH * 0.4f;
         float chrH = cellH * 0.6f;
         float pinMaxW = cellW * 1.2f;
-        float pinMaxFont = pinH * 0.8f;
-
-        // Find the uniform font size that fits the longest pinyin in pinMaxW width
-        float uniformFont = pinMaxFont;
-        foreach (var cell in cells)
-        {
-            if (cell.LetterLabel != null && !string.IsNullOrEmpty(cell.FullPinyin))
-            {
-                string saved = cell.LetterLabel.text;
-                cell.LetterLabel.text = cell.FullPinyin;
-                cell.LetterLabel.fontSize = uniformFont;
-                cell.LetterLabel.ForceMeshUpdate();
-                float prefW = cell.LetterLabel.preferredWidth;
-                if (prefW > pinMaxW)
-                {
-                    float fitFont = uniformFont * pinMaxW / prefW;
-                    if (fitFont < uniformFont) uniformFont = fitFont;
-                }
-                cell.LetterLabel.text = saved;
-            }
-        }
 
         foreach (var cell in cells)
         {
@@ -211,8 +190,9 @@ public class ChineseMatchedDisplay : MonoBehaviour
                 rt.sizeDelta = new Vector2(pinMaxW, pinH);
                 rt.anchoredPosition = new Vector2(0, cellH * 0.3f);
                 cell.LetterLabel.enableAutoSizing = false;
-                cell.LetterLabel.fontSize = uniformFont;
+                cell.LetterLabel.fontSize = pinH * 0.8f;
                 cell.LetterLabel.textWrappingMode = TMPro.TextWrappingModes.NoWrap;
+                cell.LetterLabel.overflowMode = TMPro.TextOverflowModes.Overflow;
             }
             if (cell.CharLabel != null)
             {

@@ -11,7 +11,6 @@ public class CharacterCell : MonoBehaviour
     [SerializeField] private TextMeshProUGUI charLabel;     // shows e.g. "你" when complete
     public TextMeshProUGUI LetterLabel => letterLabel;
     public TextMeshProUGUI CharLabel => charLabel;
-    public string FullPinyin => fullTypeTarget.Substring(prevBoundary, boundary - prevBoundary);
 
     private string character;
     private string fullTypeTarget;  // the full pinyin typeTarget for the whole word
