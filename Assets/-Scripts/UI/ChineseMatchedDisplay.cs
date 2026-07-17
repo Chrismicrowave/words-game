@@ -138,7 +138,9 @@ public class ChineseMatchedDisplay : MonoBehaviour
     /// </summary>
     public void PlayEntryAnimation()
     {
-        if (cells.Count == 0 || !gameObject.activeInHierarchy) return;
+        // Count all children (cells + English labels) in container
+        int totalCells = cellContainer.childCount;
+        if (totalCells == 0 || !gameObject.activeInHierarchy) return;
 
         // Prefab natural size — never overridden by grid
         float prefabW = cells[0].GetComponent<RectTransform>().rect.width;
@@ -155,7 +157,7 @@ public class ChineseMatchedDisplay : MonoBehaviour
             maxCols = Mathf.FloorToInt((containerWidth + spacingX) / (scaledW + spacingX));
             if (maxCols < 1) maxCols = 1;
             if (maxCols > Mathf.CeilToInt(48f / maxRows)) maxCols = Mathf.CeilToInt(48f / maxRows);
-            rows = Mathf.CeilToInt((float)cells.Count / maxCols);
+            rows = Mathf.CeilToInt((float)totalCells / maxCols);
             if (maxRows > 0 && rows > maxRows)
                 cellScale *= 0.95f;
             else
@@ -213,13 +215,32 @@ public class ChineseMatchedDisplay : MonoBehaviour
             }
         }
 
+        // English cells: 80% font of Chinese, same height
+        float engFont = (cells.Count > 0 ? chrBase * rowScale : cellH * 0.3f) * 0.8f;
+        foreach (Transform child in cellContainer)
+        {
+            var eng = child.GetComponent<EnglishCell>();
+            if (eng == null || eng.Label == null) continue;
+            eng.Label.enableAutoSizing = false;
+            eng.Label.fontSize = engFont;
+            eng.Label.ForceMeshUpdate();
+            float w = eng.Label.preferredWidth + 10f;
+            if (w > cellW) w = cellW;
+            var rt = eng.GetComponent<RectTransform>();
+            if (rt != null) rt.sizeDelta = new Vector2(w, cellH);
+        }
+
         StartCoroutine(AnimateCellsIn());
     }
 
     private IEnumerator AnimateCellsIn()
     {
-        foreach (var cell in cells)
-            cell.transform.localScale = Vector3.zero;
+        var allTransforms = new List<Transform>();
+        foreach (Transform child in cellContainer) allTransforms.Add(child);
+        if (allTransforms.Count == 0) yield break;
+
+        foreach (var t in allTransforms)
+            t.localScale = Vector3.zero;
 
         var audioSrc = GetComponent<AudioSource>();
         if (audioSrc == null && landingSound != null)
@@ -228,9 +249,9 @@ public class ChineseMatchedDisplay : MonoBehaviour
             audioSrc.playOnAwake = false;
         }
 
-        for (int i = 0; i < cells.Count; i++)
+        for (int i = 0; i < allTransforms.Count; i++)
         {
-            var t = cells[i].transform;
+            var t = allTransforms[i];
             float elapsed = 0f;
             while (elapsed < 1f)
             {
@@ -250,7 +271,7 @@ public class ChineseMatchedDisplay : MonoBehaviour
                 audioSrc.PlayOneShot(landingSound, landingSoundVolume);
             }
 
-            if (i < cells.Count - 1)
+            if (i < allTransforms.Count - 1)
                 yield return new WaitForSeconds(delayBetweenCells);
         }
     }

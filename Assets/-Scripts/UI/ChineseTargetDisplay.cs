@@ -106,16 +106,16 @@ public class ChineseTargetDisplay : MonoBehaviour
     /// </summary>
     public void PlayEntryAnimation()
     {
-        if (cells.Count == 0 || !gameObject.activeInHierarchy) return;
+        int totalCells = cells.Count + englishCells.Count;
+        if (totalCells == 0 || !gameObject.activeInHierarchy) return;
 
-        // Prefab natural size — never overridden by grid
-        float prefabW = cells[0].GetComponent<RectTransform>().rect.width;
-        float prefabH = cells[0].GetComponent<RectTransform>().rect.height;
-        if (prefabW < 60f) prefabW = 100f;
-        if (prefabH < 60f) prefabH = 200f;
+        // Prefab natural size
+        float prefabW = cells.Count > 0 ? cells[0].GetComponent<RectTransform>().rect.width : 120f;
+        float prefabH = cells.Count > 0 ? cells[0].GetComponent<RectTransform>().rect.height : 50f;
+        if (prefabW < 30f) prefabW = 120f;
+        if (prefabH < 30f) prefabH = 50f;
 
-        // Find the size scale that fits all cells within maxRows
-        // Find maxCols/rows that fit cells in container within maxRows
+        // Find maxCols/rows that fit ALL cells in container within maxRows
         float cellScale = 1f;
         int maxCols, rows;
         do
@@ -124,7 +124,7 @@ public class ChineseTargetDisplay : MonoBehaviour
             maxCols = Mathf.FloorToInt((containerWidth + spacingX) / (scaledW + spacingX));
             if (maxCols < 1) maxCols = 1;
             if (maxCols > Mathf.CeilToInt(48f / maxRows)) maxCols = Mathf.CeilToInt(48f / maxRows);
-            rows = Mathf.CeilToInt((float)cells.Count / maxCols);
+            rows = Mathf.CeilToInt((float)totalCells / maxCols);
             if (maxRows > 0 && rows > maxRows)
                 cellScale *= 0.95f;
             else
@@ -180,20 +180,39 @@ public class ChineseTargetDisplay : MonoBehaviour
             }
         }
 
+        // English cells: 80% font of Chinese char
+        float engFont = (cells.Count > 0 ? chrBase * rowScale : cellH * 0.3f) * 0.8f;
+        foreach (var ec in englishCells)
+        {
+            if (ec.Label != null)
+            {
+                ec.Label.enableAutoSizing = false;
+                ec.Label.fontSize = engFont;
+                ec.Label.ForceMeshUpdate();
+                // Fit cell width to text
+                float w = ec.Label.preferredWidth + 10f;
+                if (w > cellW) w = cellW;
+                var rt = ec.GetComponent<RectTransform>();
+                if (rt != null) rt.sizeDelta = new Vector2(w, cellH);
+            }
+        }
+
         StartCoroutine(AnimateCellsIn());
     }
 
     /// <summary>
-    /// Pops each cell in from scale 0 to 1 with easeOutBack, fade, and landing sound.
-    /// Layout stays on — positions are never touched.
+    /// Pops ALL cells (Chinese + English) in from scale 0 to 1.
     /// </summary>
     private IEnumerator AnimateCellsIn()
     {
-        // Start all cells at scale 0
-        foreach (var cell in cells)
-            cell.transform.localScale = Vector3.zero;
+        // Build ordered list of all transforms in container
+        var allTransforms = new List<Transform>();
+        foreach (Transform child in cellContainer) allTransforms.Add(child);
+        if (allTransforms.Count == 0) yield break;
 
-        // Audio source setup
+        foreach (var t in allTransforms)
+            t.localScale = Vector3.zero;
+
         var audioSrc = GetComponent<AudioSource>();
         if (audioSrc == null && landingSound != null)
         {
@@ -201,34 +220,30 @@ public class ChineseTargetDisplay : MonoBehaviour
             audioSrc.playOnAwake = false;
         }
 
-        // Pop in one by one
-        for (int i = 0; i < cells.Count; i++)
+        for (int i = 0; i < allTransforms.Count; i++)
         {
-            var t = cells[i].transform;
+            var t = allTransforms[i];
             float elapsed = 0f;
             while (elapsed < 1f)
             {
+                if (t == null) break;
                 elapsed += Time.deltaTime * transitionSpeed;
                 float p = Mathf.Clamp01(elapsed);
-
-                // EaseOutBack: overshoot then settle
                 float c1 = 1.70158f;
                 float c3 = c1 + 1f;
                 float eased = 1f + c3 * Mathf.Pow(p - 1f, 3f) + c1 * Mathf.Pow(p - 1f, 2f);
                 t.localScale = Vector3.one * Mathf.Max(0f, eased);
-
                 yield return null;
             }
-            t.localScale = Vector3.one;
+            if (t != null) t.localScale = Vector3.one;
 
-            // Landing sound
-            if (landingSound != null && audioSrc != null)
+            if (t != null && landingSound != null && audioSrc != null)
             {
                 audioSrc.pitch = Random.Range(1f / landingSoundPitchRandomization, landingSoundPitchRandomization);
                 audioSrc.PlayOneShot(landingSound, landingSoundVolume);
             }
 
-            if (i < cells.Count - 1)
+            if (i < allTransforms.Count - 1)
                 yield return new WaitForSeconds(delayBetweenCells);
         }
     }
