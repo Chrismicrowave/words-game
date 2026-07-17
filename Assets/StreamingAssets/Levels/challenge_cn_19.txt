@@ -1,0 +1,103 @@
+{
+  "name": "Legends",
+  "nameZh": "传说",
+  "mixedWords": [
+    {
+      "segments": [
+        {
+          "type": "chinese",
+          "entries": [
+            {
+              "character": "真",
+              "pinyin": "zhen"
+            },
+            {
+              "character": "香",
+              "pinyin": "xiang"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "segments": [
+        {
+          "type": "chinese",
+          "entries": [
+            {
+              "character": "离",
+              "pinyin": "li"
+            },
+            {
+              "character": "谱",
+              "pinyin": "pu"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "segments": [
+        {
+          "type": "chinese",
+          "entries": [
+            {
+              "character": "典",
+              "pinyin": "dian"
+            },
+            {
+              "character": "中",
+              "pinyin": "zhong"
+            },
+            {
+              "character": "典",
+              "pinyin": "dian"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "segments": [
+        {
+          "type": "chinese",
+          "entries": [
+            {
+              "character": "莎",
+              "pinyin": "sha"
+            },
+            {
+              "character": "士",
+              "pinyin": "shi"
+            },
+            {
+              "character": "比",
+              "pinyin": "bi"
+            },
+            {
+              "character": "亚",
+              "pinyin": "ya"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "segments": [
+        {
+          "type": "chinese",
+          "entries": [
+            {
+              "character": "有",
+              "pinyin": "you"
+            },
+            {
+              "character": "才",
+              "pinyin": "cai"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

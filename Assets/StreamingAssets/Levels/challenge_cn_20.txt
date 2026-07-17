@@ -1,0 +1,115 @@
+{
+  "name": "Farewell",
+  "nameZh": "告别",
+  "mixedWords": [
+    {
+      "segments": [
+        {
+          "type": "chinese",
+          "entries": [
+            {
+              "character": "再",
+              "pinyin": "zai"
+            },
+            {
+              "character": "见",
+              "pinyin": "jian"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "segments": [
+        {
+          "type": "chinese",
+          "entries": [
+            {
+              "character": "珍",
+              "pinyin": "zhen"
+            },
+            {
+              "character": "重",
+              "pinyin": "zhong"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "segments": [
+        {
+          "type": "chinese",
+          "entries": [
+            {
+              "character": "后",
+              "pinyin": "hou"
+            },
+            {
+              "character": "会",
+              "pinyin": "hui"
+            },
+            {
+              "character": "有",
+              "pinyin": "you"
+            },
+            {
+              "character": "期",
+              "pinyin": "qi"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "segments": [
+        {
+          "type": "chinese",
+          "entries": [
+            {
+              "character": "江",
+              "pinyin": "jiang"
+            },
+            {
+              "character": "湖",
+              "pinyin": "hu"
+            },
+            {
+              "character": "再",
+              "pinyin": "zai"
+            },
+            {
+              "character": "见",
+              "pinyin": "jian"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "segments": [
+        {
+          "type": "chinese",
+          "entries": [
+            {
+              "character": "有",
+              "pinyin": "you"
+            },
+            {
+              "character": "缘",
+              "pinyin": "yuan"
+            },
+            {
+              "character": "再",
+              "pinyin": "zai"
+            },
+            {
+              "character": "见",
+              "pinyin": "jian"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

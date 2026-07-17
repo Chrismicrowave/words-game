@@ -1,0 +1,91 @@
+{
+  "name": "Gaming",
+  "nameZh": "游戏",
+  "mixedWords": [
+    {
+      "segments": [
+        {
+          "type": "chinese",
+          "entries": [
+            {
+              "character": "开",
+              "pinyin": "kai"
+            },
+            {
+              "character": "黑",
+              "pinyin": "hei"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "segments": [
+        {
+          "type": "chinese",
+          "entries": [
+            {
+              "character": "带",
+              "pinyin": "dai"
+            },
+            {
+              "character": "飞",
+              "pinyin": "fei"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "segments": [
+        {
+          "type": "chinese",
+          "entries": [
+            {
+              "character": "躺",
+              "pinyin": "tang"
+            },
+            {
+              "character": "赢",
+              "pinyin": "ying"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "segments": [
+        {
+          "type": "chinese",
+          "entries": [
+            {
+              "character": "白",
+              "pinyin": "bai"
+            },
+            {
+              "character": "给",
+              "pinyin": "gei"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "segments": [
+        {
+          "type": "chinese",
+          "entries": [
+            {
+              "character": "翻",
+              "pinyin": "fan"
+            },
+            {
+              "character": "车",
+              "pinyin": "che"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

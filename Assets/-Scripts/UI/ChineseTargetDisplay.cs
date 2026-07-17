@@ -6,6 +6,8 @@ using TMPro;
 /// <summary>
 /// Displays the target Chinese phrase, one TargetCell per character.
 /// Each cell shows the character below and optionally the pinyin above.
+/// All characters are visible immediately — matched display handles
+/// character-by-character progression.
 /// </summary>
 public class ChineseTargetDisplay : MonoBehaviour
 {

@@ -1,0 +1,91 @@
+{
+  "name": "Social",
+  "nameZh": "社交",
+  "mixedWords": [
+    {
+      "segments": [
+        {
+          "type": "chinese",
+          "entries": [
+            {
+              "character": "社",
+              "pinyin": "she"
+            },
+            {
+              "character": "恐",
+              "pinyin": "kong"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "segments": [
+        {
+          "type": "chinese",
+          "entries": [
+            {
+              "character": "社",
+              "pinyin": "she"
+            },
+            {
+              "character": "牛",
+              "pinyin": "niu"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "segments": [
+        {
+          "type": "chinese",
+          "entries": [
+            {
+              "character": "搭",
+              "pinyin": "da"
+            },
+            {
+              "character": "子",
+              "pinyin": "zi"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "segments": [
+        {
+          "type": "chinese",
+          "entries": [
+            {
+              "character": "约",
+              "pinyin": "yue"
+            },
+            {
+              "character": "饭",
+              "pinyin": "fan"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "segments": [
+        {
+          "type": "chinese",
+          "entries": [
+            {
+              "character": "面",
+              "pinyin": "mian"
+            },
+            {
+              "character": "基",
+              "pinyin": "ji"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

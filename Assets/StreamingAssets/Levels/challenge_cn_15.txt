@@ -1,0 +1,91 @@
+{
+  "name": "Feelings",
+  "nameZh": "情感",
+  "mixedWords": [
+    {
+      "segments": [
+        {
+          "type": "chinese",
+          "entries": [
+            {
+              "character": "心",
+              "pinyin": "xin"
+            },
+            {
+              "character": "动",
+              "pinyin": "dong"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "segments": [
+        {
+          "type": "chinese",
+          "entries": [
+            {
+              "character": "上",
+              "pinyin": "shang"
+            },
+            {
+              "character": "头",
+              "pinyin": "tou"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "segments": [
+        {
+          "type": "chinese",
+          "entries": [
+            {
+              "character": "下",
+              "pinyin": "xia"
+            },
+            {
+              "character": "头",
+              "pinyin": "tou"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "segments": [
+        {
+          "type": "chinese",
+          "entries": [
+            {
+              "character": "告",
+              "pinyin": "gao"
+            },
+            {
+              "character": "白",
+              "pinyin": "bai"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "segments": [
+        {
+          "type": "chinese",
+          "entries": [
+            {
+              "character": "失",
+              "pinyin": "shi"
+            },
+            {
+              "character": "恋",
+              "pinyin": "lian"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

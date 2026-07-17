@@ -1,0 +1,91 @@
+{
+  "name": "Tech",
+  "nameZh": "科技",
+  "mixedWords": [
+    {
+      "segments": [
+        {
+          "type": "chinese",
+          "entries": [
+            {
+              "character": "芯",
+              "pinyin": "xin"
+            },
+            {
+              "character": "片",
+              "pinyin": "pian"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "segments": [
+        {
+          "type": "chinese",
+          "entries": [
+            {
+              "character": "算",
+              "pinyin": "suan"
+            },
+            {
+              "character": "法",
+              "pinyin": "fa"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "segments": [
+        {
+          "type": "chinese",
+          "entries": [
+            {
+              "character": "蓝",
+              "pinyin": "lan"
+            },
+            {
+              "character": "牙",
+              "pinyin": "ya"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "segments": [
+        {
+          "type": "chinese",
+          "entries": [
+            {
+              "character": "重",
+              "pinyin": "zhong"
+            },
+            {
+              "character": "启",
+              "pinyin": "qi"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "segments": [
+        {
+          "type": "chinese",
+          "entries": [
+            {
+              "character": "黑",
+              "pinyin": "hei"
+            },
+            {
+              "character": "屏",
+              "pinyin": "ping"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

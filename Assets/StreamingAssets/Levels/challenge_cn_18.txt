@@ -1,0 +1,91 @@
+{
+  "name": "Music",
+  "nameZh": "音乐",
+  "mixedWords": [
+    {
+      "segments": [
+        {
+          "type": "chinese",
+          "entries": [
+            {
+              "character": "旋",
+              "pinyin": "xuan"
+            },
+            {
+              "character": "律",
+              "pinyin": "lv"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "segments": [
+        {
+          "type": "chinese",
+          "entries": [
+            {
+              "character": "歌",
+              "pinyin": "ge"
+            },
+            {
+              "character": "词",
+              "pinyin": "ci"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "segments": [
+        {
+          "type": "chinese",
+          "entries": [
+            {
+              "character": "副",
+              "pinyin": "fu"
+            },
+            {
+              "character": "歌",
+              "pinyin": "ge"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "segments": [
+        {
+          "type": "chinese",
+          "entries": [
+            {
+              "character": "说",
+              "pinyin": "shuo"
+            },
+            {
+              "character": "唱",
+              "pinyin": "chang"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "segments": [
+        {
+          "type": "chinese",
+          "entries": [
+            {
+              "character": "电",
+              "pinyin": "dian"
+            },
+            {
+              "character": "音",
+              "pinyin": "yin"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,95 @@
+{
+  "name": "Mindset",
+  "nameZh": "心态",
+  "mixedWords": [
+    {
+      "segments": [
+        {
+          "type": "chinese",
+          "entries": [
+            {
+              "character": "破",
+              "pinyin": "po"
+            },
+            {
+              "character": "防",
+              "pinyin": "fang"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "segments": [
+        {
+          "type": "chinese",
+          "entries": [
+            {
+              "character": "麻",
+              "pinyin": "ma"
+            },
+            {
+              "character": "了",
+              "pinyin": "le"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "segments": [
+        {
+          "type": "chinese",
+          "entries": [
+            {
+              "character": "绷",
+              "pinyin": "beng"
+            },
+            {
+              "character": "不",
+              "pinyin": "bu"
+            },
+            {
+              "character": "住",
+              "pinyin": "zhu"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "segments": [
+        {
+          "type": "chinese",
+          "entries": [
+            {
+              "character": "裂",
+              "pinyin": "lie"
+            },
+            {
+              "character": "开",
+              "pinyin": "kai"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "segments": [
+        {
+          "type": "chinese",
+          "entries": [
+            {
+              "character": "自",
+              "pinyin": "zi"
+            },
+            {
+              "character": "闭",
+              "pinyin": "bi"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

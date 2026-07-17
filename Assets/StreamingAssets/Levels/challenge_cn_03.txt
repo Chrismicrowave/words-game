@@ -1,6 +1,6 @@
 {
-  "name": "First Steps",
-  "nameZh": "起步",
+  "name": "Food",
+  "nameZh": "美食",
   "mixedWords": [
     {
       "segments": [
@@ -8,12 +8,12 @@
           "type": "chinese",
           "entries": [
             {
-              "character": "你",
-              "pinyin": "ni"
+              "character": "烧",
+              "pinyin": "shao"
             },
             {
-              "character": "好",
-              "pinyin": "hao"
+              "character": "烤",
+              "pinyin": "kao"
             }
           ]
         }
@@ -25,16 +25,12 @@
           "type": "chinese",
           "entries": [
             {
-              "character": "香",
-              "pinyin": "xiang"
+              "character": "火",
+              "pinyin": "huo"
             },
             {
-              "character": "蕉",
-              "pinyin": "jiao"
-            },
-            {
-              "character": "猫",
-              "pinyin": "mao"
+              "character": "锅",
+              "pinyin": "guo"
             }
           ]
         }
@@ -46,12 +42,12 @@
           "type": "chinese",
           "entries": [
             {
-              "character": "刀",
-              "pinyin": "dao"
+              "character": "奶",
+              "pinyin": "nai"
             },
             {
-              "character": "盾",
-              "pinyin": "dun"
+              "character": "茶",
+              "pinyin": "cha"
             }
           ]
         }
@@ -63,20 +59,16 @@
           "type": "chinese",
           "entries": [
             {
-              "character": "赛",
-              "pinyin": "sai"
+              "character": "麻",
+              "pinyin": "ma"
             },
             {
-              "character": "博",
-              "pinyin": "bo"
+              "character": "辣",
+              "pinyin": "la"
             },
             {
-              "character": "躺",
+              "character": "烫",
               "pinyin": "tang"
-            },
-            {
-              "character": "平",
-              "pinyin": "ping"
             }
           ]
         }
@@ -88,16 +80,16 @@
           "type": "chinese",
           "entries": [
             {
-              "character": "地",
-              "pinyin": "di"
+              "character": "螺",
+              "pinyin": "luo"
             },
             {
-              "character": "狱",
-              "pinyin": "yu"
+              "character": "蛳",
+              "pinyin": "si"
             },
             {
-              "character": "梗",
-              "pinyin": "geng"
+              "character": "粉",
+              "pinyin": "fen"
             }
           ]
         }

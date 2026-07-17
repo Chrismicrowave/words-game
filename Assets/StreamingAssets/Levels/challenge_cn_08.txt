@@ -1,0 +1,91 @@
+{
+  "name": "Office",
+  "nameZh": "职场",
+  "mixedWords": [
+    {
+      "segments": [
+        {
+          "type": "chinese",
+          "entries": [
+            {
+              "character": "摸",
+              "pinyin": "mo"
+            },
+            {
+              "character": "鱼",
+              "pinyin": "yu"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "segments": [
+        {
+          "type": "chinese",
+          "entries": [
+            {
+              "character": "内",
+              "pinyin": "nei"
+            },
+            {
+              "character": "卷",
+              "pinyin": "juan"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "segments": [
+        {
+          "type": "chinese",
+          "entries": [
+            {
+              "character": "画",
+              "pinyin": "hua"
+            },
+            {
+              "character": "饼",
+              "pinyin": "bing"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "segments": [
+        {
+          "type": "chinese",
+          "entries": [
+            {
+              "character": "背",
+              "pinyin": "bei"
+            },
+            {
+              "character": "锅",
+              "pinyin": "guo"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "segments": [
+        {
+          "type": "chinese",
+          "entries": [
+            {
+              "character": "躺",
+              "pinyin": "tang"
+            },
+            {
+              "character": "平",
+              "pinyin": "ping"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

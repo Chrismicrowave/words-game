@@ -1,0 +1,91 @@
+{
+  "name": "Daily",
+  "nameZh": "日常",
+  "mixedWords": [
+    {
+      "segments": [
+        {
+          "type": "chinese",
+          "entries": [
+            {
+              "character": "通",
+              "pinyin": "tong"
+            },
+            {
+              "character": "勤",
+              "pinyin": "qin"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "segments": [
+        {
+          "type": "chinese",
+          "entries": [
+            {
+              "character": "午",
+              "pinyin": "wu"
+            },
+            {
+              "character": "睡",
+              "pinyin": "shui"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "segments": [
+        {
+          "type": "chinese",
+          "entries": [
+            {
+              "character": "打",
+              "pinyin": "da"
+            },
+            {
+              "character": "卡",
+              "pinyin": "ka"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "segments": [
+        {
+          "type": "chinese",
+          "entries": [
+            {
+              "character": "加",
+              "pinyin": "jia"
+            },
+            {
+              "character": "班",
+              "pinyin": "ban"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "segments": [
+        {
+          "type": "chinese",
+          "entries": [
+            {
+              "character": "放",
+              "pinyin": "fang"
+            },
+            {
+              "character": "空",
+              "pinyin": "kong"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,91 @@
+{
+  "name": "Fitness",
+  "nameZh": "健身",
+  "mixedWords": [
+    {
+      "segments": [
+        {
+          "type": "chinese",
+          "entries": [
+            {
+              "character": "撸",
+              "pinyin": "lu"
+            },
+            {
+              "character": "铁",
+              "pinyin": "tie"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "segments": [
+        {
+          "type": "chinese",
+          "entries": [
+            {
+              "character": "有",
+              "pinyin": "you"
+            },
+            {
+              "character": "氧",
+              "pinyin": "yang"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "segments": [
+        {
+          "type": "chinese",
+          "entries": [
+            {
+              "character": "深",
+              "pinyin": "shen"
+            },
+            {
+              "character": "蹲",
+              "pinyin": "dun"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "segments": [
+        {
+          "type": "chinese",
+          "entries": [
+            {
+              "character": "卧",
+              "pinyin": "wo"
+            },
+            {
+              "character": "推",
+              "pinyin": "tui"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "segments": [
+        {
+          "type": "chinese",
+          "entries": [
+            {
+              "character": "拉",
+              "pinyin": "la"
+            },
+            {
+              "character": "伸",
+              "pinyin": "shen"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

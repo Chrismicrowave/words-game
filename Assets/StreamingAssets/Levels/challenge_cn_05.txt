@@ -1,0 +1,91 @@
+{
+  "name": "Anime",
+  "nameZh": "二次元",
+  "mixedWords": [
+    {
+      "segments": [
+        {
+          "type": "chinese",
+          "entries": [
+            {
+              "character": "傲",
+              "pinyin": "ao"
+            },
+            {
+              "character": "娇",
+              "pinyin": "jiao"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "segments": [
+        {
+          "type": "chinese",
+          "entries": [
+            {
+              "character": "中",
+              "pinyin": "zhong"
+            },
+            {
+              "character": "二",
+              "pinyin": "er"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "segments": [
+        {
+          "type": "chinese",
+          "entries": [
+            {
+              "character": "病",
+              "pinyin": "bing"
+            },
+            {
+              "character": "娇",
+              "pinyin": "jiao"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "segments": [
+        {
+          "type": "chinese",
+          "entries": [
+            {
+              "character": "鬼",
+              "pinyin": "gui"
+            },
+            {
+              "character": "畜",
+              "pinyin": "chu"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "segments": [
+        {
+          "type": "chinese",
+          "entries": [
+            {
+              "character": "手",
+              "pinyin": "shou"
+            },
+            {
+              "character": "办",
+              "pinyin": "ban"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
