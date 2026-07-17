@@ -33635,7 +33635,7 @@ MonoBehaviour:
   maxRows: 3
   containerWidth: 1200
   spacingX: 20
-  spacingY: 0
+  spacingY: 30
   delayBetweenCells: 0.03
   transitionSpeed: 20
   landingSound: {fileID: 8300000, guid: 582bc5b5837a6674286b4ff36ad129d5, type: 3}
