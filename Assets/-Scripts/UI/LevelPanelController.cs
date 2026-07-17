@@ -22,6 +22,8 @@ public class LevelPanelController : MonoBehaviour
     public int maxCustomLists = 1;
     [Tooltip("Max number of words/phases per list in demo mode.")]
     public int maxWordsPerList = 3;
+    [Tooltip("Max challenge levels visible and unlockable in demo mode. 0 = no cap.")]
+    public int maxChallengeLevels = 5;
 
     [Header("Debug")]
     [SerializeField] private bool unlockAllChallenges;  // bypass all challenge level locks
@@ -139,6 +141,9 @@ public class LevelPanelController : MonoBehaviour
             LevelWordListProvider.GetChallengeDirectory());
         customProviders = LevelWordListProvider.ScanDirectory(
             LevelWordListProvider.GetCustomDirectory(), true);
+
+        // Set unlock cap for demo mode
+        ChallengeProgression.MaxUnlockableLevel = isDemo ? maxChallengeLevels : 0;
     }
 
     private void UpdateOkButtonState()
@@ -235,6 +240,10 @@ public class LevelPanelController : MonoBehaviour
                 providers = new List<LevelWordListProvider>();
                 break;
         }
+
+        // Cap challenge levels shown in demo mode
+        if (isDemo && currentTab == LevelTab.Challenges && maxChallengeLevels > 0 && providers.Count > maxChallengeLevels)
+            providers = providers.GetRange(0, maxChallengeLevels);
 
         if (providers.Count == 0)
         {

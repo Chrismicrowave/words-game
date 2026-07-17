@@ -68,7 +68,10 @@ public class LevelCompletePanelController : MonoBehaviour
         int currentIdx = FindChallengeIndex(Services.Get<PhaseManager>().ActiveProvider);
         int nextIdx = currentIdx + 1;
 
-        if (nextIdx < challenges.Count)
+        // Cap next level at demo max if set
+        int maxDemo = ChallengeProgression.MaxUnlockableLevel;
+
+        if (nextIdx < challenges.Count && (maxDemo <= 0 || nextIdx < maxDemo))
         {
             Services.Get<PhaseManager>().CurrentLevelMode = LevelMode.Challenge;
             Services.Get<PhaseManager>().LoadWordList(challenges[nextIdx]);

@@ -19,6 +19,9 @@ public static class ChallengeProgression
         }
     }
 
+    /// <summary>Max levels that can be unlocked (0 = no cap). Used in demo mode.</summary>
+    public static int MaxUnlockableLevel { get; set; } = 0;
+
     /// <summary>Check if a specific challenge index (0-based) is unlocked.</summary>
     public static bool IsUnlocked(int challengeIndex) =>
         challengeIndex < UnlockedCount;
@@ -26,10 +29,13 @@ public static class ChallengeProgression
     /// <summary>
     /// Unlock next challenge after completing the given one (0-based index).
     /// Completing challenge 0 unlocks challenge 1; replaying 0 doesn't re-unlock.
+    /// When MaxUnlockableLevel is set, caps the unlock at that level.
     /// </summary>
     public static void UnlockNext(int completedChallengeIndex)
     {
         int next = completedChallengeIndex + 2; // 0-based: complete 0 → unlock up to 1
+        if (MaxUnlockableLevel > 0)
+            next = Mathf.Min(next, MaxUnlockableLevel);
         if (next > UnlockedCount)
             UnlockedCount = next;
     }
