@@ -164,70 +164,49 @@ public class ChineseMatchedDisplay : MonoBehaviour
                 break;
         } while (cellScale > 0.3f);
 
-        // Cell dimensions that fit container exactly, font scale per row
-        float cellW = maxCols > 0 ? (containerWidth - (maxCols - 1) * spacingX) / maxCols : 1f;
-        float cellH = cellW;
+        // Keep prefab ratio, scale proportionally
         float t = Mathf.Clamp01((float)(rows - 1) / Mathf.Max(1, maxRows - 1));
-        float fontScale = Mathf.Lerp(1f, 0.5f, t);
+        float scale = Mathf.Lerp(1f, 0.5f, t);
 
-        // Grid cellSize = actual display size
+        // Grid uses prefab dimensions — cells scaled via localScale only
         var grid = cellContainer.GetComponent<UnityEngine.UI.GridLayoutGroup>();
         if (grid != null)
         {
-            grid.cellSize = new Vector2(cellW, cellH);
-            grid.spacing = new Vector2(spacingX, spacingY);
+            grid.cellSize = new Vector2(prefabW, prefabH);
+            grid.spacing = new Vector2(spacingX / scale, spacingY / scale);
             grid.constraintCount = maxCols;
         }
 
-        // Read prefab base font sizes, scale by row scale only, no auto-sizing
+        // Font sizes scale with row count only, no auto-sizing
         float pinBase = cells[0].LetterLabel != null ? cells[0].LetterLabel.fontSize : 18f;
         float chrBase = cells[0].CharLabel   != null ? cells[0].CharLabel.fontSize   : 32f;
-        float rowScale = fontScale;
-
-        float pinH = cellH * 0.475f;
-        float chrH = cellH * 0.475f;
 
         foreach (var cell in cells)
         {
-            var vlg = cell.GetComponent<UnityEngine.UI.VerticalLayoutGroup>();
-            if (vlg != null)
-                vlg.enabled = false;
+            cell.transform.localScale = new Vector3(scale, scale, 1f);
 
             if (cell.LetterLabel != null)
             {
-                var rt = cell.LetterLabel.GetComponent<RectTransform>();
-                rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0f);
-                rt.sizeDelta = new Vector2(cellW, pinH);
-                rt.anchoredPosition = new Vector2(0, chrH + cellH * 0.025f);
                 cell.LetterLabel.enableAutoSizing = false;
-                cell.LetterLabel.fontSize = pinBase * rowScale;
+                cell.LetterLabel.fontSize = pinBase * scale;
                 cell.LetterLabel.textWrappingMode = TMPro.TextWrappingModes.NoWrap;
-                cell.LetterLabel.overflowMode = TMPro.TextOverflowModes.Overflow;
             }
             if (cell.CharLabel != null)
             {
-                var rt = cell.CharLabel.GetComponent<RectTransform>();
-                rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0f);
-                rt.sizeDelta = new Vector2(cellW, chrH);
-                rt.anchoredPosition = new Vector2(0, 0);
                 cell.CharLabel.enableAutoSizing = false;
-                cell.CharLabel.fontSize = chrBase * rowScale;
+                cell.CharLabel.fontSize = chrBase * scale;
             }
         }
 
-        // English cells: 80% font of Chinese, same height
-        float engFont = (cells.Count > 0 ? chrBase * rowScale : cellH * 0.3f) * 0.8f;
+        // English cells: 80% font of Chinese, scaled like Chinese cells
+        float engFont = (cells.Count > 0 ? chrBase * scale : 10f) * 0.8f;
         foreach (Transform child in cellContainer)
         {
             var eng = child.GetComponent<EnglishCell>();
             if (eng == null || eng.Label == null) continue;
+            child.localScale = new Vector3(scale, scale, 1f);
             eng.Label.enableAutoSizing = false;
             eng.Label.fontSize = engFont;
-            eng.Label.ForceMeshUpdate();
-            float w = eng.Label.preferredWidth + 10f;
-            if (w > cellW) w = cellW;
-            var rt = eng.GetComponent<RectTransform>();
-            if (rt != null) rt.sizeDelta = new Vector2(w, cellH);
         }
 
         StartCoroutine(AnimateCellsIn());
@@ -239,6 +218,7 @@ public class ChineseMatchedDisplay : MonoBehaviour
         foreach (Transform child in cellContainer) allTransforms.Add(child);
         if (allTransforms.Count == 0) yield break;
 
+        Vector3 targetScale = allTransforms[0] != null ? allTransforms[0].localScale : Vector3.one;
         foreach (var t in allTransforms)
             t.localScale = Vector3.zero;
 
@@ -261,10 +241,10 @@ public class ChineseMatchedDisplay : MonoBehaviour
                 float c1 = 1.70158f;
                 float c3 = c1 + 1f;
                 float eased = 1f + c3 * Mathf.Pow(p - 1f, 3f) + c1 * Mathf.Pow(p - 1f, 2f);
-                t.localScale = Vector3.one * Mathf.Max(0f, eased);
+                t.localScale = targetScale * Mathf.Max(0f, eased);
                 yield return null;
             }
-            if (t != null) t.localScale = Vector3.one;
+            if (t != null) t.localScale = targetScale;
 
             if (t != null && landingSound != null && audioSrc != null)
             {
