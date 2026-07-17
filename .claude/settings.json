@@ -1,0 +1,8 @@
+{
+  "hooks": {
+    "preTool": {
+      "Edit": "powershell -ExecutionPolicy Bypass -File \"Tools/StopUnityPlayMode.ps1\"",
+      "Write": "powershell -ExecutionPolicy Bypass -File \"Tools/StopUnityPlayMode.ps1\""
+    }
+  }
+}
