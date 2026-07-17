@@ -115,34 +115,27 @@ public class ChineseTargetDisplay : MonoBehaviour
         float containerWidth = containerRt != null ? containerRt.rect.width : 1920f;
         float startX = (containerWidth - totalWidth) * 0.5f + prefabWidth * 0.5f;
 
+        // Store final positions and immediately set cells to offset positions
+        // (no flash frame — cells start at offset and animate in)
+        var finalPositions = new Vector2[cells.Count];
+        Vector2 offset = new Vector2(offsetStartPosition.x, offsetStartPosition.y);
         for (int i = 0; i < cells.Count; i++)
         {
             var rt = cells[i].GetComponent<RectTransform>();
             if (rt == null) continue;
-
-            rt.anchoredPosition = new Vector2(startX + i * step, 0f);
+            finalPositions[i] = new Vector2(startX + i * step, 0f);
+            rt.anchoredPosition = finalPositions[i] + offset;
         }
 
-        StartCoroutine(AnimateCellsIn());
+        StartCoroutine(AnimateCellsIn(finalPositions, offset));
     }
 
     /// <summary>
-    /// Animates each Chinese TargetCell flying in from an offset position,
+    /// Animates each Chinese TargetCell flying in from offset position,
     /// with fade-in and landing sound — matching CurText's letter animation.
     /// </summary>
-    private IEnumerator AnimateCellsIn()
+    private IEnumerator AnimateCellsIn(Vector2[] finalPositions, Vector2 offset)
     {
-        yield return null; // wait one frame for transforms to settle
-
-        // Store final positions; set start positions to offset
-        var finalPositions = new Vector2[cells.Count];
-        for (int i = 0; i < cells.Count; i++)
-        {
-            var rt = cells[i].GetComponent<RectTransform>();
-            finalPositions[i] = rt.anchoredPosition;
-            rt.anchoredPosition = finalPositions[i] + new Vector2(offsetStartPosition.x, offsetStartPosition.y);
-        }
-
         // Ensure we have an audio source
         var audioSrc = GetComponent<AudioSource>();
         if (audioSrc == null && landingSound != null)
@@ -161,8 +154,7 @@ public class ChineseTargetDisplay : MonoBehaviour
                 elapsed += Time.deltaTime * transitionSpeed;
                 float progress = Mathf.Clamp01(elapsed);
 
-                var startPos = finalPositions[i] + new Vector2(offsetStartPosition.x, offsetStartPosition.y);
-                rt.anchoredPosition = Vector2.Lerp(startPos, finalPositions[i], progress);
+                rt.anchoredPosition = Vector2.Lerp(finalPositions[i] + offset, finalPositions[i], progress);
 
                 // Fade in the cell contents (pinyin + char label alpha)
                 var canvasGroup = rt.GetComponent<UnityEngine.CanvasGroup>();
