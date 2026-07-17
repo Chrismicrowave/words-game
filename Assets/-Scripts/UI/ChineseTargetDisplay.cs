@@ -113,7 +113,7 @@ public class ChineseTargetDisplay : MonoBehaviour
             if (h > cellHeight) cellHeight = h;
         }
         if (maxCellWidth < 60f) maxCellWidth = 60f;
-        if (cellHeight < 60f) cellHeight = 150f;
+        if (cellHeight < 60f) cellHeight = 300f;
 
         // Calculate columns: fit maxCellWidth cells into 1200px container with 20px spacing
         float containerWidth = 1200f;
@@ -138,7 +138,7 @@ public class ChineseTargetDisplay : MonoBehaviour
         if (grid != null)
         {
             float scaleRatio = cellWidth / maxCellWidth;
-            float scaledHeight = cellHeight * scaleRatio;
+            float scaledHeight = cellHeight * scaleRatio * 0.5f;
             if (scaledHeight < 60f) scaledHeight = 60f;
             grid.cellSize = new Vector2(cellWidth, scaledHeight);
             grid.constraintCount = maxCols;
