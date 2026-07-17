@@ -94,48 +94,26 @@ public class ChineseTargetDisplay : MonoBehaviour
     }
 
     /// <summary>
-    /// Call after the GameObject is active. Reads cell positions from the layout,
-    /// then animates cells flying in from offset one by one with landing sound.
-    /// Layout is disabled during animation and stays disabled after.
+    /// Call after the GameObject is active. Layout handles cell positioning.
+    /// Animates cells popping in from scale 0 one by one with landing sound.
     /// </summary>
     public void PlayEntryAnimation()
     {
         if (cells.Count == 0 || !gameObject.activeInHierarchy) return;
-
-        // Force layout to calculate cell positions (layout is active, handles wrapping)
-        var containerRt = cellContainer.GetComponent<RectTransform>();
-        if (containerRt != null)
-            UnityEngine.UI.LayoutRebuilder.ForceRebuildLayoutImmediate(containerRt);
-
-        // Read final positions from layout, then disable it so we can animate freely
-        Vector2 offset = new Vector2(offsetStartPosition.x, offsetStartPosition.y);
-        var finalPositions = new Vector2[cells.Count];
-        for (int i = 0; i < cells.Count; i++)
-        {
-            var t = cells[i].transform;
-            finalPositions[i] = t.localPosition;
-        }
-
-        var layout = cellContainer.GetComponent<UnityEngine.UI.HorizontalLayoutGroup>();
-        if (layout != null) layout.enabled = false;
-
-        // Set cells to offset start positions
-        for (int i = 0; i < cells.Count; i++)
-        {
-            var t = cells[i].transform;
-            t.localPosition = finalPositions[i] + offset;
-        }
-
-        StartCoroutine(AnimateCellsIn(finalPositions, offset));
+        StartCoroutine(AnimateCellsIn());
     }
 
     /// <summary>
-    /// Animates each Chinese TargetCell flying in from offset position,
-    /// with fade-in and landing sound — matching CurText's letter animation.
+    /// Pops each cell in from scale 0 to 1 with easeOutBack, fade, and landing sound.
+    /// Layout stays on — positions are never touched.
     /// </summary>
-    private IEnumerator AnimateCellsIn(Vector2[] finalPositions, Vector2 offset)
+    private IEnumerator AnimateCellsIn()
     {
-        // Ensure we have an audio source
+        // Start all cells at scale 0
+        foreach (var cell in cells)
+            cell.transform.localScale = Vector3.zero;
+
+        // Audio source setup
         var audioSrc = GetComponent<AudioSource>();
         if (audioSrc == null && landingSound != null)
         {
@@ -143,37 +121,27 @@ public class ChineseTargetDisplay : MonoBehaviour
             audioSrc.playOnAwake = false;
         }
 
-        // Animate one by one (same as CurText: move + fade in + landing sound)
+        // Pop in one by one
         for (int i = 0; i < cells.Count; i++)
         {
             var t = cells[i].transform;
-            Vector3 targetPos = new Vector3(finalPositions[i].x, finalPositions[i].y, 0f);
-            Vector3 startPos = targetPos + new Vector3(offset.x, offset.y, 0f);
             float elapsed = 0f;
             while (elapsed < 1f)
             {
                 elapsed += Time.deltaTime * transitionSpeed;
-                float progress = Mathf.Clamp01(elapsed);
+                float p = Mathf.Clamp01(elapsed);
 
-                t.localPosition = Vector3.Lerp(startPos, targetPos, progress);
-
-                // Fade in the cell contents (pinyin + char label alpha)
-                var canvasGroup = t.GetComponent<UnityEngine.CanvasGroup>();
-                if (canvasGroup == null)
-                {
-                    canvasGroup = t.gameObject.AddComponent<UnityEngine.CanvasGroup>();
-                }
-                canvasGroup.alpha = progress;
+                // EaseOutBack: overshoot then settle (same feel as CurText's bounce)
+                float c1 = 1.70158f;
+                float c3 = c1 + 1f;
+                float eased = 1f + c3 * Mathf.Pow(p - 1f, 3f) + c1 * Mathf.Pow(p - 1f, 2f);
+                t.localScale = Vector3.one * Mathf.Max(0f, eased);
 
                 yield return null;
             }
-            t.localPosition = targetPos;
+            t.localScale = Vector3.one;
 
-            // Ensure fully opaque
-            var cg = t.GetComponent<UnityEngine.CanvasGroup>();
-            if (cg != null) cg.alpha = 1f;
-
-            // Landing sound (same pitch randomization as CurText)
+            // Landing sound
             if (landingSound != null && audioSrc != null)
             {
                 audioSrc.pitch = Random.Range(1f / landingSoundPitchRandomization, landingSoundPitchRandomization);
