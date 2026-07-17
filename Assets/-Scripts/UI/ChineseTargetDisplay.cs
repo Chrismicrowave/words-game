@@ -95,54 +95,30 @@ public class ChineseTargetDisplay : MonoBehaviour
 
     /// <summary>
     /// Call after the GameObject is active. Configures GridLayoutGroup cell size
-    /// based on actual content widths, then animates cells popping in.
+    /// based on row count (fixed 16 columns), then animates cells popping in.
+    /// 1 row = default prefab size, 2 rows = 75%, 3 rows = 50%.
     /// </summary>
     public void PlayEntryAnimation()
     {
         if (cells.Count == 0 || !gameObject.activeInHierarchy) return;
 
-        // Measure natural cell widths from char content, pick the widest
-        float maxCellWidth = 0f;
-        float cellHeight = 0f;
-        foreach (var cell in cells)
-        {
-            var rt = cell.GetComponent<RectTransform>();
-            float w = rt.rect.width;
-            float h = rt.rect.height;
-            if (w > maxCellWidth) maxCellWidth = w;
-            if (h > cellHeight) cellHeight = h;
-        }
-        if (maxCellWidth < 60f) maxCellWidth = 60f;
-        if (cellHeight < 60f) cellHeight = 300f;
-
-        // Calculate columns: fit maxCellWidth cells into 1200px container with 20px spacing
-        float containerWidth = 1200f;
-        float spacing = 20f;
-        int maxCols = Mathf.FloorToInt((containerWidth + spacing) / (maxCellWidth + spacing));
-        if (maxCols < 1) maxCols = 1;
-        if (maxCols > 12) maxCols = 12;
-
-        // If more than 4 rows, shrink cell width to fit
-        int rows = Mathf.CeilToInt((float)cells.Count / maxCols);
-        float cellWidth = maxCellWidth;
-        if (rows > 4)
-        {
-            int neededCols = Mathf.CeilToInt((float)cells.Count / 4f);
-            cellWidth = (containerWidth - (neededCols - 1) * spacing) / neededCols;
-            maxCols = neededCols;
-            if (maxCols > 12) maxCols = 12;
-        }
-
-        // Apply to GridLayoutGroup — scale height proportionally when width shrinks
         var grid = cellContainer.GetComponent<UnityEngine.UI.GridLayoutGroup>();
-        if (grid != null)
+        if (grid == null) return;
+
+        // Fixed 16 columns — matches GridLayoutGroup constraint in the scene
+        grid.constraintCount = 16;
+
+        // Base cell size from default prefab size, scale by row count
+        float baseSize = grid.cellSize.x; // 100f from prefab default
+        int rows = Mathf.CeilToInt((float)cells.Count / 16);
+        float scale = rows switch
         {
-            float scaleRatio = cellWidth / maxCellWidth;
-            float scaledHeight = cellHeight * scaleRatio * 0.5f;
-            if (scaledHeight < 60f) scaledHeight = 60f;
-            grid.cellSize = new Vector2(cellWidth, scaledHeight);
-            grid.constraintCount = maxCols;
-        }
+            1 => 1f,
+            2 => 0.75f,
+            _ => 0.5f // 3 rows (max 48 chars)
+        };
+
+        grid.cellSize = new Vector2(baseSize * scale, baseSize * scale);
 
         StartCoroutine(AnimateCellsIn());
     }
