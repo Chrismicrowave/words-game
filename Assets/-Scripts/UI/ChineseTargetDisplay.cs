@@ -111,7 +111,7 @@ public class ChineseTargetDisplay : MonoBehaviour
         float spacing = 20f;
         int maxCols = Mathf.FloorToInt((containerWidth + spacing) / (maxCellWidth + spacing));
         if (maxCols < 1) maxCols = 1;
-        if (maxCols > 12) maxCols = 12;
+        // maxCols is naturally bounded by container width
 
         // If more than 4 rows, shrink cell width to fit
         int rows = Mathf.CeilToInt((float)cells.Count / maxCols);
@@ -121,7 +121,7 @@ public class ChineseTargetDisplay : MonoBehaviour
             int neededCols = Mathf.CeilToInt((float)cells.Count / maxRows);
             cellWidth = (containerWidth - (neededCols - 1) * spacing) / neededCols;
             maxCols = neededCols;
-            if (maxCols > 12) maxCols = 12;
+            // maxCols is naturally bounded by container width
         }
 
         // Apply to GridLayoutGroup — scale height proportionally when width shrinks
