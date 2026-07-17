@@ -148,8 +148,8 @@ public class ChineseTargetDisplay : MonoBehaviour
             if (vlg != null)
                 vlg.enabled = false;
 
-            float pinH = cellH * 0.3f;
-            float chrH = cellH * 0.7f;
+            float pinH = cellH * 0.4f;
+            float chrH = cellH * 0.6f;
 
             if (cell.PinyinLabel != null)
             {
