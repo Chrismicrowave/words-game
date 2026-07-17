@@ -172,10 +172,29 @@ public class ChineseMatchedDisplay : MonoBehaviour
             grid.constraintCount = maxCols;
         }
 
-        // Uniform sizing — disable VLG, calculate uniform font that fits all pinyin
+        // Uniform sizing — disable VLG, one font size fits all pinyin in this phase
         float pinH = cellH * 0.4f;
         float chrH = cellH * 0.6f;
         float pinMaxW = cellW;
+        float pinMaxFont = pinH * 0.8f;
+
+        // Measure widest pinyin at max font, scale down uniformly if needed
+        float maxPrefW = 0f;
+        foreach (var cell in cells)
+        {
+            if (cell.LetterLabel != null && !string.IsNullOrEmpty(cell.FullPinyin))
+            {
+                string saved = cell.LetterLabel.text;
+                cell.LetterLabel.text = cell.FullPinyin;
+                cell.LetterLabel.enableAutoSizing = false;
+                cell.LetterLabel.fontSize = pinMaxFont;
+                cell.LetterLabel.ForceMeshUpdate();
+                float w = cell.LetterLabel.preferredWidth;
+                if (w > maxPrefW) maxPrefW = w;
+                cell.LetterLabel.text = saved;
+            }
+        }
+        float uniformFont = maxPrefW > pinMaxW ? pinMaxFont * pinMaxW / maxPrefW : pinMaxFont;
 
         foreach (var cell in cells)
         {
@@ -189,9 +208,10 @@ public class ChineseMatchedDisplay : MonoBehaviour
                 rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);
                 rt.sizeDelta = new Vector2(pinMaxW, pinH);
                 rt.anchoredPosition = new Vector2(0, cellH * 0.3f);
-                cell.LetterLabel.enableAutoSizing = true;
-                cell.LetterLabel.fontSizeMax = pinH * 0.8f;
+                cell.LetterLabel.enableAutoSizing = false;
+                cell.LetterLabel.fontSize = uniformFont;
                 cell.LetterLabel.textWrappingMode = TMPro.TextWrappingModes.NoWrap;
+                cell.LetterLabel.overflowMode = TMPro.TextOverflowModes.Overflow;
             }
             if (cell.CharLabel != null)
             {

@@ -141,10 +141,26 @@ public class ChineseTargetDisplay : MonoBehaviour
             grid.constraintCount = maxCols;
         }
 
-        // Uniform sizing — disable VLG, fixed layout, pinyin overflows if too long
+        // Uniform sizing — disable VLG, one font size fits all pinyin in this phase
         float pinH = cellH * 0.4f;
         float chrH = cellH * 0.6f;
         float pinMaxW = cellW;
+        float pinMaxFont = pinH * 0.8f;
+
+        // Measure widest pinyin at max font, scale down uniformly if needed
+        float maxPrefW = 0f;
+        foreach (var cell in cells)
+        {
+            if (cell.PinyinLabel != null)
+            {
+                cell.PinyinLabel.enableAutoSizing = false;
+                cell.PinyinLabel.fontSize = pinMaxFont;
+                cell.PinyinLabel.ForceMeshUpdate();
+                float w = cell.PinyinLabel.preferredWidth;
+                if (w > maxPrefW) maxPrefW = w;
+            }
+        }
+        float uniformFont = maxPrefW > pinMaxW ? pinMaxFont * pinMaxW / maxPrefW : pinMaxFont;
 
         foreach (var cell in cells)
         {
@@ -158,9 +174,10 @@ public class ChineseTargetDisplay : MonoBehaviour
                 rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);
                 rt.sizeDelta = new Vector2(pinMaxW, pinH);
                 rt.anchoredPosition = new Vector2(0, cellH * 0.3f);
-                cell.PinyinLabel.enableAutoSizing = true;
-                cell.PinyinLabel.fontSizeMax = pinH * 0.8f;
+                cell.PinyinLabel.enableAutoSizing = false;
+                cell.PinyinLabel.fontSize = uniformFont;
                 cell.PinyinLabel.textWrappingMode = TMPro.TextWrappingModes.NoWrap;
+                cell.PinyinLabel.overflowMode = TMPro.TextOverflowModes.Overflow;
             }
             if (cell.CharLabel != null)
             {
