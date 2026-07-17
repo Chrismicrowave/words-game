@@ -112,28 +112,28 @@ public class ChineseTargetDisplay : MonoBehaviour
         if (prefabH < 60f) prefabH = 200f;
 
         // Find the size scale that fits all cells within maxRows
-        // Start at 100%, shrink until rows <= maxRows
-        float scale = 1f;
+        // Find maxCols/rows that fit cells in container within maxRows
+        float cellScale = 1f;
         int maxCols, rows;
         do
         {
-            float scaledW = prefabW * scale;
+            float scaledW = prefabW * cellScale;
             maxCols = Mathf.FloorToInt((containerWidth + spacingX) / (scaledW + spacingX));
             if (maxCols < 1) maxCols = 1;
+            if (maxCols > Mathf.CeilToInt(48f / maxRows)) maxCols = Mathf.CeilToInt(48f / maxRows);
             rows = Mathf.CeilToInt((float)cells.Count / maxCols);
             if (maxRows > 0 && rows > maxRows)
-                scale *= 0.95f; // shrink slightly and retry
+                cellScale *= 0.95f;
             else
                 break;
-        } while (scale > 0.3f);
+        } while (cellScale > 0.3f);
 
-        // Width/height scale per row: 100% → 75% → 50%
+        // Cell dimensions that fit container exactly
+        float cellW = maxCols > 0 ? (containerWidth - (maxCols - 1) * spacingX) / maxCols : 1f;
+        float cellH = cellW; // square cells
+        // Font scale per row: 100% → 75% → 50% (for font sizing only)
         float t = Mathf.Clamp01((float)(rows - 1) / Mathf.Max(1, maxRows - 1));
-        scale = Mathf.Lerp(1f, 0.5f, t);
-
-        // Grid cellSize = actual display size
-        float cellW = prefabW * scale;
-        float cellH = prefabH * scale;
+        float fontScale = Mathf.Lerp(1f, 0.5f, t);
         var grid = cellContainer.GetComponent<UnityEngine.UI.GridLayoutGroup>();
         if (grid != null)
         {
@@ -145,7 +145,7 @@ public class ChineseTargetDisplay : MonoBehaviour
         // Read prefab base font sizes, scale by row scale only, no auto-sizing
         float pinBase = cells[0].PinyinLabel != null ? cells[0].PinyinLabel.fontSize : 34f;
         float chrBase = cells[0].CharLabel   != null ? cells[0].CharLabel.fontSize   : 56f;
-        float rowScale = scale; // 1.0, 0.75, or 0.5 from lerp above
+        float rowScale = fontScale;
 
         float pinH = cellH * 0.475f;
         float chrH = cellH * 0.475f;
