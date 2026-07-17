@@ -1,0 +1,65 @@
+{
+  "name": "First Steps",
+  "nameZh": "起步",
+  "mixedWords": [
+    {
+      "segments": [
+        {
+          "type": "chinese",
+          "entries": [
+            { "character": "你", "pinyin": "ni" },
+            { "character": "好", "pinyin": "hao" }
+          ]
+        }
+      ]
+    },
+    {
+      "segments": [
+        {
+          "type": "chinese",
+          "entries": [
+            { "character": "香", "pinyin": "xiang" },
+            { "character": "蕉", "pinyin": "jiao" },
+            { "character": "猫", "pinyin": "mao" }
+          ]
+        }
+      ]
+    },
+    {
+      "segments": [
+        {
+          "type": "chinese",
+          "entries": [
+            { "character": "刀", "pinyin": "dao" },
+            { "character": "盾", "pinyin": "dun" }
+          ]
+        }
+      ]
+    },
+    {
+      "segments": [
+        {
+          "type": "chinese",
+          "entries": [
+            { "character": "赛", "pinyin": "sai" },
+            { "character": "博", "pinyin": "bo" },
+            { "character": "躺", "pinyin": "tang" },
+            { "character": "平", "pinyin": "ping" }
+          ]
+        }
+      ]
+    },
+    {
+      "segments": [
+        {
+          "type": "chinese",
+          "entries": [
+            { "character": "地", "pinyin": "di" },
+            { "character": "狱", "pinyin": "yu" },
+            { "character": "梗", "pinyin": "geng" }
+          ]
+        }
+      ]
+    }
+  ]
+}
