@@ -30,6 +30,9 @@ public class ChineseMatchedDisplay : MonoBehaviour
     [Range(0.5f, 2f)] [SerializeField] private float landingSoundPitchRandomization = 1.1f;
 
     private readonly List<CharacterCell> cells = new List<CharacterCell>();
+    private Vector2 _prefabSize = Vector2.zero;
+    private float _cachedPinBase, _cachedChrBase;
+    private bool _prefabCached;
 
     // English segment tracking: label + the range of typeTarget indices it covers
     private struct EnglishSegmentLabel
@@ -141,11 +144,15 @@ public class ChineseMatchedDisplay : MonoBehaviour
         int totalCells = cellContainer.childCount;
         if (totalCells == 0 || !gameObject.activeInHierarchy) return;
 
-        // Prefab dimensions
-        float prefabW = cells[0].GetComponent<RectTransform>().rect.width;
-        float prefabH = cells[0].GetComponent<RectTransform>().rect.height;
-        if (prefabW < 30f) prefabW = 45f;
-        if (prefabH < 30f) prefabH = 60f;
+        // Cache prefab dimensions on first load
+        if (!_prefabCached)
+        {
+            var rt = cells[0].GetComponent<RectTransform>();
+            _prefabSize = new Vector2(rt.rect.width, rt.rect.height);
+            _prefabCached = true;
+        }
+        float prefabW = _prefabSize.x;
+        float prefabH = _prefabSize.y;
 
         // Find scale that fits cells within maxRows: 100% → 75% → 50%
         float scale = 1f;
@@ -173,9 +180,14 @@ public class ChineseMatchedDisplay : MonoBehaviour
             grid.constraintCount = maxCols;
         }
 
-        // Font sizes = prefab base × scale, children scale with cell
-        float pinBase = cells[0].LetterLabel != null ? cells[0].LetterLabel.fontSize : 18f;
-        float chrBase = cells[0].CharLabel   != null ? cells[0].CharLabel.fontSize   : 32f;
+        // Cache font bases on first load (prefab gets dirtied by grid/autosize)
+        if (!_prefabCached)
+        {
+            _cachedPinBase = cells[0].LetterLabel != null ? cells[0].LetterLabel.fontSize : 18f;
+            _cachedChrBase = cells[0].CharLabel   != null ? cells[0].CharLabel.fontSize   : 32f;
+        }
+        float pinBase = _cachedPinBase;
+        float chrBase = _cachedChrBase;
 
         foreach (var cell in cells)
         {
