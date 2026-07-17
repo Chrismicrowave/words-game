@@ -3,10 +3,14 @@ using UnityEngine;
 /// <summary>
 /// Tracks which challenge levels the player has unlocked and their star ratings.
 /// Progress is persisted in PlayerPrefs and survives restarts.
+/// Supports separate tracks via TrackPrefix (e.g. "cn_" for Chinese levels).
 /// </summary>
 public static class ChallengeProgression
 {
-    private const string PrefKey = "ChallengeUnlockedCount";
+    /// <summary>Track key prefix for separate progression sets ("" = English, "cn_" = Chinese).</summary>
+    public static string TrackPrefix { get; set; } = "";
+
+    private static string PrefKey => $"ChallengeUnlockedCount_{TrackPrefix}";
 
     /// <summary>How many challenges are currently unlocked (1-based count).</summary>
     public static int UnlockedCount
@@ -43,19 +47,27 @@ public static class ChallengeProgression
     /// <summary>Reset all progress back to level 1 only (unlock + stars + last level).</summary>
     public static void ResetAll()
     {
-        UnlockedCount = 1;
-        // Clear all star ratings (keys ChallengeStar_0 through ChallengeStar_N)
-        for (int i = 0; i < 100; i++)
-        {
-            string key = $"ChallengeStar_{i}";
-            if (PlayerPrefs.HasKey(key))
-                PlayerPrefs.DeleteKey(key);
-        }
+        // Reset both tracks
+        ResetTrack("");
+        ResetTrack("cn_");
+
         // Clear last selected level so game starts at level 1
         PlayerPrefs.DeleteKey("LevelPanel_LastPath");
         // Clear all time records (challenge + custom best times)
         ListTimeManager.ClearAll();
         PlayerPrefs.Save();
+    }
+
+    private static void ResetTrack(string prefix)
+    {
+        PlayerPrefs.SetInt($"ChallengeUnlockedCount_{prefix}", 1);
+        // Clear all star ratings
+        for (int i = 0; i < 100; i++)
+        {
+            string key = $"ChallengeStar_{prefix}{i}";
+            if (PlayerPrefs.HasKey(key))
+                PlayerPrefs.DeleteKey(key);
+        }
     }
 
     // ── Star rating ────────────────────────────────────────────────────────────
@@ -72,7 +84,7 @@ public static class ChallengeProgression
     /// <summary>Save star rating for a challenge by index (0-based).</summary>
     public static void SaveStarRating(int challengeIndex, int stars)
     {
-        string key = $"ChallengeStar_{challengeIndex}";
+        string key = $"ChallengeStar_{TrackPrefix}{challengeIndex}";
         int current = PlayerPrefs.GetInt(key, 0);
         if (stars > current) // only overwrite if better
         {
@@ -83,7 +95,7 @@ public static class ChallengeProgression
 
     /// <summary>Get saved star rating for a challenge (0-3, 0 = unrated).</summary>
     public static int GetStarRating(int challengeIndex) =>
-        PlayerPrefs.GetInt($"ChallengeStar_{challengeIndex}", 0);
+        PlayerPrefs.GetInt($"ChallengeStar_{TrackPrefix}{challengeIndex}", 0);
 
     /// <summary>Builds a star string with filled + empty stars, e.g. ★★☆ for 2/3.</summary>
     public static string GetStarDisplay(int stars)

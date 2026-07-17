@@ -83,6 +83,7 @@ public class LevelPanelController : MonoBehaviour
     private LevelWordListProvider selectedProvider;
 
     private List<LevelWordListProvider> challengeProviders = new List<LevelWordListProvider>();
+    private List<LevelWordListProvider> challengeCnProviders = new List<LevelWordListProvider>();
     private List<LevelWordListProvider> customProviders = new List<LevelWordListProvider>();
 
     private Image challengesTabImage;
@@ -137,13 +138,37 @@ public class LevelPanelController : MonoBehaviour
     private void RefreshAll()
     {
         LevelWordListProvider.SeedCustomDirectoryIfEmpty();
-        challengeProviders = LevelWordListProvider.ScanDirectory(
+        var allChallenges = LevelWordListProvider.ScanDirectory(
             LevelWordListProvider.GetChallengeDirectory());
+
+        // Separate English and Chinese challenge files by naming convention
+        challengeProviders = new List<LevelWordListProvider>();
+        challengeCnProviders = new List<LevelWordListProvider>();
+        foreach (var p in allChallenges)
+        {
+            string fileName = System.IO.Path.GetFileName(p.FilePath);
+            if (fileName.Contains("_cn"))
+                challengeCnProviders.Add(p);
+            else
+                challengeProviders.Add(p);
+        }
+
         customProviders = LevelWordListProvider.ScanDirectory(
             LevelWordListProvider.GetCustomDirectory(), true);
 
         // Set unlock cap for demo mode
         ChallengeProgression.MaxUnlockableLevel = isDemo ? maxChallengeLevels : 0;
+    }
+
+    /// <summary>Returns true when the current Unity locale is Chinese (zh-Hans).</summary>
+    private static bool IsChineseLocale()
+    {
+        try
+        {
+            var locale = UnityEngine.Localization.Settings.LocalizationSettings.SelectedLocale;
+            return locale != null && locale.Identifier.Code == "zh-Hans";
+        }
+        catch { return false; }
     }
 
     private void UpdateOkButtonState()
@@ -226,11 +251,14 @@ public class LevelPanelController : MonoBehaviour
             return;
         }
 
+        // Pick challenge set based on locale
+        bool isChinese = IsChineseLocale();
+        ChallengeProgression.TrackPrefix = (currentTab == LevelTab.Challenges && isChinese) ? "cn_" : "";
         List<LevelWordListProvider> providers;
         switch (currentTab)
         {
             case LevelTab.Challenges:
-                providers = challengeProviders;
+                providers = isChinese ? challengeCnProviders : challengeProviders;
                 break;
             case LevelTab.Custom:
                 providers = customProviders;
@@ -240,10 +268,6 @@ public class LevelPanelController : MonoBehaviour
                 providers = new List<LevelWordListProvider>();
                 break;
         }
-
-        // Cap challenge levels shown in demo mode
-        if (isDemo && currentTab == LevelTab.Challenges && maxChallengeLevels > 0 && providers.Count > maxChallengeLevels)
-            providers = providers.GetRange(0, maxChallengeLevels);
 
         if (providers.Count == 0)
         {

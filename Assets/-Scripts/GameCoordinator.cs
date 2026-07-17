@@ -1,4 +1,5 @@
 // Assets/-Scripts/GameCoordinator.cs
+using System.Collections.Generic;
 using UnityEngine;
 
 public class GameCoordinator : MonoBehaviour
@@ -32,6 +33,14 @@ public class GameCoordinator : MonoBehaviour
         leaderboardService = new NullLeaderboardService();
 
         uiController = FindAnyObjectByType<UIController>();
+
+        // Set challenge progression track based on current locale
+        try
+        {
+            var locale = UnityEngine.Localization.Settings.LocalizationSettings.SelectedLocale;
+            ChallengeProgression.TrackPrefix = (locale != null && locale.Identifier.Code == "zh-Hans") ? "cn_" : "";
+        }
+        catch { ChallengeProgression.TrackPrefix = ""; }
 
         // Restore last played list — challenge or custom
         string savedPath = PlayerPrefs.GetString("LevelPanel_LastPath", "");
@@ -218,13 +227,29 @@ public class GameCoordinator : MonoBehaviour
     {
         if (provider == null || !(provider is LevelWordListProvider lvlProvider)) return -1;
         var challengeDir = LevelWordListProvider.GetChallengeDirectory();
-        var challenges = LevelWordListProvider.ScanDirectory(challengeDir);
+        var allChallenges = LevelWordListProvider.ScanDirectory(challengeDir);
+        var challenges = FilterByLocale(allChallenges);
         for (int i = 0; i < challenges.Count; i++)
         {
             if (challenges[i].FilePath == lvlProvider.FilePath)
                 return i;
         }
         return -1;
+    }
+
+    /// <summary>Filter challenge list to match current locale track.</summary>
+    private static List<LevelWordListProvider> FilterByLocale(List<LevelWordListProvider> all)
+    {
+        bool isCn = ChallengeProgression.TrackPrefix == "cn_";
+        var result = new List<LevelWordListProvider>();
+        foreach (var p in all)
+        {
+            string fileName = System.IO.Path.GetFileName(p.FilePath);
+            bool hasCn = fileName.Contains("_cn");
+            if (isCn == hasCn)
+                result.Add(p);
+        }
+        return result;
     }
 
     private void HandleBackspace()

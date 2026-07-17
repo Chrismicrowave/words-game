@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 
@@ -64,8 +65,8 @@ public class LevelCompletePanelController : MonoBehaviour
         if (Services.Get<PhaseManager>() == null) return;
 
         var challengeDir = LevelWordListProvider.GetChallengeDirectory();
-        var challenges = LevelWordListProvider.ScanDirectory(challengeDir);
-        int currentIdx = FindChallengeIndex(Services.Get<PhaseManager>().ActiveProvider);
+        var challenges = GetLocaleFilteredChallenges(LevelWordListProvider.ScanDirectory(challengeDir));
+        int currentIdx = FindChallengeIndex(Services.Get<PhaseManager>().ActiveProvider, challenges);
         int nextIdx = currentIdx + 1;
 
         // Cap next level at demo max if set
@@ -85,11 +86,24 @@ public class LevelCompletePanelController : MonoBehaviour
         }
     }
 
-    private int FindChallengeIndex(IWordListProvider provider)
+    /// <summary>Filter challenge list to match current locale (English or Chinese track).</summary>
+    private static List<LevelWordListProvider> GetLocaleFilteredChallenges(List<LevelWordListProvider> all)
+    {
+        bool isCn = ChallengeProgression.TrackPrefix == "cn_";
+        var result = new List<LevelWordListProvider>();
+        foreach (var p in all)
+        {
+            string fileName = System.IO.Path.GetFileName(p.FilePath);
+            bool hasCn = fileName.Contains("_cn");
+            if (isCn == hasCn)
+                result.Add(p);
+        }
+        return result;
+    }
+
+    private int FindChallengeIndex(IWordListProvider provider, List<LevelWordListProvider> challenges)
     {
         if (provider == null || !(provider is LevelWordListProvider lvlProvider)) return -1;
-        var challengeDir = LevelWordListProvider.GetChallengeDirectory();
-        var challenges = LevelWordListProvider.ScanDirectory(challengeDir);
         for (int i = 0; i < challenges.Count; i++)
         {
             if (challenges[i].FilePath == lvlProvider.FilePath)
