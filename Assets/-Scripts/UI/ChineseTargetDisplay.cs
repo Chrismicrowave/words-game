@@ -94,32 +94,51 @@ public class ChineseTargetDisplay : MonoBehaviour
     }
 
     /// <summary>
-    /// Call after the GameObject is active. Layout handles cell positioning.
-    /// If total width exceeds container, scales down to fit.
-    /// Then animates cells popping in from scale 0 one by one.
+    /// Call after the GameObject is active. Configures GridLayoutGroup cell size
+    /// based on actual content widths, then animates cells popping in.
     /// </summary>
     public void PlayEntryAnimation()
     {
         if (cells.Count == 0 || !gameObject.activeInHierarchy) return;
 
-        // Force layout to calculate natural cell positions
-        var ctRt = cellContainer.GetComponent<RectTransform>();
-        if (ctRt != null)
-            UnityEngine.UI.LayoutRebuilder.ForceRebuildLayoutImmediate(ctRt);
-
-        // Measure total row width and scale down if it overflows the container
-        float lastRight = 0f;
+        // Measure natural cell widths from char content, pick the widest
+        float maxCellWidth = 0f;
+        float cellHeight = 0f;
         foreach (var cell in cells)
         {
-            float halfW = cell.GetComponent<RectTransform>().rect.width * 0.5f;
-            float right = cell.transform.localPosition.x + halfW;
-            if (right > lastRight) lastRight = right;
+            var rt = cell.GetComponent<RectTransform>();
+            float w = rt.rect.width;
+            float h = rt.rect.height;
+            if (w > maxCellWidth) maxCellWidth = w;
+            if (h > cellHeight) cellHeight = h;
         }
-        float visibleHalf = ctRt != null ? ctRt.rect.width * 0.5f : 600f;
-        if (lastRight > visibleHalf)
+        if (maxCellWidth < 60f) maxCellWidth = 60f;
+        if (cellHeight < 60f) cellHeight = 300f;
+
+        // Calculate columns: fit maxCellWidth cells into 1200px container with 20px spacing
+        float containerWidth = 1200f;
+        float spacing = 20f;
+        int maxCols = Mathf.FloorToInt((containerWidth + spacing) / (maxCellWidth + spacing));
+        if (maxCols < 1) maxCols = 1;
+        if (maxCols > 12) maxCols = 12;
+
+        // If more than 4 rows, shrink cell width to fit
+        int rows = Mathf.CeilToInt((float)cells.Count / maxCols);
+        float cellWidth = maxCellWidth;
+        if (rows > 4)
         {
-            float scale = visibleHalf / lastRight;
-            cellContainer.localScale = Vector3.one * scale;
+            int neededCols = Mathf.CeilToInt((float)cells.Count / 4f);
+            cellWidth = (containerWidth - (neededCols - 1) * spacing) / neededCols;
+            maxCols = neededCols;
+            if (maxCols > 12) maxCols = 12;
+        }
+
+        // Apply to GridLayoutGroup
+        var grid = cellContainer.GetComponent<UnityEngine.UI.GridLayoutGroup>();
+        if (grid != null)
+        {
+            grid.cellSize = new Vector2(cellWidth, cellHeight);
+            grid.constraintCount = maxCols;
         }
 
         StartCoroutine(AnimateCellsIn());
