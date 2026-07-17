@@ -133,6 +133,7 @@ public class ChineseTargetDisplay : MonoBehaviour
             float scaledHeight = cellHeight * Mathf.Lerp(1f, 0.5f, t);
             if (scaledHeight < 60f) scaledHeight = 60f;
             grid.cellSize = new Vector2(cellWidth, scaledHeight);
+            grid.spacing = new Vector2(spacing, spacing);
             grid.constraintCount = maxCols;
         }
 
