@@ -213,10 +213,13 @@ public class UIController : MonoBehaviour
 
         if (useCellDisplay)
         {
-            matchedTextUI.gameObject.SetActive(false);
             targetTextUI.gameObject.SetActive(false);
-            chineseDisplay.SetVisible(true);
+            // Show Chinese target characters + pinyin, hide cell-based matched display
+            chineseDisplay.SetTargetOnlyVisible(true);
             chineseDisplay.UpdateProgress(wordEngine.MatchedLength);
+            // Show pinyin building up in standard matched text (letter by letter, like English)
+            matchedTextUI.gameObject.SetActive(true);
+            matchedTextUI.text = wordEngine.GetDisplayText(showCursor);
         }
         else
         {

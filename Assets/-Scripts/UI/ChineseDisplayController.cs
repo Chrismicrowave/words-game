@@ -56,6 +56,13 @@ public class ChineseDisplayController : MonoBehaviour
         matchedDisplay?.UpdateProgress(matchedLength);
     }
 
+    /// <summary>Shows only the target display (characters + pinyin), hides the cell-based matched display.</summary>
+    public void SetTargetOnlyVisible(bool visible)
+    {
+        if (matchedDisplay != null) matchedDisplay.gameObject.SetActive(false);
+        if (targetDisplay != null) targetDisplay.gameObject.SetActive(visible);
+    }
+
     public void SetVisible(bool visible)
     {
         if (matchedDisplay != null) matchedDisplay.gameObject.SetActive(visible);
