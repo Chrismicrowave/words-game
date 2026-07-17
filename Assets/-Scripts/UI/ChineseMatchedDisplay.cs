@@ -188,9 +188,8 @@ public class ChineseMatchedDisplay : MonoBehaviour
                 rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);
                 rt.sizeDelta = new Vector2(cellW, pinH);
                 rt.anchoredPosition = new Vector2(0, cellH * 0.3f);
-                cell.LetterLabel.enableAutoSizing = false;
-                cell.LetterLabel.fontSize = pinH * 0.8f;
-                cell.LetterLabel.overflowMode = TMPro.TextOverflowModes.Overflow;
+                cell.LetterLabel.enableAutoSizing = true;
+                cell.LetterLabel.fontSizeMax = pinH * 0.8f;
                 cell.LetterLabel.textWrappingMode = TMPro.TextWrappingModes.NoWrap;
             }
             if (cell.CharLabel != null)

@@ -157,9 +157,8 @@ public class ChineseTargetDisplay : MonoBehaviour
                 rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);
                 rt.sizeDelta = new Vector2(cellW, pinH);
                 rt.anchoredPosition = new Vector2(0, cellH * 0.3f);
-                cell.PinyinLabel.enableAutoSizing = false;
-                cell.PinyinLabel.fontSize = pinH * 0.8f;
-                cell.PinyinLabel.overflowMode = TMPro.TextOverflowModes.Overflow;
+                cell.PinyinLabel.enableAutoSizing = true;
+                cell.PinyinLabel.fontSizeMax = pinH * 0.8f;
                 cell.PinyinLabel.textWrappingMode = TMPro.TextWrappingModes.NoWrap;
             }
             if (cell.CharLabel != null)
