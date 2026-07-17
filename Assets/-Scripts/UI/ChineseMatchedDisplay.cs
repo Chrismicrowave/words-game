@@ -196,9 +196,9 @@ public class ChineseMatchedDisplay : MonoBehaviour
             if (cell.LetterLabel != null)
             {
                 var rt = cell.LetterLabel.GetComponent<RectTransform>();
-                rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);
+                rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0f);
                 rt.sizeDelta = new Vector2(cellW, pinH);
-                rt.anchoredPosition = new Vector2(0, cellH * 0.2625f);
+                rt.anchoredPosition = new Vector2(0, chrH + cellH * 0.025f);
                 cell.LetterLabel.enableAutoSizing = false;
                 cell.LetterLabel.fontSize = pinBase * rowScale;
                 cell.LetterLabel.textWrappingMode = TMPro.TextWrappingModes.NoWrap;
@@ -207,9 +207,9 @@ public class ChineseMatchedDisplay : MonoBehaviour
             if (cell.CharLabel != null)
             {
                 var rt = cell.CharLabel.GetComponent<RectTransform>();
-                rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);
+                rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0f);
                 rt.sizeDelta = new Vector2(cellW, chrH);
-                rt.anchoredPosition = new Vector2(0, cellH * -0.2625f);
+                rt.anchoredPosition = new Vector2(0, 0);
                 cell.CharLabel.enableAutoSizing = false;
                 cell.CharLabel.fontSize = chrBase * rowScale;
             }
