@@ -156,7 +156,7 @@ public class ChineseTargetDisplay : MonoBehaviour
                 var rt = cell.PinyinLabel.GetComponent<RectTransform>();
                 rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);
                 rt.sizeDelta = new Vector2(cellW, pinH);
-                rt.anchoredPosition = new Vector2(0, cellH * 0.15f);
+                rt.anchoredPosition = new Vector2(0, cellH * 0.3f);
                 cell.PinyinLabel.enableAutoSizing = false;
                 cell.PinyinLabel.fontSize = pinH * 0.8f;
             }
@@ -165,7 +165,7 @@ public class ChineseTargetDisplay : MonoBehaviour
                 var rt = cell.CharLabel.GetComponent<RectTransform>();
                 rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);
                 rt.sizeDelta = new Vector2(cellW, chrH);
-                rt.anchoredPosition = new Vector2(0, -cellH * 0.15f);
+                rt.anchoredPosition = new Vector2(0, cellH * -0.25f);
                 cell.CharLabel.enableAutoSizing = false;
                 cell.CharLabel.fontSize = chrH * 0.8f;
             }
