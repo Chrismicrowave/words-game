@@ -94,31 +94,35 @@ public class ChineseTargetDisplay : MonoBehaviour
     }
 
     /// <summary>
-    /// Call after the GameObject is active. Positions cells manually (no layout),
-    /// then animates them flying in from offset with fade-in and landing sound.
+    /// Call after the GameObject is active. Reads cell positions from the layout,
+    /// then animates cells flying in from offset one by one with landing sound.
+    /// Layout is disabled during animation and stays disabled after.
     /// </summary>
     public void PlayEntryAnimation()
     {
         if (cells.Count == 0 || !gameObject.activeInHierarchy) return;
 
-        // Disable layout group — we position cells manually
-        var layout = cellContainer.GetComponent<UnityEngine.UI.HorizontalLayoutGroup>();
-        if (layout != null) layout.enabled = false;
+        // Force layout to calculate cell positions (layout is active, handles wrapping)
+        var containerRt = cellContainer.GetComponent<RectTransform>();
+        if (containerRt != null)
+            UnityEngine.UI.LayoutRebuilder.ForceRebuildLayoutImmediate(containerRt);
 
-        // Position cells centered at origin using localPosition
-        float prefabWidth = cells.Count > 0 ? cells[0].GetComponent<RectTransform>().rect.width : 200f;
-        float step = prefabWidth + cellSpacing;
-        float totalWidth = cells.Count * prefabWidth + (cells.Count - 1) * cellSpacing;
-        float startX = -totalWidth * 0.5f + prefabWidth * 0.5f;
-
-        // Store final positions and immediately set cells to offset positions
-        var finalPositions = new Vector2[cells.Count];
+        // Read final positions from layout, then disable it so we can animate freely
         Vector2 offset = new Vector2(offsetStartPosition.x, offsetStartPosition.y);
+        var finalPositions = new Vector2[cells.Count];
         for (int i = 0; i < cells.Count; i++)
         {
             var t = cells[i].transform;
-            if (t == null) continue;
-            finalPositions[i] = new Vector2(startX + i * step, 0f);
+            finalPositions[i] = t.localPosition;
+        }
+
+        var layout = cellContainer.GetComponent<UnityEngine.UI.HorizontalLayoutGroup>();
+        if (layout != null) layout.enabled = false;
+
+        // Set cells to offset start positions
+        for (int i = 0; i < cells.Count; i++)
+        {
+            var t = cells[i].transform;
             t.localPosition = finalPositions[i] + offset;
         }
 
