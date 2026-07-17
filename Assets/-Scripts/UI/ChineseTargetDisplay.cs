@@ -141,24 +141,43 @@ public class ChineseTargetDisplay : MonoBehaviour
             grid.constraintCount = maxCols;
         }
 
-        // Uniform sizing — disable VLG + auto-sizing, set fixed layout per cell
+        // Uniform sizing — disable VLG, calculate uniform font that fits all pinyin
+        float pinH = cellH * 0.4f;
+        float chrH = cellH * 0.6f;
+        float pinMaxW = cellW * 1.2f;
+        float pinMaxFont = pinH * 0.8f;
+
+        // Find the uniform font size that fits the longest pinyin in pinMaxW width
+        float uniformFont = pinMaxFont;
+        foreach (var cell in cells)
+        {
+            if (cell.PinyinLabel != null)
+            {
+                cell.PinyinLabel.fontSize = uniformFont;
+                cell.PinyinLabel.ForceMeshUpdate();
+                float prefW = cell.PinyinLabel.preferredWidth;
+                if (prefW > pinMaxW)
+                {
+                    float fitFont = uniformFont * pinMaxW / prefW;
+                    if (fitFont < uniformFont) uniformFont = fitFont;
+                }
+            }
+        }
+
         foreach (var cell in cells)
         {
             var vlg = cell.GetComponent<UnityEngine.UI.VerticalLayoutGroup>();
             if (vlg != null)
                 vlg.enabled = false;
 
-            float pinH = cellH * 0.4f;
-            float chrH = cellH * 0.6f;
-
             if (cell.PinyinLabel != null)
             {
                 var rt = cell.PinyinLabel.GetComponent<RectTransform>();
                 rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);
-                rt.sizeDelta = new Vector2(cellW, pinH);
+                rt.sizeDelta = new Vector2(pinMaxW, pinH);
                 rt.anchoredPosition = new Vector2(0, cellH * 0.3f);
-                cell.PinyinLabel.enableAutoSizing = true;
-                cell.PinyinLabel.fontSizeMax = pinH * 0.8f;
+                cell.PinyinLabel.enableAutoSizing = false;
+                cell.PinyinLabel.fontSize = uniformFont;
                 cell.PinyinLabel.textWrappingMode = TMPro.TextWrappingModes.NoWrap;
             }
             if (cell.CharLabel != null)
