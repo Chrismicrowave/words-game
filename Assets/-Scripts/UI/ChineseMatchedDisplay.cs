@@ -158,9 +158,8 @@ public class ChineseMatchedDisplay : MonoBehaviour
         var grid = cellContainer.GetComponent<UnityEngine.UI.GridLayoutGroup>();
         if (grid != null)
         {
-            float scaleRatio = cellWidth / maxCellWidth;
-            float scaledHeight = cellHeight * scaleRatio;
-            if (scaleRatio < 1f) scaledHeight *= (float)maxRows / rows;
+            float t = Mathf.Clamp01((float)(rows - 1) / Mathf.Max(1, maxRows - 1));
+            float scaledHeight = cellHeight * Mathf.Lerp(1f, 0.5f, t);
             if (scaledHeight < 30f) scaledHeight = 30f;
             grid.cellSize = new Vector2(cellWidth, scaledHeight);
             grid.constraintCount = maxCols;
