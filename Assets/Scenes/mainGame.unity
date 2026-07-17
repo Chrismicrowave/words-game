@@ -6526,6 +6526,11 @@ MonoBehaviour:
   englishCellPrefab: {fileID: 8127532070943617958, guid: c51e0c1828f4c3846869360da83f0dfc, type: 3}
   cellContainer: {fileID: 308885397}
   chineseFontAsset: {fileID: 11400000, guid: 428be41dc6b96d74cb9084b697519d27, type: 2}
+  transitionSpeed: 20
+  delayBetweenCells: 0.03
+  landingSound: {fileID: 8300000, guid: 582bc5b5837a6674286b4ff36ad129d5, type: 3}
+  landingSoundVolume: 0.4
+  landingSoundPitchRandomization: 1.1
 --- !u!224 &258928774
 RectTransform:
   m_ObjectHideFlags: 0

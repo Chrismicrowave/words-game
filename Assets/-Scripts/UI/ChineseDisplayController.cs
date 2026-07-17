@@ -29,6 +29,11 @@ public class ChineseDisplayController : MonoBehaviour
         if (!MixedPhaseParser.IsPurelyEnglish(parsed))
         {
             matchedDisplay?.BuildMixedCells(parsed);
+            if (matchedDisplay != null)
+            {
+                matchedDisplay.gameObject.SetActive(true);
+                matchedDisplay.PlayEntryAnimation();
+            }
             if (targetDisplay != null)
             {
                 targetDisplay.BuildMixedCells(parsed);

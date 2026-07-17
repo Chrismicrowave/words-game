@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
@@ -5,7 +6,8 @@ using TMPro;
 
 /// <summary>
 /// Displays the matched progress of a Chinese or Mixed phase.
-/// Chinese segments: each character gets a CharacterCell (snap-in on syllable complete).
+/// Chinese segments: each character gets a CharacterCell in a dynamic GridLayoutGroup,
+/// matching the multi-row grid layout of the target display.
 /// English segments: plain TMP label, letters revealed one-by-one.
 /// </summary>
 public class ChineseMatchedDisplay : MonoBehaviour
@@ -14,6 +16,13 @@ public class ChineseMatchedDisplay : MonoBehaviour
     [SerializeField] private GameObject englishCellPrefab;
     [SerializeField] private Transform cellContainer;
     [SerializeField] private TMPro.TMP_FontAsset chineseFontAsset; // NotoSansSC — for non-ASCII English segments
+
+    [Header("Entry Animation")]
+    [SerializeField] private float transitionSpeed = 20f;
+    [SerializeField] private float delayBetweenCells = 0.03f;
+    [SerializeField] private AudioClip landingSound;
+    [Range(0, 1)] [SerializeField] private float landingSoundVolume = 0.4f;
+    [Range(0.5f, 2f)] [SerializeField] private float landingSoundPitchRandomization = 1.1f;
 
     private readonly List<CharacterCell> cells = new List<CharacterCell>();
 
@@ -98,8 +107,6 @@ public class ChineseMatchedDisplay : MonoBehaviour
 
         foreach (var el in englishLabels)
         {
-            // typeStart/typeEnd are step-based (letter counts, spaces excluded).
-            // Reveal letters one-by-one while preserving spaces in the display string.
             int lettersTyped = Mathf.Clamp(typedLetterCount - el.typeStart, 0, el.typeEnd - el.typeStart);
             char[] chars = el.fullText.ToCharArray();
             int seen = 0;
@@ -110,14 +117,106 @@ public class ChineseMatchedDisplay : MonoBehaviour
                     if (seen >= lettersTyped) chars[i] = '_';
                     seen++;
                 }
-                // spaces / punctuation are left as-is
             }
             el.label.text = new string(chars);
         }
     }
 
+    // ── Grid sizing & entry animation (matches ChineseTargetDisplay) ──────────
+
+    /// <summary>
+    /// Call after the GameObject is active. Configures GridLayoutGroup dynamically
+    /// to match the target display's multi-row grid, then animates cells popping in.
+    /// </summary>
+    public void PlayEntryAnimation()
+    {
+        if (cells.Count == 0 || !gameObject.activeInHierarchy) return;
+
+        // Measure natural cell width from prefab
+        float maxCellWidth = 45f;
+        float cellHeight = 60f;
+        foreach (var cell in cells)
+        {
+            var rt = cell.GetComponent<RectTransform>();
+            float w = rt.rect.width;
+            float h = rt.rect.height;
+            if (w > maxCellWidth) maxCellWidth = w;
+            if (h > cellHeight) cellHeight = h;
+        }
+        if (maxCellWidth < 30f) maxCellWidth = 30f;
+        if (cellHeight < 30f) cellHeight = 60f;
+
+        float containerWidth = 1200f;
+        float spacing = 20f;
+        int maxCols = Mathf.FloorToInt((containerWidth + spacing) / (maxCellWidth + spacing));
+        if (maxCols < 1) maxCols = 1;
+        if (maxCols > 12) maxCols = 12;
+
+        int rows = Mathf.CeilToInt((float)cells.Count / maxCols);
+        float cellWidth = maxCellWidth;
+        if (rows > 4)
+        {
+            int neededCols = Mathf.CeilToInt((float)cells.Count / 4f);
+            cellWidth = (containerWidth - (neededCols - 1) * spacing) / neededCols;
+            maxCols = neededCols;
+            if (maxCols > 12) maxCols = 12;
+        }
+
+        var grid = cellContainer.GetComponent<UnityEngine.UI.GridLayoutGroup>();
+        if (grid != null)
+        {
+            float scaleRatio = cellWidth / maxCellWidth;
+            float scaledHeight = cellHeight * scaleRatio * 0.5f;
+            if (scaledHeight < 30f) scaledHeight = 30f;
+            grid.cellSize = new Vector2(cellWidth, scaledHeight);
+            grid.constraintCount = maxCols;
+        }
+
+        StartCoroutine(AnimateCellsIn());
+    }
+
+    private IEnumerator AnimateCellsIn()
+    {
+        foreach (var cell in cells)
+            cell.transform.localScale = Vector3.zero;
+
+        var audioSrc = GetComponent<AudioSource>();
+        if (audioSrc == null && landingSound != null)
+        {
+            audioSrc = gameObject.AddComponent<AudioSource>();
+            audioSrc.playOnAwake = false;
+        }
+
+        for (int i = 0; i < cells.Count; i++)
+        {
+            var t = cells[i].transform;
+            float elapsed = 0f;
+            while (elapsed < 1f)
+            {
+                elapsed += Time.deltaTime * transitionSpeed;
+                float p = Mathf.Clamp01(elapsed);
+                float c1 = 1.70158f;
+                float c3 = c1 + 1f;
+                float eased = 1f + c3 * Mathf.Pow(p - 1f, 3f) + c1 * Mathf.Pow(p - 1f, 2f);
+                t.localScale = Vector3.one * Mathf.Max(0f, eased);
+                yield return null;
+            }
+            t.localScale = Vector3.one;
+
+            if (landingSound != null && audioSrc != null)
+            {
+                audioSrc.pitch = Random.Range(1f / landingSoundPitchRandomization, landingSoundPitchRandomization);
+                audioSrc.PlayOneShot(landingSound, landingSoundVolume);
+            }
+
+            if (i < cells.Count - 1)
+                yield return new WaitForSeconds(delayBetweenCells);
+        }
+    }
+
     public void Clear()
     {
+        StopAllCoroutines();
         foreach (Transform child in cellContainer)
             Destroy(child.gameObject);
         cells.Clear();
