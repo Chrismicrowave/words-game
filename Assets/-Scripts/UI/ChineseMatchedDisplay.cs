@@ -18,7 +18,6 @@ public class ChineseMatchedDisplay : MonoBehaviour
     [SerializeField] private TMPro.TMP_FontAsset chineseFontAsset; // NotoSansSC — for non-ASCII English segments
 
     [Header("Grid & Entry Animation")]
-    [SerializeField] private int maxChars = 48;
     [SerializeField] private int maxRows = 4;
     [SerializeField] private float transitionSpeed = 20f;
     [SerializeField] private float delayBetweenCells = 0.03f;
@@ -43,8 +42,7 @@ public class ChineseMatchedDisplay : MonoBehaviour
     public void BuildCells(ChinesePhaseData data)
     {
         Clear();
-        int count = Mathf.Min(data.characters.Length, maxChars);
-        for (int i = 0; i < count; i++)
+        for (int i = 0; i < data.characters.Length; i++)
         {
             GameObject go = Instantiate(characterCellPrefab, cellContainer);
             var cell = go.GetComponent<CharacterCell>();
@@ -62,12 +60,11 @@ public class ChineseMatchedDisplay : MonoBehaviour
     public void BuildMixedCells(MixedPhaseParser.MixedPhaseResult parsed)
     {
         Clear();
-        int totalChars = 0;
         foreach (var seg in parsed.segments)
         {
             if (seg.type == MixedPhaseParser.SegmentType.Chinese)
             {
-                for (int i = 0; i < seg.characters.Length && totalChars < maxChars; i++)
+                for (int i = 0; i < seg.characters.Length; i++)
                 {
                     GameObject go = Instantiate(characterCellPrefab, cellContainer);
                     var cell = go.GetComponent<CharacterCell>();
@@ -76,7 +73,6 @@ public class ChineseMatchedDisplay : MonoBehaviour
                         int prevBoundary = i == 0 ? seg.typeStart : seg.boundaries[i - 1];
                         cell.Init(seg.characters[i], parsed.typeTarget, prevBoundary, seg.boundaries[i]);
                         cells.Add(cell);
-                        totalChars++;
                     }
                 }
             }
