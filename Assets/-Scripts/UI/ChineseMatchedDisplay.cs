@@ -164,27 +164,27 @@ public class ChineseMatchedDisplay : MonoBehaviour
                 break;
         } while (cellScale > 0.3f);
 
-        // Keep prefab ratio, scale proportionally
+        // Cell dimensions that fit container exactly
+        float cellW = maxCols > 0 ? (containerWidth - (maxCols - 1) * spacingX) / maxCols : 1f;
+        float cellH = cellW;
         float t = Mathf.Clamp01((float)(rows - 1) / Mathf.Max(1, maxRows - 1));
         float scale = Mathf.Lerp(1f, 0.5f, t);
 
-        // Grid uses prefab dimensions — cells scaled via localScale only
+        // Grid cellSize = actual display size
         var grid = cellContainer.GetComponent<UnityEngine.UI.GridLayoutGroup>();
         if (grid != null)
         {
-            grid.cellSize = new Vector2(prefabW, prefabH);
-            grid.spacing = new Vector2(spacingX / scale, spacingY / scale);
+            grid.cellSize = new Vector2(cellW, cellH);
+            grid.spacing = new Vector2(spacingX, spacingY);
             grid.constraintCount = maxCols;
         }
 
-        // Font sizes scale with row count only, no auto-sizing
+        // Font sizes scale with row count, no auto-sizing
         float pinBase = cells[0].LetterLabel != null ? cells[0].LetterLabel.fontSize : 18f;
         float chrBase = cells[0].CharLabel   != null ? cells[0].CharLabel.fontSize   : 32f;
 
         foreach (var cell in cells)
         {
-            cell.transform.localScale = new Vector3(scale, scale, 1f);
-
             if (cell.LetterLabel != null)
             {
                 cell.LetterLabel.enableAutoSizing = false;
@@ -198,13 +198,12 @@ public class ChineseMatchedDisplay : MonoBehaviour
             }
         }
 
-        // English cells: 80% font of Chinese, scaled like Chinese cells
+        // English cells: 80% font of Chinese
         float engFont = (cells.Count > 0 ? chrBase * scale : 10f) * 0.8f;
         foreach (Transform child in cellContainer)
         {
             var eng = child.GetComponent<EnglishCell>();
             if (eng == null || eng.Label == null) continue;
-            child.localScale = new Vector3(scale, scale, 1f);
             eng.Label.enableAutoSizing = false;
             eng.Label.fontSize = engFont;
         }
