@@ -17,11 +17,8 @@ public class ChineseTargetDisplay : MonoBehaviour
     [SerializeField] private bool showPinyin = true;
     [SerializeField] private TMPro.TMP_FontAsset chineseFontAsset; // NotoSansSC — for non-ASCII English segments
 
-    [Header("Cell Layout")]
-    [SerializeField] private float cellWidth = 65f;
-    [SerializeField] private float cellSpacing = 20f;
-
     [Header("Entry Animation")]
+    [SerializeField] private float cellSpacing = 20f;
     [SerializeField] private Vector3 offsetStartPosition = new Vector3(50f, 100f, 0f);
     [SerializeField] private float delayBetweenCells = 0.03f;
     [SerializeField] private float transitionSpeed = 20f;
