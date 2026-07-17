@@ -25,16 +25,16 @@
           "type": "chinese",
           "entries": [
             {
-              "character": "香",
-              "pinyin": "xiang"
+              "character": "双",
+              "pinyin": "shuang"
             },
             {
-              "character": "蕉",
-              "pinyin": "jiao"
+              "character": "双",
+              "pinyin": "shuang"
             },
             {
-              "character": "猫",
-              "pinyin": "mao"
+              "character": "窗",
+              "pinyin": "chuang"
             }
           ]
         }
