@@ -187,8 +187,8 @@ public class ChineseMatchedDisplay : MonoBehaviour
         {
             if (cell.LetterLabel != null)
             {
-                cell.LetterLabel.enableAutoSizing = false;
-                cell.LetterLabel.fontSize = pinBase * scale;
+                cell.LetterLabel.enableAutoSizing = true;
+                cell.LetterLabel.fontSizeMax = pinBase * scale;
                 cell.LetterLabel.textWrappingMode = TMPro.TextWrappingModes.NoWrap;
             }
             if (cell.CharLabel != null)
