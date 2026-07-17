@@ -108,18 +108,22 @@ public class ChineseTargetDisplay : MonoBehaviour
         var layout = cellContainer.GetComponent<UnityEngine.UI.HorizontalLayoutGroup>();
         if (layout != null) layout.enabled = false;
 
-        // Position cells side by side, centered in the container
-        float totalWidth = cells.Count * cellWidth + (cells.Count - 1) * cellSpacing;
-        float startX = -totalWidth * 0.5f + cellWidth * 0.5f;
+        // Use the actual prefab root width for cell spacing
+        float prefabWidth = cells.Count > 0 ? cells[0].GetComponent<RectTransform>().rect.width : 200f;
+        float step = prefabWidth + cellSpacing;
+
+        // Position cells side by side, centered in the container's width
+        float totalWidth = cells.Count * prefabWidth + (cells.Count - 1) * cellSpacing;
+        var containerRt = cellContainer.GetComponent<RectTransform>();
+        float containerWidth = containerRt != null ? containerRt.rect.width : 1920f;
+        float startX = (containerWidth - totalWidth) * 0.5f + prefabWidth * 0.5f;
 
         for (int i = 0; i < cells.Count; i++)
         {
             var rt = cells[i].GetComponent<RectTransform>();
             if (rt == null) continue;
 
-            rt.sizeDelta = new Vector2(cellWidth, rt.sizeDelta.y);
-            // Anchored from bottom-left (cell anchors are 0,0), pivot (0.5, 0.5)
-            rt.anchoredPosition = new Vector2(startX + i * (cellWidth + cellSpacing), 0f);
+            rt.anchoredPosition = new Vector2(startX + i * step, 0f);
         }
 
         StartCoroutine(AnimateCellsIn());
