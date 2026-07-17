@@ -221,6 +221,57 @@ public class WordEngine
         return display;
     }
 
+    /// <summary>
+    /// Character-by-character display for Chinese/mixed phases.
+    /// Completed syllables show the Chinese character; future ones show underscores.
+    /// For English falls back to TargetText.
+    /// </summary>
+    public string GetCharacterBuildDisplay()
+    {
+        if (IsChinesePhase && CurrentChineseData.boundaries != null)
+        {
+            var sb = new System.Text.StringBuilder();
+            for (int i = 0; i < CurrentChineseData.characters.Length; i++)
+            {
+                sb.Append(CurrentStep >= CurrentChineseData.boundaries[i]
+                    ? CurrentChineseData.characters[i] : '_');
+            }
+            return sb.ToString();
+        }
+
+        if (IsMixedPhase && CurrentMixedData.segments != null)
+        {
+            var sb = new System.Text.StringBuilder();
+            int stepIdx = 0;
+            foreach (var seg in CurrentMixedData.segments)
+            {
+                if (seg.type == MixedPhaseParser.SegmentType.Chinese)
+                {
+                    for (int i = 0; i < seg.characters.Length; i++)
+                    {
+                        stepIdx += seg.entries[i].pinyin.Length;
+                        sb.Append(CurrentStep >= stepIdx ? seg.characters[i] : '_');
+                    }
+                }
+                else // English
+                {
+                    foreach (char c in seg.text)
+                    {
+                        if (char.IsLetterOrDigit(c))
+                        {
+                            sb.Append(stepIdx < CurrentStep ? c : '_');
+                            stepIdx++;
+                        }
+                        else sb.Append(c);
+                    }
+                }
+            }
+            return sb.ToString();
+        }
+
+        return targetText;
+    }
+
     public string GetActionPrompt()
     {
         if (CurrentStep >= steps.Count)
