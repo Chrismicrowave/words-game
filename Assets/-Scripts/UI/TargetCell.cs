@@ -9,6 +9,8 @@ public class TargetCell : MonoBehaviour
 {
     [SerializeField] private TextMeshProUGUI pinyinLabel;   // small label above, e.g. "ni"
     [SerializeField] private TextMeshProUGUI charLabel;     // large label, e.g. "你"
+    public TextMeshProUGUI PinyinLabel => pinyinLabel;
+    public TextMeshProUGUI CharLabel => charLabel;
 
     public void Init(string chineseChar, string pinyin, bool pinyinVisible)
     {

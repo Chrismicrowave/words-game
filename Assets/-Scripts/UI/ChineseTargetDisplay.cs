@@ -130,13 +130,45 @@ public class ChineseTargetDisplay : MonoBehaviour
         float t = Mathf.Clamp01((float)(rows - 1) / Mathf.Max(1, maxRows - 1));
         scale = Mathf.Lerp(1f, 0.5f, t);
 
-        // Grid cellSize = actual display size, cells fit perfectly in container
+        // Grid cellSize = actual display size
+        float cellW = prefabW * scale;
+        float cellH = prefabH * scale;
         var grid = cellContainer.GetComponent<UnityEngine.UI.GridLayoutGroup>();
         if (grid != null)
         {
-            grid.cellSize = new Vector2(prefabW * scale, prefabH * scale);
+            grid.cellSize = new Vector2(cellW, cellH);
             grid.spacing = new Vector2(spacing, spacing);
             grid.constraintCount = maxCols;
+        }
+
+        // Uniform sizing — disable VLG + auto-sizing, set fixed layout per cell
+        foreach (var cell in cells)
+        {
+            var vlg = cell.GetComponent<UnityEngine.UI.VerticalLayoutGroup>();
+            if (vlg != null)
+                vlg.enabled = false;
+
+            float pinH = cellH * 0.3f;
+            float chrH = cellH * 0.7f;
+
+            if (cell.PinyinLabel != null)
+            {
+                var rt = cell.PinyinLabel.GetComponent<RectTransform>();
+                rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);
+                rt.sizeDelta = new Vector2(cellW, pinH);
+                rt.anchoredPosition = new Vector2(0, cellH * 0.15f);
+                cell.PinyinLabel.enableAutoSizing = false;
+                cell.PinyinLabel.fontSize = pinH * 0.8f;
+            }
+            if (cell.CharLabel != null)
+            {
+                var rt = cell.CharLabel.GetComponent<RectTransform>();
+                rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);
+                rt.sizeDelta = new Vector2(cellW, chrH);
+                rt.anchoredPosition = new Vector2(0, -cellH * 0.15f);
+                cell.CharLabel.enableAutoSizing = false;
+                cell.CharLabel.fontSize = chrH * 0.8f;
+            }
         }
 
         StartCoroutine(AnimateCellsIn());

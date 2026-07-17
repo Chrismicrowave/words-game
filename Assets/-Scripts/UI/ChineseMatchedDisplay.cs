@@ -161,13 +161,30 @@ public class ChineseMatchedDisplay : MonoBehaviour
         float t = Mathf.Clamp01((float)(rows - 1) / Mathf.Max(1, maxRows - 1));
         scale = Mathf.Lerp(1f, 0.5f, t);
 
-        // Grid cellSize = actual display size, cells fit perfectly in container
+        // Grid cellSize = actual display size
+        float cellW = prefabW * scale;
+        float cellH = prefabH * scale;
         var grid = cellContainer.GetComponent<UnityEngine.UI.GridLayoutGroup>();
         if (grid != null)
         {
-            grid.cellSize = new Vector2(prefabW * scale, prefabH * scale);
+            grid.cellSize = new Vector2(cellW, cellH);
             grid.spacing = new Vector2(spacing, spacing);
             grid.constraintCount = maxCols;
+        }
+
+        // Uniform sizing — disable auto-sizing so all cells look identical
+        foreach (var cell in cells)
+        {
+            if (cell.LetterLabel != null)
+            {
+                cell.LetterLabel.enableAutoSizing = false;
+                cell.LetterLabel.fontSize = cellH * 0.6f;
+            }
+            if (cell.CharLabel != null)
+            {
+                cell.CharLabel.enableAutoSizing = false;
+                cell.CharLabel.fontSize = cellH * 0.8f;
+            }
         }
 
         StartCoroutine(AnimateCellsIn());
