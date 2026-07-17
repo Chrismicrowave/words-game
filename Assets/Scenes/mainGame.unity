@@ -33655,6 +33655,8 @@ MonoBehaviour:
   cellContainer: {fileID: 78683134}
   showPinyin: 1
   chineseFontAsset: {fileID: 11400000, guid: 428be41dc6b96d74cb9084b697519d27, type: 2}
+  cellWidth: 65
+  cellSpacing: 20
   offsetStartPosition: {x: 50, y: 100, z: 0}
   delayBetweenCells: 0.03
   transitionSpeed: 20

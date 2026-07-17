@@ -17,6 +17,10 @@ public class ChineseTargetDisplay : MonoBehaviour
     [SerializeField] private bool showPinyin = true;
     [SerializeField] private TMPro.TMP_FontAsset chineseFontAsset; // NotoSansSC — for non-ASCII English segments
 
+    [Header("Cell Layout")]
+    [SerializeField] private float cellWidth = 65f;
+    [SerializeField] private float cellSpacing = 20f;
+
     [Header("Entry Animation")]
     [SerializeField] private Vector3 offsetStartPosition = new Vector3(50f, 100f, 0f);
     [SerializeField] private float delayBetweenCells = 0.03f;
@@ -86,31 +90,37 @@ public class ChineseTargetDisplay : MonoBehaviour
 
     /// <summary>
     /// Stores cell references for entry animation — called after building.
-    /// Layout stays enabled so positions can calculate properly.
-    /// PlayEntryAnimation() starts the fly-in coroutine once the GO is active.
+    /// PlayEntryAnimation() positions and animates cells once the GO is active.
     /// </summary>
     private void PrepareEntryAnimation()
     {
-        // Layout remains active so positions calculate — disabled later in coroutine
     }
 
     /// <summary>
-    /// Call after the GameObject is active. Animates each TargetCell flying in
-    /// from offset position with fade-in and landing sound, matching CurText.
-    /// Forces layout synchronously first so cell positions are correct.
+    /// Call after the GameObject is active. Positions cells manually (no layout),
+    /// then animates them flying in from offset with fade-in and landing sound.
     /// </summary>
     public void PlayEntryAnimation()
     {
         if (cells.Count == 0 || !gameObject.activeInHierarchy) return;
 
-        // Force layout calculation immediately (cells are now active and laid out)
-        var cellRt = cellContainer.GetComponent<RectTransform>();
-        if (cellRt != null)
-            UnityEngine.UI.LayoutRebuilder.ForceRebuildLayoutImmediate(cellRt);
-
-        // Disable layout so we can move cells freely without recalculation
+        // Disable layout group — we position cells manually
         var layout = cellContainer.GetComponent<UnityEngine.UI.HorizontalLayoutGroup>();
         if (layout != null) layout.enabled = false;
+
+        // Position cells side by side, centered in the container
+        float totalWidth = cells.Count * cellWidth + (cells.Count - 1) * cellSpacing;
+        float startX = -totalWidth * 0.5f + cellWidth * 0.5f;
+
+        for (int i = 0; i < cells.Count; i++)
+        {
+            var rt = cells[i].GetComponent<RectTransform>();
+            if (rt == null) continue;
+
+            rt.sizeDelta = new Vector2(cellWidth, rt.sizeDelta.y);
+            // Anchored from bottom-left (cell anchors are 0,0), pivot (0.5, 0.5)
+            rt.anchoredPosition = new Vector2(startX + i * (cellWidth + cellSpacing), 0f);
+        }
 
         StartCoroutine(AnimateCellsIn());
     }
@@ -121,15 +131,15 @@ public class ChineseTargetDisplay : MonoBehaviour
     /// </summary>
     private IEnumerator AnimateCellsIn()
     {
-        yield return null; // wait one frame for positions to settle
+        yield return null; // wait one frame for transforms to settle
 
         // Store final positions; set start positions to offset
-        var finalPositions = new Vector3[cells.Count];
+        var finalPositions = new Vector2[cells.Count];
         for (int i = 0; i < cells.Count; i++)
         {
-            var t = cells[i].transform;
-            finalPositions[i] = t.localPosition;
-            t.localPosition = finalPositions[i] + offsetStartPosition;
+            var rt = cells[i].GetComponent<RectTransform>();
+            finalPositions[i] = rt.anchoredPosition;
+            rt.anchoredPosition = finalPositions[i] + new Vector2(offsetStartPosition.x, offsetStartPosition.y);
         }
 
         // Ensure we have an audio source
@@ -143,30 +153,30 @@ public class ChineseTargetDisplay : MonoBehaviour
         // Animate one by one (same as CurText: move + fade in + landing sound)
         for (int i = 0; i < cells.Count; i++)
         {
-            var t = cells[i].transform;
+            var rt = cells[i].GetComponent<RectTransform>();
             float elapsed = 0f;
             while (elapsed < 1f)
             {
                 elapsed += Time.deltaTime * transitionSpeed;
                 float progress = Mathf.Clamp01(elapsed);
 
-                t.localPosition = Vector3.Lerp(finalPositions[i] + offsetStartPosition, finalPositions[i], progress);
+                var startPos = finalPositions[i] + new Vector2(offsetStartPosition.x, offsetStartPosition.y);
+                rt.anchoredPosition = Vector2.Lerp(startPos, finalPositions[i], progress);
 
                 // Fade in the cell contents (pinyin + char label alpha)
-                var canvasGroup = t.GetComponent<UnityEngine.CanvasGroup>();
+                var canvasGroup = rt.GetComponent<UnityEngine.CanvasGroup>();
                 if (canvasGroup == null)
                 {
-                    // Add one dynamically for fade control
-                    canvasGroup = t.gameObject.AddComponent<UnityEngine.CanvasGroup>();
+                    canvasGroup = rt.gameObject.AddComponent<UnityEngine.CanvasGroup>();
                 }
                 canvasGroup.alpha = progress;
 
                 yield return null;
             }
-            t.localPosition = finalPositions[i];
+            rt.anchoredPosition = finalPositions[i];
 
             // Ensure fully opaque
-            var cg = t.GetComponent<UnityEngine.CanvasGroup>();
+            var cg = rt.GetComponent<UnityEngine.CanvasGroup>();
             if (cg != null) cg.alpha = 1f;
 
             // Landing sound (same pitch randomization as CurText)
