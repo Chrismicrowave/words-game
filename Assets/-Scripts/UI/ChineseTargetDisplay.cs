@@ -94,9 +94,9 @@ public class ChineseTargetDisplay : MonoBehaviour
     }
 
     /// <summary>
-    /// Call after the GameObject is active. Configures GridLayoutGroup cell size
-    /// based on row count (fixed 16 columns), then animates cells popping in.
-    /// 1 row = default prefab size, 2 rows = 75%, 3 rows = 50%.
+    /// Call after the GameObject is active. Ensures 16-column grid, calculates
+    /// row count, then scales each cell's transform (1 row = 100%, 2 = 75%,
+    /// 3 = 50%) and animates them popping in.
     /// </summary>
     public void PlayEntryAnimation()
     {
@@ -108,8 +108,7 @@ public class ChineseTargetDisplay : MonoBehaviour
         // Fixed 16 columns — matches GridLayoutGroup constraint in the scene
         grid.constraintCount = 16;
 
-        // Base cell size from default prefab size, scale by row count
-        float baseSize = grid.cellSize.x; // 100f from prefab default
+        // Row-count based scale on the prefab transform (grid cellSize stays at 100x100)
         int rows = Mathf.CeilToInt((float)cells.Count / 16);
         float scale = rows switch
         {
@@ -118,16 +117,14 @@ public class ChineseTargetDisplay : MonoBehaviour
             _ => 0.5f // 3 rows (max 48 chars)
         };
 
-        grid.cellSize = new Vector2(baseSize * scale, baseSize * scale);
-
-        StartCoroutine(AnimateCellsIn());
+        StartCoroutine(AnimateCellsIn(scale));
     }
 
     /// <summary>
-    /// Pops each cell in from scale 0 to 1 with easeOutBack, fade, and landing sound.
-    /// Layout stays on — positions are never touched.
+    /// Pops each cell in from scale 0 to targetScale with easeOutBack, fade,
+    /// and landing sound. Layout stays on — positions are never touched.
     /// </summary>
-    private IEnumerator AnimateCellsIn()
+    private IEnumerator AnimateCellsIn(float targetScale)
     {
         // Start all cells at scale 0
         foreach (var cell in cells)
@@ -140,6 +137,8 @@ public class ChineseTargetDisplay : MonoBehaviour
             audioSrc = gameObject.AddComponent<AudioSource>();
             audioSrc.playOnAwake = false;
         }
+
+        Vector3 target = Vector3.one * targetScale;
 
         // Pop in one by one
         for (int i = 0; i < cells.Count; i++)
@@ -155,11 +154,11 @@ public class ChineseTargetDisplay : MonoBehaviour
                 float c1 = 1.70158f;
                 float c3 = c1 + 1f;
                 float eased = 1f + c3 * Mathf.Pow(p - 1f, 3f) + c1 * Mathf.Pow(p - 1f, 2f);
-                t.localScale = Vector3.one * Mathf.Max(0f, eased);
+                t.localScale = target * Mathf.Max(0f, eased);
 
                 yield return null;
             }
-            t.localScale = Vector3.one;
+            t.localScale = target;
 
             // Landing sound
             if (landingSound != null && audioSrc != null)
