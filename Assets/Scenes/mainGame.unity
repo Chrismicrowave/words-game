@@ -2341,13 +2341,13 @@ MonoBehaviour:
     m_Right: 0
     m_Top: 0
     m_Bottom: 0
-  m_CellSize: {x: 200, y: 300}
+  m_CellSize: {x: 82, y: 300}
   m_Spacing: {x: 20, y: 20}
   m_StartCorner: 0
   m_StartAxis: 0
   m_ChildAlignment: 4
-  m_Constraint: 0
-  m_ConstraintCount: 2
+  m_Constraint: 1
+  m_ConstraintCount: 12
 --- !u!114 &78683136
 MonoBehaviour:
   m_ObjectHideFlags: 0
