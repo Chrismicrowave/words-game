@@ -85,16 +85,13 @@ public class ChineseTargetDisplay : MonoBehaviour
     }
 
     /// <summary>
-    /// Disables layout and sets cells to their start offset — call after building.
-    /// Then PlayEntryAnimation() starts the fly-in coroutine once the GO is active.
+    /// Stores cell references for entry animation — called after building.
+    /// Layout stays enabled so positions can calculate properly.
+    /// PlayEntryAnimation() starts the fly-in coroutine once the GO is active.
     /// </summary>
     private void PrepareEntryAnimation()
     {
-        if (cells.Count == 0) return;
-
-        // Disable layout so we can move cells freely
-        var layout = cellContainer.GetComponent<UnityEngine.UI.HorizontalLayoutGroup>();
-        if (layout != null) layout.enabled = false;
+        // Layout remains active so positions calculate — disabled later in coroutine
     }
 
     /// <summary>
@@ -113,7 +110,14 @@ public class ChineseTargetDisplay : MonoBehaviour
     /// </summary>
     private IEnumerator AnimateCellsIn()
     {
-        yield return null; // wait one frame so layout positions are final
+        // Let layout calculate cell positions before disabling it
+        Canvas.ForceUpdateCanvases();
+
+        // Disable layout so we can move cells freely
+        var layout = cellContainer.GetComponent<UnityEngine.UI.HorizontalLayoutGroup>();
+        if (layout != null) layout.enabled = false;
+
+        yield return null; // wait a frame for positions to settle
 
         // Store final positions; set start positions to offset
         var finalPositions = new Vector3[cells.Count];
