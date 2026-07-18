@@ -235,7 +235,7 @@ public class LevelWordListProvider : IWordListProvider
 
     /// <summary>
     /// Seeds the custom directory with a starter list on first launch.
-    /// Copies DefaultCustom/starter.txt from StreamingAssets, assigns a new UUID.
+    /// Copies DefaultCustom/custom-list-01.txt from StreamingAssets, assigns a new UUID.
     /// </summary>
     public static void SeedCustomDirectoryIfEmpty()
     {
@@ -244,14 +244,14 @@ public class LevelWordListProvider : IWordListProvider
             return; // already has custom lists
 
         string srcDir = Path.Combine(Application.streamingAssetsPath, "DefaultCustom");
-        string srcPath = Path.Combine(srcDir, "starter.txt");
+        string srcPath = Path.Combine(srcDir, "custom-list-01.txt");
         if (!File.Exists(srcPath))
-            return; // no starter file shipped
+            return; // no default list file shipped
 
         if (!Directory.Exists(dir))
             Directory.CreateDirectory(dir);
 
-        string destPath = Path.Combine(dir, "starter.txt");
+        string destPath = Path.Combine(dir, "custom-list-01.txt");
         string content = File.ReadAllText(srcPath);
         string newUuid = Guid.NewGuid().ToString("N").Substring(0, 12);
         File.WriteAllText(destPath, "// u:" + newUuid + "\n" + content);
