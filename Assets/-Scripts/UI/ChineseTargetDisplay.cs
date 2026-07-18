@@ -189,7 +189,7 @@ public class ChineseTargetDisplay : MonoBehaviour
 
             float scs = cellSize * rowScale; // scaled cell size
             float rw = naturalRowWidth * rowScale; // scaled row width
-            rowMetrics.Add((rowScale, scs, scs * charRatio, scs * pinyinRatio, scs * englishFontRatio, rw));
+            rowMetrics.Add((rowScale, scs, scs * charRatio, scs * pinyinRatio, scs * charRatio * englishFontRatio, rw));
             totalContentHeight += scs + (r < rows.Count - 1 ? verticalSpacing : 0f);
         }
 
@@ -375,7 +375,7 @@ public class ChineseTargetDisplay : MonoBehaviour
     {
         float charSize = cellSize * charRatio;
         float pinyinSize = cellSize * pinyinRatio;
-        float enSize = cellSize * englishFontRatio;
+        float enSize = charSize * englishFontRatio;
 
         foreach (var item in items)
         {
