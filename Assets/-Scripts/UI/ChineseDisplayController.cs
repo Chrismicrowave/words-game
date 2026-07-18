@@ -18,9 +18,14 @@ public class ChineseDisplayController : MonoBehaviour
     public void RebuildForChinese(ChinesePhaseData data)
     {
         matchedDisplay?.BuildCells(data);
-        targetDisplay?.BuildCells(data);
-        if (Services.Get<SettingsManager>() != null)
-            targetDisplay?.SetPinyinVisible(Services.Get<SettingsManager>().ShowPinyin);
+        if (targetDisplay != null)
+        {
+            targetDisplay.BuildCells(data);
+            if (Services.Get<SettingsManager>() != null)
+                targetDisplay.SetPinyinVisible(Services.Get<SettingsManager>().ShowPinyin);
+            targetDisplay.gameObject.SetActive(true);
+            targetDisplay.PlayEntryAnimation();
+        }
         IsShowingCells = true;
     }
 
@@ -36,7 +41,6 @@ public class ChineseDisplayController : MonoBehaviour
                     targetDisplay.SetPinyinVisible(Services.Get<SettingsManager>().ShowPinyin);
                 targetDisplay.gameObject.SetActive(true);
                 targetDisplay.PlayEntryAnimation();
-                targetDisplay.SyncFontSizesNextFrame();
             }
             IsShowingCells = true;
         }

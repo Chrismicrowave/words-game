@@ -30,6 +30,7 @@ public class PhaseManager : SingletonBehaviour<PhaseManager>
     public void LoadWordList(IWordListProvider provider)
     {
         activeProvider = provider;
+        LanguageMode mode = provider.LanguageMode;
         words = provider.GetWords();
         chineseWords = provider.GetChineseWords() ?? new List<ChineseWordEntry>();
         mixedWords = provider.GetMixedWords() ?? new List<MixedWordEntry>();
@@ -37,13 +38,13 @@ public class PhaseManager : SingletonBehaviour<PhaseManager>
         ResetErrors(); // fresh session, clear failure count
 
         // For Chinese/Mixed lists, populate words from display strings so TotalPhases is correct
-        if (provider.LanguageMode == LanguageMode.Chinese && chineseWords.Count > 0)
+        if (mode == LanguageMode.Chinese && chineseWords.Count > 0)
         {
             words = new List<string>();
             foreach (var cw in chineseWords)
                 words.Add(cw.display);
         }
-        else if (provider.LanguageMode == LanguageMode.Mixed && mixedWords.Count > 0)
+        else if (mode == LanguageMode.Mixed && mixedWords.Count > 0)
         {
             words = new List<string>();
             foreach (var mw in mixedWords)
@@ -58,6 +59,42 @@ public class PhaseManager : SingletonBehaviour<PhaseManager>
                 }
                 words.Add(sb.ToString());
             }
+        }
+
+        // Filter out over-long words
+        if (mode == LanguageMode.English)
+        {
+            words = DisplayWidthUtil.FilterWords(words, LanguageMode.English);
+        }
+        else if (mode == LanguageMode.Mixed && mixedWords.Count > 0)
+        {
+            var filteredWords = new List<string>();
+            var filteredMixed = new List<MixedWordEntry>();
+            for (int i = 0; i < words.Count && i < mixedWords.Count; i++)
+            {
+                if (!DisplayWidthUtil.IsOverLimit(words[i], LanguageMode.Mixed))
+                {
+                    filteredWords.Add(words[i]);
+                    filteredMixed.Add(mixedWords[i]);
+                }
+            }
+            words = filteredWords;
+            mixedWords = filteredMixed;
+        }
+        else if (mode == LanguageMode.Chinese && chineseWords.Count > 0)
+        {
+            var filteredWords = new List<string>();
+            var filteredChinese = new List<ChineseWordEntry>();
+            for (int i = 0; i < words.Count && i < chineseWords.Count; i++)
+            {
+                if (!DisplayWidthUtil.IsOverLimit(words[i], LanguageMode.Chinese))
+                {
+                    filteredWords.Add(words[i]);
+                    filteredChinese.Add(chineseWords[i]);
+                }
+            }
+            words = filteredWords;
+            chineseWords = filteredChinese;
         }
 
         CurrentPhaseIndex = 0;

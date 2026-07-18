@@ -34,4 +34,22 @@ public class TargetCell : MonoBehaviour
     {
         if (pinyinLabel != null) pinyinLabel.gameObject.SetActive(visible);
     }
+
+    /// <summary>
+    /// Sets uniform font sizes on both labels, disabling auto-sizing.
+    /// Called during manual layout so all cells render identically.
+    /// </summary>
+    public void SetFixedFontSizes(float charSize, float pinyinSize)
+    {
+        if (charLabel != null)
+        {
+            charLabel.enableAutoSizing = false;
+            charLabel.fontSize = charSize;
+        }
+        if (pinyinLabel != null)
+        {
+            pinyinLabel.enableAutoSizing = false;
+            pinyinLabel.fontSize = pinyinSize;
+        }
+    }
 }

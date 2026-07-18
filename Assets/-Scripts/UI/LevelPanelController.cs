@@ -512,6 +512,9 @@ public class LevelPanelController : MonoBehaviour
 
         foreach (var word in words)
         {
+            if (DisplayWidthUtil.IsOverLimit(word, provider.LanguageMode))
+                continue;
+
             var labelObj = Instantiate(wordLabelPrefab, wordListContent);
             var tmp = labelObj.GetComponentInChildren<TextMeshProUGUI>();
             if (tmp != null)

@@ -15,4 +15,17 @@ public class EnglishCell : MonoBehaviour
     {
         if (label != null) label.text = $"<font=\"Oswald Bold SDF\">{text}</font>";
     }
+
+    /// <summary>
+    /// Sets a uniform font size, disabling auto-sizing.
+    /// Called during manual layout so all English cells render identically.
+    /// </summary>
+    public void SetFixedFontSize(float size)
+    {
+        if (label != null)
+        {
+            label.enableAutoSizing = false;
+            label.fontSize = size;
+        }
+    }
 }
