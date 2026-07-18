@@ -35,6 +35,8 @@ public class ChineseTargetDisplay : MonoBehaviour
 
     private readonly List<TargetCell> cells = new List<TargetCell>();
     private readonly List<EnglishCell> englishCells = new List<EnglishCell>();
+    // Ordered items used by layout — rebuilt during Build*Cells to avoid iterating stale destroyed children
+    private readonly List<LayoutItem> currentItems = new List<LayoutItem>();
 
     private void DisableGrid()
     {
@@ -54,6 +56,7 @@ public class ChineseTargetDisplay : MonoBehaviour
             {
                 cell.Init(data.characters[i], data.entries[i].pinyin, showPinyin);
                 cells.Add(cell);
+                currentItems.Add(new LayoutItem { rect = go.transform as RectTransform, target = cell, english = null });
             }
         }
     }
@@ -70,7 +73,8 @@ public class ChineseTargetDisplay : MonoBehaviour
         {
             if (seg.type == MixedPhaseParser.SegmentType.Chinese)
             {
-                for (int i = 0; i < seg.characters.Length; i++)
+                int n = seg.characters?.Length ?? 0;
+                for (int i = 0; i < n; i++)
                 {
                     GameObject go = Instantiate(targetCellPrefab, cellContainer);
                     var cell = go.GetComponent<TargetCell>();
@@ -78,6 +82,7 @@ public class ChineseTargetDisplay : MonoBehaviour
                     {
                         cell.Init(seg.characters[i], seg.entries[i].pinyin, showPinyin);
                         cells.Add(cell);
+                        currentItems.Add(new LayoutItem { rect = go.transform as RectTransform, target = cell, english = null });
                     }
                 }
             }
@@ -93,6 +98,7 @@ public class ChineseTargetDisplay : MonoBehaviour
                     if (chineseFontAsset != null && PinyinLookup.HasNonAscii(seg.text) && cell.Label != null)
                         cell.Label.font = chineseFontAsset;
                     englishCells.Add(cell);
+                    currentItems.Add(new LayoutItem { rect = go.transform as RectTransform, target = null, english = cell });
                 }
             }
         }
@@ -113,8 +119,8 @@ public class ChineseTargetDisplay : MonoBehaviour
         // Ensure canvas layout is up to date before measuring viewport
         UnityEngine.Canvas.ForceUpdateCanvases();
 
-        // Collect all items in order from container
-        var items = CollectLayoutItems();
+        // Use currentItems (built during Build*Cells, not container iteration)
+        var items = currentItems;
         if (items.Count == 0) return;
 
         // Disable GridLayoutGroup — manual layout
@@ -239,10 +245,11 @@ public class ChineseTargetDisplay : MonoBehaviour
     /// </summary>
     private IEnumerator AnimateCellsIn()
     {
-        // Collect all visible children in order
-        var children = new List<Transform>(cellContainer.childCount);
-        for (int i = 0; i < cellContainer.childCount; i++)
-            children.Add(cellContainer.GetChild(i));
+        // Use currentItems (populated during Build*Cells, guaranteed valid)
+        var children = new List<Transform>(currentItems.Count);
+        for (int i = 0; i < currentItems.Count; i++)
+            children.Add(currentItems[i].rect);
+        // Items guaranteed valid from currentItems
 
         // Start all at scale 0
         foreach (var child in children)
@@ -294,25 +301,6 @@ public class ChineseTargetDisplay : MonoBehaviour
             if (i < children.Count - 1)
                 yield return new WaitForSeconds(delayBetweenCells);
         }
-    }
-
-    /// <summary>Collects all TargetCell and EnglishCell children in container order.</summary>
-    private List<LayoutItem> CollectLayoutItems()
-    {
-        var items = new List<LayoutItem>(cellContainer.childCount);
-        foreach (Transform child in cellContainer)
-        {
-            var tc = child.GetComponent<TargetCell>();
-            if (tc != null)
-            {
-                items.Add(new LayoutItem { rect = child as RectTransform, target = tc, english = null });
-                continue;
-            }
-            var ec = child.GetComponent<EnglishCell>();
-            if (ec != null)
-                items.Add(new LayoutItem { rect = child as RectTransform, target = null, english = ec });
-        }
-        return items;
     }
 
     /// <summary>
@@ -440,9 +428,14 @@ public class ChineseTargetDisplay : MonoBehaviour
     {
         StopAllCoroutines();
         foreach (Transform child in cellContainer)
+        {
+            if (child == null) continue;
+            child.localScale = Vector3.zero;
             Destroy(child.gameObject);
+        }
         cells.Clear();
         englishCells.Clear();
+        currentItems.Clear();
     }
 
 }
