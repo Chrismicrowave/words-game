@@ -66,35 +66,49 @@ public class PhaseManager : SingletonBehaviour<PhaseManager>
         {
             words = DisplayWidthUtil.FilterWords(words, LanguageMode.English);
         }
-        else if (mode == LanguageMode.Mixed && mixedWords.Count > 0)
+        else if (mode == LanguageMode.Mixed)
         {
-            var filteredWords = new List<string>();
-            var filteredMixed = new List<MixedWordEntry>();
-            for (int i = 0; i < words.Count && i < mixedWords.Count; i++)
+            if (mixedWords.Count > 0)
             {
-                if (!DisplayWidthUtil.IsOverLimit(words[i], LanguageMode.Mixed))
+                var filteredWords = new List<string>();
+                var filteredMixed = new List<MixedWordEntry>();
+                for (int i = 0; i < words.Count && i < mixedWords.Count; i++)
                 {
-                    filteredWords.Add(words[i]);
-                    filteredMixed.Add(mixedWords[i]);
+                    if (!DisplayWidthUtil.IsOverLimit(words[i], LanguageMode.Mixed))
+                    {
+                        filteredWords.Add(words[i]);
+                        filteredMixed.Add(mixedWords[i]);
+                    }
                 }
+                words = filteredWords;
+                mixedWords = filteredMixed;
             }
-            words = filteredWords;
-            mixedWords = filteredMixed;
+            else
+            {
+                words = DisplayWidthUtil.FilterWords(words, LanguageMode.Mixed);
+            }
         }
-        else if (mode == LanguageMode.Chinese && chineseWords.Count > 0)
+        else if (mode == LanguageMode.Chinese)
         {
-            var filteredWords = new List<string>();
-            var filteredChinese = new List<ChineseWordEntry>();
-            for (int i = 0; i < words.Count && i < chineseWords.Count; i++)
+            if (chineseWords.Count > 0)
             {
-                if (!DisplayWidthUtil.IsOverLimit(words[i], LanguageMode.Chinese))
+                var filteredWords = new List<string>();
+                var filteredChinese = new List<ChineseWordEntry>();
+                for (int i = 0; i < words.Count && i < chineseWords.Count; i++)
                 {
-                    filteredWords.Add(words[i]);
-                    filteredChinese.Add(chineseWords[i]);
+                    if (!DisplayWidthUtil.IsOverLimit(words[i], LanguageMode.Chinese))
+                    {
+                        filteredWords.Add(words[i]);
+                        filteredChinese.Add(chineseWords[i]);
+                    }
                 }
+                words = filteredWords;
+                chineseWords = filteredChinese;
             }
-            words = filteredWords;
-            chineseWords = filteredChinese;
+            else
+            {
+                words = DisplayWidthUtil.FilterWords(words, LanguageMode.Chinese);
+            }
         }
 
         CurrentPhaseIndex = 0;
