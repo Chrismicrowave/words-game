@@ -125,16 +125,30 @@ UserSettings/
 # ─────────────────────────────────────────────────────────────
 
 # AI / CLI / MCP tooling (teammates get raw Unity project only)
-.claude/*
-!.claude/skills/
-!.claude/settings.json
-CLAUDE.md
-.mcp.json
+# Everything serving only an AI workflow stays local and out of git.
+**/.claude/
+**/.codex/
+**/.agents/
+**/.hermes/
+**/.opencode/
+**/.cursor/
+**/.aider/
+**/.gemini/
+**/.codeium/
+**/.windsurf/
+**/.codegraph/
+**/.playwright-mcp/
+**/.mcp.json
+**/AGENTS.md
+**/CLAUDE.md
+**/CODEX.md
+**/codex.md
+**/.cursorrules
+**/.cursorignore
+**/opencode.json
+**/cursor-agent/
+**/cursor-agent-*/
 Assets/Editor/AIMCP/AgentMirror/
 
 # ── UCC Gateway MCP ──────────────────────────────────────
 Library/AgentMirror/
-.codegraph/
-.claude/knowledge/ucc-pending/
-.claude/unity-mode-history.jsonl
-.claude/UCC-MCP-Update-Archive/

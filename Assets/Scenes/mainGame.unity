@@ -944,6 +944,7 @@ GameObject:
   - component: {fileID: 24522978}
   - component: {fileID: 24522980}
   - component: {fileID: 24522979}
+  - component: {fileID: 24522981}
   m_Layer: 0
   m_Name: Text (TMP)
   m_TagString: Untagged
@@ -1070,6 +1071,19 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 24522977}
   m_CullTransparentMesh: 1
+--- !u!114 &24522981
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 24522977}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fd84856d67206fc45a7bbca33bfb5584, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::StableId
+  _id: b5de2668d9ef4c96b0a3ac87b4839132
 --- !u!1 &27133367
 GameObject:
   m_ObjectHideFlags: 0
@@ -2297,7 +2311,6 @@ GameObject:
   m_Component:
   - component: {fileID: 78683134}
   - component: {fileID: 78683136}
-  - component: {fileID: 78683137}
   m_Layer: 0
   m_Name: Content
   m_TagString: Untagged
@@ -2337,30 +2350,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::StableId
   _id: 6e26f45b0ebd42d88f22b6ccde8a9148
---- !u!114 &78683137
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 78683133}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 8a8695521f0d02e499659fee002a26c2, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.GridLayoutGroup
-  m_Padding:
-    m_Left: 0
-    m_Right: 0
-    m_Top: 0
-    m_Bottom: 0
-  m_ChildAlignment: 4
-  m_StartCorner: 0
-  m_StartAxis: 0
-  m_CellSize: {x: 100, y: 100}
-  m_Spacing: {x: 20, y: 30}
-  m_Constraint: 1
-  m_ConstraintCount: 16
 --- !u!1 &91941636
 GameObject:
   m_ObjectHideFlags: 0
@@ -33632,6 +33621,11 @@ MonoBehaviour:
   landingSound: {fileID: 8300000, guid: 582bc5b5837a6674286b4ff36ad129d5, type: 3}
   landingSoundVolume: 0.4
   landingSoundPitchRandomization: 1.1
+  charRatio: 0.6
+  pinyinRatio: 0.3
+  englishFontRatio: 0.8
+  horizontalSpacing: 10
+  verticalSpacing: 15
 --- !u!224 &1504769737
 RectTransform:
   m_ObjectHideFlags: 0
@@ -45201,6 +45195,7 @@ GameObject:
   - component: {fileID: 1996982191}
   - component: {fileID: 1996982193}
   - component: {fileID: 1996982192}
+  - component: {fileID: 1996982194}
   m_Layer: 0
   m_Name: DemoCustomLimitPrompt
   m_TagString: Untagged
@@ -45266,6 +45261,19 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1996982190}
   m_CullTransparentMesh: 1
+--- !u!114 &1996982194
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1996982190}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fd84856d67206fc45a7bbca33bfb5584, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::StableId
+  _id: c7b740ee6b6c48feafa3f3325c320ae7
 --- !u!1001 &1997047616
 PrefabInstance:
   m_ObjectHideFlags: 0
