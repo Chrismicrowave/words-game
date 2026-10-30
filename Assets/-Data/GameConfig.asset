@@ -13,3 +13,4 @@ MonoBehaviour:
   m_Name: GameConfig
   m_EditorClassIdentifier: Core::GameConfig
   isDemo: 0
+  activeProfile: {fileID: 11400000, guid: b68cf1580f794c4b8db4a520cc8ec54c, type: 2}

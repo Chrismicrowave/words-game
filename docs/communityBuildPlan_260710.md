@@ -4,6 +4,8 @@
 **Status:** Post-launch (Steam initial launch first)
 **Trigger:** Design discussion about username, community word lists, leaderboards
 
+> **方向说明（2026-10-29）：** 本文保留 2026-07-10 的历史 Supabase 跨商店社区词表提案。当前优先适配 Steam Workshop，其他平台以后可独立实现社区并复用 UI；社区功能是否随游戏首次发售上线及排期仍待确认。本文原有“零在线首发”假设待重评，不作当前规划已决定事项。玩家流程和技术细节仍在讨论，见 [community-wordlists-wip.md](community-wordlists-wip.md)；此方向说明不自动替代本文的 leaderboard 提案。
+
 ---
 
 ## Guiding Decisions

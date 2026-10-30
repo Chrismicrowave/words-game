@@ -121,7 +121,6 @@ Keyboard typing game. Players hold/release letter keys to match words one phase 
 |---|---|---|
 | `ChallengeProgression` | ~50 | Static: PlayerPrefs unlock count + star ratings |
 | `OnGameStartManager` | ~20 | Inspector-driven GO active state setup |
-| `StableId` | ~5 | Stable ID component (MCP/UCC) |
 | `DeactiveOnStart` | ~5 | Disables GO in Start |
 | `SaveScreenshot` | ~30 | Save screenshot to PNG via file dialog |
 

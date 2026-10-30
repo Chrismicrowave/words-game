@@ -148,7 +148,4 @@ UserSettings/
 **/opencode.json
 **/cursor-agent/
 **/cursor-agent-*/
-Assets/Editor/AIMCP/AgentMirror/
-
-# ── UCC Gateway MCP ──────────────────────────────────────
-Library/AgentMirror/
+**/.claude/state/

@@ -52,7 +52,7 @@ Architecture details: `docs/architecture.md`
 - **Stop Play Mode before structural edits** — changes don't persist
 - **Script controls initial active state** — Awake()/Start(), not GO toggle
 - **Wire references via MCP** — never tell user to do it
-- **No name-based lookups** — use stableId or inspector references
+- **Use live Unity Pipeline tools** for scene hierarchy, object targets, assets, and Inspector values.
 - **RefHub for shared systems** — single source for cameras, UI, managers
-- **Use ucc-gateway for all scene/asset/code queries** — faster, no round-trips
+- **Use UCC Gateway** for codebase, reference, and knowledge queries; use live Unity Pipeline queries for Editor state and scene/asset data.
 [UCC-END]

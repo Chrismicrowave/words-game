@@ -151,7 +151,13 @@ public class SettingsManager : SingletonBehaviour<SettingsManager>
         PlayerPrefs.DeleteKey(KeyCRTFilter);
         PlayerPrefs.DeleteKey(KeyScreenShake);
         PlayerPrefs.DeleteKey(KeyPlayerName);
-        PlayerPrefs.Save();
+
+        BuildDefaultsApplier defaultsApplier = FindAnyObjectByType<BuildDefaultsApplier>();
+        if (defaultsApplier != null)
+            defaultsApplier.ApplyMissingDefaults();
+        else
+            PlayerPrefs.Save();
+
         Load();
         OnSettingsChanged?.Invoke();
     }

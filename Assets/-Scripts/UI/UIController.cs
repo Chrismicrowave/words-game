@@ -70,6 +70,7 @@ public class UIController : MonoBehaviour
     private const string InfoPanelPrefKey  = "InfoPanelOn";
 
     private WordEngine wordEngine;
+    private SettingsManager actionPromptSettings;
     private Coroutine deleteAnimCoroutine;
     private Color matchedTextOriginalColor;
     private Color phaseInputTextOriginalColor;
@@ -105,11 +106,23 @@ public class UIController : MonoBehaviour
         OnDisable();
         OnEnable();
 
+        actionPromptSettings = Services.Get<SettingsManager>();
+        if (actionPromptSettings != null)
+        {
+            actionPromptSettings.OnSettingsChanged -= HandleActionPromptSettingsChanged;
+            actionPromptSettings.OnSettingsChanged += HandleActionPromptSettingsChanged;
+            ApplyActionPromptSetting();
+        }
+        else
+        {
+            showActionPrompt = PlayerPrefs.GetInt(
+                SettingsManager.KeyActionPrompts, showActionPrompt ? 1 : 0) == 1;
+        }
+
         if (LevelPanelController.Instance != null)
         {
-            bool showImportExport = !LevelPanelController.Instance.isDemo;
-            if (importBtn != null) importBtn.gameObject.SetActive(showImportExport);
-            if (exportBtn != null) exportBtn.gameObject.SetActive(showImportExport);
+            if (importBtn != null) importBtn.gameObject.SetActive(LevelPanelController.Instance.ShouldShowImportButton);
+            if (exportBtn != null) exportBtn.gameObject.SetActive(LevelPanelController.Instance.ShouldShowExportButton);
         }
 
         // Restore Words panel state
@@ -139,6 +152,26 @@ public class UIController : MonoBehaviour
         _infoPanelOn = PlayerPrefs.GetInt(InfoPanelPrefKey, 1) == 1;
         if (instructionPanel != null)
             instructionPanel.SetActive(_infoPanelOn);
+    }
+
+    private void HandleActionPromptSettingsChanged()
+    {
+        ApplyActionPromptSetting();
+    }
+
+    private void ApplyActionPromptSetting()
+    {
+        if (actionPromptSettings == null) return;
+
+        showActionPrompt = actionPromptSettings.ShowActionPrompts;
+        if (wordEngine != null)
+            UpdateTextDisplay();
+    }
+
+    void OnDestroy()
+    {
+        if (actionPromptSettings != null)
+            actionPromptSettings.OnSettingsChanged -= HandleActionPromptSettingsChanged;
     }
 
     public void Initialize(WordEngine engine)
@@ -275,11 +308,19 @@ public class UIController : MonoBehaviour
 
     public void OnAddPhaseClicked()
     {
+        var phaseManager = Services.Get<PhaseManager>();
+        if (phaseManager == null) return;
+
         var lp = LevelPanelController.Instance;
-        if (lp != null && lp.isDemo
-            && Services.Get<PhaseManager>().TotalPhases >= lp.maxWordsPerList)
+        if (lp != null && !lp.CanAddWords)
         {
-            ShowDemoLimitPrompt($"Max {lp.maxWordsPerList} words per list in demo");
+            Debug.LogWarning("[UIController] Adding words is disabled by the active profile.");
+            return;
+        }
+
+        if (lp != null && lp.IsWordLimitReached(phaseManager.TotalPhases))
+        {
+            ShowDemoLimitPrompt($"Max {lp.EffectiveMaxWordsPerList} words per list in demo");
             return;
         }
 
@@ -289,21 +330,31 @@ public class UIController : MonoBehaviour
         if (text.Length > MaxWordLength)
             text = text.Substring(0, MaxWordLength);
 
+        if (!phaseManager.AllowChineseAndMixed && PhaseManager.ContainsHanCharacters(text))
+        {
+            Debug.LogWarning("[UIController] Chinese content is disabled; the word was not added.");
+            return;
+        }
+
         if (PinyinLookup.ContainsChinese(text))
         {
             // Open pinyin confirmation popup for any text containing Chinese characters
             chineseDisplay?.ShowPinyinPopup(text, entry =>
             {
-                Services.Get<PhaseManager>().AddMixedPhase(entry);
-                Services.Get<PhaseManager>().SaveCurrentList();
+                if (!phaseManager.AddMixedPhase(entry)) return;
+                phaseManager.SaveCurrentList();
                 phaseInputField.text = "";
                 if (EventSystem.current != null) EventSystem.current.SetSelectedGameObject(null);
             }, () => { /* cancelled — leave input as-is */ });
         }
         else
         {
-            Services.Get<PhaseManager>().AddPhase(text, 0);
-            Services.Get<PhaseManager>().SaveCurrentList();
+            if (!phaseManager.AddPhase(text, 0))
+            {
+                Debug.LogWarning("[UIController] The word list does not allow this entry; the word was not added.");
+                return;
+            }
+            phaseManager.SaveCurrentList();
             phaseInputField.text = "";
             if (EventSystem.current != null) EventSystem.current.SetSelectedGameObject(null);
         }
@@ -328,6 +379,11 @@ public class UIController : MonoBehaviour
 
     public void OnDeletePhaseClicked()
     {
+        if (LevelPanelController.Instance != null && !LevelPanelController.Instance.CanEditLists)
+        {
+            Debug.LogWarning("[UIController] Editing word lists is disabled by the active profile.");
+            return;
+        }
         if (phaseListUIManager == null || phaseListUIManager.SelectedPhaseIndex < 0) return;
         Services.Get<PhaseManager>().RemovePhase(phaseListUIManager.SelectedPhaseIndex);
         Services.Get<PhaseManager>().SaveCurrentList();
@@ -344,6 +400,11 @@ public class UIController : MonoBehaviour
 
     public void OnMovePhaseUpClicked()
     {
+        if (LevelPanelController.Instance != null && !LevelPanelController.Instance.CanEditLists)
+        {
+            Debug.LogWarning("[UIController] Editing word lists is disabled by the active profile.");
+            return;
+        }
         if (phaseListUIManager == null || phaseListUIManager.SelectedPhaseIndex <= 0) return;
         int idx = phaseListUIManager.SelectedPhaseIndex;
         Services.Get<PhaseManager>().MovePhase(idx, idx - 1);
@@ -354,6 +415,11 @@ public class UIController : MonoBehaviour
 
     public void OnMovePhaseDownClicked()
     {
+        if (LevelPanelController.Instance != null && !LevelPanelController.Instance.CanEditLists)
+        {
+            Debug.LogWarning("[UIController] Editing word lists is disabled by the active profile.");
+            return;
+        }
         if (phaseListUIManager == null || phaseListUIManager.SelectedPhaseIndex < 0
             || phaseListUIManager.SelectedPhaseIndex >= Services.Get<PhaseManager>().TotalPhases - 1) return;
         int idx = phaseListUIManager.SelectedPhaseIndex;
@@ -414,19 +480,49 @@ public class UIController : MonoBehaviour
         StandaloneFileBrowser.OpenFilePanelAsync("Import Word List", "", ext, false, paths =>
         {
             if (paths.Length == 0 || string.IsNullOrEmpty(paths[0])) return;
-            var provider = TxtWordListImporter.ImportFromTxt(paths[0]);
+
+            var phaseManager = Services.Get<PhaseManager>();
+            if (phaseManager == null) return;
+            if (LevelPanelController.Instance != null && !LevelPanelController.Instance.CanImportLists)
+            {
+                Debug.LogWarning("[UIController] Importing custom lists is disabled by the active profile.");
+                return;
+            }
+            if (!phaseManager.AllowChineseAndMixed &&
+                !phaseManager.CanLoadWordList(new LevelWordListProvider(paths[0])))
+            {
+                Debug.LogWarning("[UIController] Chinese content is disabled; the imported list was not written or activated.");
+                return;
+            }
+
+            var provider = TxtWordListImporter.ImportFromTxt(paths[0], phaseManager.CanLoadWordList);
+            if (provider == null)
+            {
+                Debug.LogWarning("[UIController] Import rejected; no files were written.");
+                return;
+            }
+            if (!phaseManager.LoadWordList(provider))
+            {
+                Debug.LogWarning("[UIController] The imported list could not be activated.");
+                return;
+            }
+
             // Update tab manager state: set provider + persist path + mark active tab as mylist.
             // Call these directly rather than through OnMyListTabClicked — the StandaloneFileBrowser
             // async callback is not guaranteed to be on Unity's main thread on all platforms, so
             // we keep the Unity API surface minimal and explicit.
             wordListTabManager?.SetMyListProvider(provider);
             wordListTabManager?.SaveMyListPath(provider.FilePath);
-            Services.Get<PhaseManager>().LoadWordList(provider);
         });
     }
 
     public void OnExportClicked()
     {
+        if (LevelPanelController.Instance != null && !LevelPanelController.Instance.CanExportLists)
+        {
+            Debug.LogWarning("[UIController] Exporting custom lists is disabled by the active profile.");
+            return;
+        }
         var provider = Services.Get<PhaseManager>().ActiveProvider;
         string defaultName = (provider?.DisplayName ?? "wordlist").Replace(" ", "_");
         // Snapshot the display words from PhaseManager — provider.GetWords() may be empty for

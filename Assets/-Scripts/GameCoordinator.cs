@@ -24,6 +24,15 @@ public class GameCoordinator : MonoBehaviour
     private WordEngine wordEngine;
     private ILeaderboardService leaderboardService;
     private UIController uiController;
+    private WordAchievementProgress wordAchievementProgress;
+    private IWordAchievementPlatform wordAchievementPlatform;
+    private bool wordAchievementProfileReady;
+    private bool wordAchievementStorageWarningLogged;
+    private bool wordAchievementStatsCallbackSubscribed;
+    private string boundWordAchievementUserId;
+    private float nextWordAchievementProfileRetryTime;
+    private float nextWordAchievementInitRetryTime;
+    private float nextWordAchievementPersistenceRetryTime;
 
     void Start()
     {
@@ -33,14 +42,45 @@ public class GameCoordinator : MonoBehaviour
         leaderboardService = new NullLeaderboardService();
 
         uiController = FindAnyObjectByType<UIController>();
+        var phaseManager = Services.Get<PhaseManager>();
+        if (phaseManager == null)
+        {
+            Debug.LogError("[GameCoordinator] PhaseManager is unavailable; gameplay was not started.");
+            return;
+        }
 
-        // Set challenge progression track based on current locale
         try
         {
-            var locale = UnityEngine.Localization.Settings.LocalizationSettings.SelectedLocale;
-            ChallengeProgression.TrackPrefix = (locale != null && locale.Identifier.Code == "zh-Hans") ? "cn_" : "";
+            wordAchievementPlatform = WordAchievementPlatformRegistry.CreateOrLocalOnly();
+            if (wordAchievementPlatform == null)
+                wordAchievementPlatform = WordAchievementPlatformRegistry.CreateLocalOnly();
         }
-        catch { ChallengeProgression.TrackPrefix = ""; }
+        catch (System.Exception exception)
+        {
+            wordAchievementPlatform = WordAchievementPlatformRegistry.CreateLocalOnly();
+            LogWordAchievementStorageWarning("Steam achievement integration is unavailable; continuing locally. "
+                + exception.Message);
+        }
+        TryInitializeWordAchievementPlatform();
+
+        try
+        {
+            string achievementProfileDirectory = System.IO.Path.Combine(
+                Application.persistentDataPath, "WordAchievementProfiles");
+            wordAchievementProgress = new WordAchievementProgress(achievementProfileDirectory);
+            string initialSteamId = GetCurrentWordAchievementUserId();
+            if (TryActivateWordAchievementProfile(initialSteamId))
+            {
+                boundWordAchievementUserId = initialSteamId;
+                SubmitWordAchievementProgress();
+            }
+        }
+        catch (System.Exception exception)
+        {
+            wordAchievementProgress = null;
+            wordAchievementProfileReady = false;
+            LogWordAchievementStorageWarning("Local progress initialization failed. " + exception.Message);
+        }
 
         // Restore last played list — challenge or custom
         string savedPath = PlayerPrefs.GetString("LevelPanel_LastPath", "");
@@ -65,21 +105,60 @@ public class GameCoordinator : MonoBehaviour
             }
         }
 
+        // A saved Chinese path may remain in PlayerPrefs while Chinese gameplay is disabled.
+        // Keep the saved path and progress intact, but do not activate that provider.
+        if (target != null && !phaseManager.CanLoadWordList(target))
+        {
+            target = null;
+            restoreMode = LevelMode.Challenge;
+        }
+
+        if (target != null && restoreMode == LevelMode.Custom && !CanOpenCustomLists(phaseManager))
+        {
+            Debug.LogWarning("[GameCoordinator] The saved custom list is still locked by the active profile; restoring an available challenge instead.");
+            target = null;
+            restoreMode = LevelMode.Challenge;
+        }
+
+        if (restoreMode == LevelMode.Challenge
+            && target is LevelWordListProvider savedChallenge
+            && ChallengeTrackResolver.GetTrackPrefixForChallengeProvider(savedChallenge) != null
+            && !CanEnterChallenge(savedChallenge, phaseManager))
+        {
+            Debug.LogWarning("[GameCoordinator] The saved challenge is locked by the active progression policy; restoring an available challenge instead.");
+            target = null;
+            restoreMode = LevelMode.Challenge;
+        }
+
         // Fallback: first challenge, or default word list
         if (target == null)
         {
-            var challenges = LevelWordListProvider.ScanDirectory(
-                LevelWordListProvider.GetChallengeDirectory());
-            if (challenges.Count > 0)
-                target = challenges[0];
-            else if (defaultWordList != null)
+            string preferredTrack = GetPreferredChallengeTrackPrefix(phaseManager.AllowChineseAndMixed);
+            var challenges = ChallengeTrackResolver.FilterByTrack(
+                LevelWordListProvider.ScanDirectory(LevelWordListProvider.GetChallengeDirectory()),
+                preferredTrack);
+            if (!phaseManager.AllowChineseAndMixed)
+                challenges.RemoveAll(challenge => !phaseManager.CanLoadWordList(challenge));
+
+            for (int i = 0; i < challenges.Count; i++)
+            {
+                if (CanEnterChallenge(challenges[i], phaseManager))
+                {
+                    target = challenges[i];
+                    break;
+                }
+            }
+
+            if (target == null && defaultWordList != null && phaseManager.CanLoadWordList(defaultWordList))
                 target = defaultWordList;
         }
 
+        bool loadedWordList = false;
         if (target != null)
         {
-            Services.Get<PhaseManager>().LoadWordList(target);
-            Services.Get<PhaseManager>().CurrentLevelMode = restoreMode;
+            loadedWordList = phaseManager.LoadWordList(target);
+            if (loadedWordList)
+                phaseManager.CurrentLevelMode = restoreMode;
         }
 
         // Subscribe to input events
@@ -99,12 +178,26 @@ public class GameCoordinator : MonoBehaviour
 
         // Start the first phase
         uiController.Initialize(wordEngine);
+        if (!loadedWordList)
+        {
+            Debug.LogWarning("[GameCoordinator] No allowed word list is available; remaining idle instead of starting an empty game.");
+            Services.Get<GameStateManager>().TransitionTo(GameState.Idle);
+            return;
+        }
+
         LoadCurrentPhase();
         Services.Get<GameStateManager>().TransitionTo(GameState.Playing);
     }
 
     void OnDestroy()
     {
+        if (wordAchievementProgress != null && wordAchievementProgress.HasPendingPersistence
+            && !wordAchievementProgress.RetryPersistence())
+        {
+            LogWordAchievementStorageWarning("Pending progress could not be saved during shutdown. "
+                + wordAchievementProgress.LastPersistenceError);
+        }
+
         if (Services.Get<InputHandler>() != null)
         {
             Services.Get<InputHandler>().OnKeyAction -= HandleKeyAction;
@@ -120,6 +213,68 @@ public class GameCoordinator : MonoBehaviour
         {
             Services.Get<GameStateManager>().OnPhaseFailed -= HandlePhaseFailed;
             Services.Get<GameStateManager>().OnAllPhasesCompleted -= HandleAllPhasesCompleted;
+        }
+
+        if (wordAchievementPlatform != null)
+        {
+            if (wordAchievementStatsCallbackSubscribed)
+                wordAchievementPlatform.StatsStored -= HandleWordAchievementStatsStored;
+            wordAchievementPlatform.Shutdown();
+        }
+    }
+
+    void Update()
+    {
+        TryInitializeWordAchievementPlatform();
+
+        if (wordAchievementPlatform != null && wordAchievementPlatform.IsInitialized)
+        {
+            try
+            {
+                wordAchievementPlatform.RunCallbacks();
+            }
+            catch (System.Exception exception)
+            {
+                LogWordAchievementStorageWarning("Steam achievement callback processing failed; gameplay continues. "
+                    + exception.Message);
+            }
+        }
+
+        if (wordAchievementProfileReady && wordAchievementProgress != null
+            && wordAchievementProgress.HasPendingPersistence
+            && Time.unscaledTime >= nextWordAchievementPersistenceRetryTime)
+        {
+            if (wordAchievementProgress.RetryPersistence())
+            {
+                wordAchievementStorageWarningLogged = false;
+                nextWordAchievementPersistenceRetryTime = 0f;
+                SubmitWordAchievementProgress();
+            }
+            else
+            {
+                LogWordAchievementStorageWarning("Progress is still pending local persistence. "
+                    + wordAchievementProgress.LastPersistenceError);
+                nextWordAchievementPersistenceRetryTime = Time.unscaledTime + 5f;
+            }
+        }
+
+        string currentSteamId = GetCurrentWordAchievementUserId();
+        bool identityChanged = !string.IsNullOrEmpty(currentSteamId)
+            && !string.Equals(currentSteamId, boundWordAchievementUserId, System.StringComparison.Ordinal);
+        bool activationNeeded = identityChanged || !wordAchievementProfileReady;
+        if (!activationNeeded || Time.unscaledTime < nextWordAchievementProfileRetryTime)
+            return;
+
+        string targetSteamId = identityChanged ? currentSteamId : boundWordAchievementUserId;
+        if (TryActivateWordAchievementProfile(targetSteamId))
+        {
+            boundWordAchievementUserId = targetSteamId;
+            nextWordAchievementProfileRetryTime = 0f;
+            SubmitWordAchievementProgress();
+        }
+        else
+        {
+            nextWordAchievementProfileRetryTime = Time.unscaledTime + 5f;
         }
     }
 
@@ -152,6 +307,22 @@ public class GameCoordinator : MonoBehaviour
                 break;
             case StepResult.PhaseComplete:
                 Services.Get<TimerSystem>().StopAndAccumulate();
+                if (wordAchievementProgress != null && wordAchievementProfileReady)
+                {
+                    WordAchievementProgressRecordResult progressResult =
+                        wordAchievementProgress.RecordCompletedWord(wordEngine.TargetText);
+                    if (!progressResult.PersistenceSucceeded)
+                    {
+                        LogWordAchievementStorageWarning("Progress is pending local persistence and will be retried. "
+                            + progressResult.StorageError);
+                        nextWordAchievementPersistenceRetryTime = Time.unscaledTime + 5f;
+                    }
+                    else
+                    {
+                        nextWordAchievementPersistenceRetryTime = 0f;
+                        SubmitWordAchievementProgress();
+                    }
+                }
                 // Always play the word-complete sound via the PhaseComplete event,
                 // even for the last word. Then go straight to AllComplete if done.
                 Services.Get<GameStateManager>().TransitionTo(GameState.PhaseComplete);
@@ -210,11 +381,13 @@ public class GameCoordinator : MonoBehaviour
         if (Services.Get<PhaseManager>().CurrentLevelMode == LevelMode.Challenge)
         {
             int stars = ChallengeProgression.CalculateStars(Services.Get<PhaseManager>().TotalErrors);
-            int challengeIndex = FindChallengeIndex(provider);
+            string trackPrefix;
+            int challengeIndex = FindChallengeIndex(provider, out trackPrefix);
             if (challengeIndex >= 0)
             {
-                ChallengeProgression.SaveStarRating(challengeIndex, stars);
-                ChallengeProgression.UnlockNext(challengeIndex);
+                ChallengeProgression.SaveStarRating(challengeIndex, stars, trackPrefix);
+                ChallengeProgression.UnlockNext(
+                    challengeIndex, trackPrefix, GetEffectiveChallengeCap(Services.Get<PhaseManager>()));
             }
 
             string levelName = provider?.DisplayName ?? "Level";
@@ -223,33 +396,84 @@ public class GameCoordinator : MonoBehaviour
         }
     }
 
-    private int FindChallengeIndex(IWordListProvider provider)
+    private int FindChallengeIndex(IWordListProvider provider, out string trackPrefix)
     {
+        trackPrefix = null;
         if (provider == null || !(provider is LevelWordListProvider lvlProvider)) return -1;
-        var challengeDir = LevelWordListProvider.GetChallengeDirectory();
-        var allChallenges = LevelWordListProvider.ScanDirectory(challengeDir);
-        var challenges = FilterByLocale(allChallenges);
-        for (int i = 0; i < challenges.Count; i++)
-        {
-            if (challenges[i].FilePath == lvlProvider.FilePath)
-                return i;
-        }
-        return -1;
+
+        trackPrefix = ChallengeTrackResolver.GetTrackPrefixForChallengeProvider(lvlProvider);
+        if (trackPrefix == null) return -1;
+
+        var challenges = ChallengeTrackResolver.FilterByTrack(
+            LevelWordListProvider.ScanDirectory(LevelWordListProvider.GetChallengeDirectory()),
+            trackPrefix);
+        return ChallengeTrackResolver.FindIndex(lvlProvider, challenges);
     }
 
-    /// <summary>Filter challenge list to match current locale track.</summary>
-    private static List<LevelWordListProvider> FilterByLocale(List<LevelWordListProvider> all)
+    private bool CanEnterChallenge(LevelWordListProvider provider, PhaseManager phaseManager)
     {
-        bool isCn = ChallengeProgression.TrackPrefix == "cn_";
-        var result = new List<LevelWordListProvider>();
-        foreach (var p in all)
+        if (provider == null || phaseManager == null) return false;
+
+        string trackPrefix = ChallengeTrackResolver.GetTrackPrefixForChallengeProvider(provider);
+        if (trackPrefix == null) return false;
+
+        var trackChallenges = ChallengeTrackResolver.FilterByTrack(
+            LevelWordListProvider.ScanDirectory(LevelWordListProvider.GetChallengeDirectory()),
+            trackPrefix);
+        int challengeIndex = ChallengeTrackResolver.FindIndex(provider, trackChallenges);
+        if (challengeIndex < 0) return false;
+
+        LevelPanelController panel = LevelPanelController.Instance;
+        if (panel == null)
+            panel = FindFirstObjectByType<LevelPanelController>(FindObjectsInactive.Include);
+
+        int legacyCap = panel != null ? panel.LegacyChallengeCap : ChallengeProgression.MaxUnlockableLevel;
+        bool legacyUnlockAll = panel != null && panel.LegacyUnlockAllChallenges;
+        int unlockedCount = ChallengeProgression.GetUnlockedCountForTrack(trackPrefix);
+        return ChallengeAccessPolicy.CanEnterChallenge(
+            phaseManager.ActiveProfile, challengeIndex, unlockedCount, legacyCap, legacyUnlockAll);
+    }
+
+    private static int GetEffectiveChallengeCap(PhaseManager phaseManager)
+    {
+        if (phaseManager != null && phaseManager.ActiveProfile != null)
+            return phaseManager.ActiveProfile.EffectiveChallengeCap;
+
+        LevelPanelController panel = LevelPanelController.Instance;
+        if (panel == null)
+            panel = FindFirstObjectByType<LevelPanelController>(FindObjectsInactive.Include);
+        return panel != null ? panel.LegacyChallengeCap : ChallengeProgression.MaxUnlockableLevel;
+    }
+
+    private static string GetPreferredChallengeTrackPrefix(bool allowChineseAndMixed)
+    {
+        try
         {
-            string fileName = System.IO.Path.GetFileName(p.FilePath);
-            bool hasCn = fileName.Contains("_cn");
-            if (isCn == hasCn)
-                result.Add(p);
+            var locale = UnityEngine.Localization.Settings.LocalizationSettings.SelectedLocale;
+            return allowChineseAndMixed && locale != null && locale.Identifier.Code == "zh-Hans"
+                ? ChallengeTrackResolver.ChineseTrackPrefix
+                : ChallengeTrackResolver.EnglishTrackPrefix;
         }
-        return result;
+        catch
+        {
+            return ChallengeTrackResolver.EnglishTrackPrefix;
+        }
+    }
+
+    private bool CanOpenCustomLists(PhaseManager phaseManager)
+    {
+        if (phaseManager == null) return false;
+
+        string trackPrefix = GetPreferredChallengeTrackPrefix(phaseManager.AllowChineseAndMixed);
+        int completedChallenges = ChallengeProgression.GetUnlockedCountForTrack(trackPrefix) - 1;
+        if (phaseManager.ActiveProfile != null)
+            return phaseManager.ActiveProfile.CanOpenCustomLists(completedChallenges);
+
+        LevelPanelController panel = LevelPanelController.Instance;
+        if (panel == null)
+            panel = FindFirstObjectByType<LevelPanelController>(FindObjectsInactive.Include);
+        return panel != null
+            && (panel.LegacyUnlockCustomTab || completedChallenges >= panel.LegacyCustomUnlockThreshold);
     }
 
     private void HandleBackspace()
@@ -338,6 +562,102 @@ public class GameCoordinator : MonoBehaviour
         wordEngine.LoadMixedWord(parsed);
         uiController.RebuildMixedDisplays(wordEngine.CurrentMixedData);
         uiController.UpdateTextDisplay();
+        wordAchievementProgress?.BeginPhaseAttempt();
+    }
+
+    private bool TryActivateWordAchievementProfile(string steamId)
+    {
+        if (wordAchievementProgress == null)
+        {
+            wordAchievementProfileReady = false;
+            return false;
+        }
+
+        try
+        {
+            wordAchievementProgress.ActivateProfile(steamId);
+            wordAchievementProfileReady = true;
+            wordAchievementStorageWarningLogged = false;
+            return true;
+        }
+        catch (System.Exception exception)
+        {
+            // Do not keep recording against the previous account if profile activation fails.
+            wordAchievementProfileReady = false;
+            LogWordAchievementStorageWarning("Local achievement profile activation failed; achievement tracking is paused. "
+                + exception.Message);
+            return false;
+        }
+    }
+
+    private void TryInitializeWordAchievementPlatform()
+    {
+        if (wordAchievementPlatform == null || wordAchievementPlatform.IsInitialized
+            || Time.unscaledTime < nextWordAchievementInitRetryTime)
+            return;
+
+        if (WordAchievementPlatformRegistry.TryInitialize(
+                wordAchievementPlatform, LogWordAchievementStorageWarning))
+        {
+            if (!wordAchievementStatsCallbackSubscribed)
+            {
+                wordAchievementPlatform.StatsStored += HandleWordAchievementStatsStored;
+                wordAchievementStatsCallbackSubscribed = true;
+            }
+
+            nextWordAchievementInitRetryTime = 0f;
+        }
+        else
+        {
+            nextWordAchievementInitRetryTime = Time.unscaledTime + 10f;
+        }
+    }
+
+    private string GetCurrentWordAchievementUserId()
+    {
+        return wordAchievementPlatform != null && wordAchievementPlatform.IsInitialized
+            ? wordAchievementPlatform.CurrentUserId
+            : null;
+    }
+
+    private void SubmitWordAchievementProgress()
+    {
+        if (!wordAchievementProfileReady || wordAchievementProgress == null
+            || wordAchievementPlatform == null || !wordAchievementPlatform.IsInitialized
+            || string.IsNullOrEmpty(boundWordAchievementUserId)
+            || !string.Equals(wordAchievementProgress.ActiveProfileId, boundWordAchievementUserId, System.StringComparison.Ordinal))
+            return;
+
+        if (!wordAchievementPlatform.SubmitProgress(boundWordAchievementUserId, wordAchievementProgress.Snapshot))
+        {
+            LogWordAchievementStorageWarning("Steam could not queue the saved achievement snapshot; it remains in the local profile.");
+        }
+    }
+
+    private void HandleWordAchievementStatsStored(string steamId, bool succeeded)
+    {
+        if (!string.Equals(steamId, boundWordAchievementUserId, System.StringComparison.Ordinal)
+            || wordAchievementProgress == null
+            || !string.Equals(steamId, wordAchievementProgress.ActiveProfileId, System.StringComparison.Ordinal))
+            return;
+
+        if (succeeded && !wordAchievementProgress.HasPendingPersistence)
+        {
+            wordAchievementStorageWarningLogged = false;
+            return;
+        }
+
+        if (!succeeded)
+            LogWordAchievementStorageWarning("Steam did not confirm the achievement update. Local progress remains saved and will be retried.");
+    }
+
+    private void LogWordAchievementStorageWarning(string message)
+    {
+        if (wordAchievementStorageWarningLogged)
+            return;
+
+        wordAchievementStorageWarningLogged = true;
+        Debug.LogWarning("[Achievements] " + message);
     }
 
     private void HandlePhaseWordChanged(string word)

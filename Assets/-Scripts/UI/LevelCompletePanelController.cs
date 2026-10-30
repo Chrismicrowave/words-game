@@ -62,20 +62,46 @@ public class LevelCompletePanelController : MonoBehaviour
         if (Services.Get<InputHandler>() != null)
             Services.Get<InputHandler>().SetGameplayBlocked(false);
 
-        if (Services.Get<PhaseManager>() == null) return;
+        var phaseManager = Services.Get<PhaseManager>();
+        if (phaseManager == null) return;
 
-        var challengeDir = LevelWordListProvider.GetChallengeDirectory();
-        var challenges = GetLocaleFilteredChallenges(LevelWordListProvider.ScanDirectory(challengeDir));
-        int currentIdx = FindChallengeIndex(Services.Get<PhaseManager>().ActiveProvider, challenges);
+        var currentProvider = phaseManager.ActiveProvider as LevelWordListProvider;
+        string trackPrefix = ChallengeTrackResolver.GetTrackPrefixForChallengeProvider(currentProvider);
+        if (trackPrefix == null)
+        {
+            Services.Get<GameStateManager>().TransitionTo(GameState.Idle);
+            return;
+        }
+
+        var challenges = ChallengeTrackResolver.FilterByTrack(
+            LevelWordListProvider.ScanDirectory(LevelWordListProvider.GetChallengeDirectory()),
+            trackPrefix);
+        if (!phaseManager.AllowChineseAndMixed)
+            challenges.RemoveAll(challenge => !phaseManager.CanLoadWordList(challenge));
+
+        int currentIdx = FindChallengeIndex(phaseManager.ActiveProvider, challenges);
         int nextIdx = currentIdx + 1;
 
-        // Cap next level at demo max if set
-        int maxDemo = ChallengeProgression.MaxUnlockableLevel;
+        int unlockedCount = ChallengeProgression.GetUnlockedCountForTrack(trackPrefix);
+        LevelPanelController panel = LevelPanelController.Instance;
+        if (panel == null)
+            panel = FindFirstObjectByType<LevelPanelController>(FindObjectsInactive.Include);
+        int legacyCap = panel != null ? panel.LegacyChallengeCap : ChallengeProgression.MaxUnlockableLevel;
+        bool legacyUnlockAll = panel != null && panel.LegacyUnlockAllChallenges;
 
-        if (nextIdx < challenges.Count && (maxDemo <= 0 || nextIdx < maxDemo))
+        if (nextIdx < challenges.Count && ChallengeAccessPolicy.CanEnterChallenge(
+            phaseManager.ActiveProfile, nextIdx, unlockedCount, legacyCap, legacyUnlockAll))
         {
-            Services.Get<PhaseManager>().CurrentLevelMode = LevelMode.Challenge;
-            Services.Get<PhaseManager>().LoadWordList(challenges[nextIdx]);
+            LevelMode previousMode = phaseManager.CurrentLevelMode;
+            phaseManager.CurrentLevelMode = LevelMode.Challenge;
+            if (!phaseManager.LoadWordList(challenges[nextIdx]))
+            {
+                phaseManager.CurrentLevelMode = previousMode;
+                Debug.LogWarning("[LevelCompletePanelController] The next challenge is not allowed; returning to idle.");
+                Services.Get<GameStateManager>().TransitionTo(GameState.Idle);
+                return;
+            }
+
             // Persist so game restores this level on next launch
             PlayerPrefs.SetString("LevelPanel_LastPath", challenges[nextIdx].FilePath);
             PlayerPrefs.Save();
@@ -86,29 +112,9 @@ public class LevelCompletePanelController : MonoBehaviour
         }
     }
 
-    /// <summary>Filter challenge list to match current locale (English or Chinese track).</summary>
-    private static List<LevelWordListProvider> GetLocaleFilteredChallenges(List<LevelWordListProvider> all)
-    {
-        bool isCn = ChallengeProgression.TrackPrefix == "cn_";
-        var result = new List<LevelWordListProvider>();
-        foreach (var p in all)
-        {
-            string fileName = System.IO.Path.GetFileName(p.FilePath);
-            bool hasCn = fileName.Contains("_cn");
-            if (isCn == hasCn)
-                result.Add(p);
-        }
-        return result;
-    }
-
     private int FindChallengeIndex(IWordListProvider provider, List<LevelWordListProvider> challenges)
     {
         if (provider == null || !(provider is LevelWordListProvider lvlProvider)) return -1;
-        for (int i = 0; i < challenges.Count; i++)
-        {
-            if (challenges[i].FilePath == lvlProvider.FilePath)
-                return i;
-        }
-        return -1;
+        return ChallengeTrackResolver.FindIndex(lvlProvider, challenges);
     }
 }

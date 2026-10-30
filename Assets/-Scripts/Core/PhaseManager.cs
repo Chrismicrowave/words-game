@@ -4,6 +4,10 @@ using UnityEngine;
 
 public class PhaseManager : SingletonBehaviour<PhaseManager>
 {
+    [SerializeField] private GameConfig config;
+    [SerializeField, Tooltip("Allow Chinese and mixed Chinese-English gameplay content. This does not affect the UI language.")]
+    private bool allowChineseAndMixed = true;
+
     private IWordListProvider activeProvider;
     private List<string> words = new List<string>();
     private List<ChineseWordEntry> chineseWords = new List<ChineseWordEntry>();
@@ -16,6 +20,18 @@ public class PhaseManager : SingletonBehaviour<PhaseManager>
     public IWordListProvider ActiveProvider => activeProvider;
     public IReadOnlyList<string> Words => words;
     public LanguageMode CurrentLanguageMode => activeProvider?.LanguageMode ?? LanguageMode.English;
+    public bool AllowChineseAndMixed => config != null && config.activeProfile != null
+        ? config.activeProfile.allowChineseAndMixed
+        : allowChineseAndMixed;
+    public GameConfigProfile ActiveProfile => config != null ? config.activeProfile : null;
+    public bool CanAddWords => config == null || config.activeProfile == null
+        || config.activeProfile.IsFeatureAvailable(config.activeProfile.unlockAddWords);
+    public bool CanEditLists => config == null || config.activeProfile == null
+        || config.activeProfile.IsFeatureAvailable(config.activeProfile.unlockEditLists);
+    public bool HasReachedWordLimit => config != null && config.activeProfile != null
+        && config.activeProfile.isDemo && !config.activeProfile.unlockAllFeatures
+        && config.activeProfile.maxWordsPerList > 0
+        && words.Count >= config.activeProfile.maxWordsPerList;
     public LevelMode CurrentLevelMode { get; set; } = LevelMode.Challenge;
 
     /// <summary>Total failed attempts during the current game session.</summary>
@@ -27,8 +43,15 @@ public class PhaseManager : SingletonBehaviour<PhaseManager>
     public event Action<string> OnPhaseWordChanged;
     public event Action OnWordListChanged;
 
-    public void LoadWordList(IWordListProvider provider)
+    /// <summary>Returns false without changing the active list when Chinese content is disabled.</summary>
+    public bool LoadWordList(IWordListProvider provider)
     {
+        if (!CanLoadWordList(provider))
+        {
+            Debug.LogWarning("[PhaseManager] Chinese and mixed word lists are disabled; keeping the current list.");
+            return false;
+        }
+
         activeProvider = provider;
         LanguageMode mode = provider.LanguageMode;
         words = provider.GetWords();
@@ -114,6 +137,126 @@ public class PhaseManager : SingletonBehaviour<PhaseManager>
         CurrentPhaseIndex = 0;
         OnWordListChanged?.Invoke();
         OnPhaseWordChanged?.Invoke(CurrentWord);
+        return true;
+    }
+
+    /// <summary>Checks provider content rather than its declared mode so English-only mixed data remains usable.</summary>
+    public bool CanLoadWordList(IWordListProvider provider)
+    {
+        if (provider == null) return false;
+        return AllowChineseAndMixed || !ProviderContainsHan(provider);
+    }
+
+    /// <summary>Detects Han characters including supplementary and compatibility ideographs.</summary>
+    public static bool ContainsHanCharacters(string text)
+    {
+        if (string.IsNullOrEmpty(text)) return false;
+
+        for (int i = 0; i < text.Length; i++)
+        {
+            int codePoint = text[i];
+            if (char.IsSurrogate(text[i]))
+            {
+                if (!char.IsHighSurrogate(text[i]) || i + 1 >= text.Length || !char.IsLowSurrogate(text[i + 1]))
+                    return true; // Conservatively reject malformed/split supplementary characters.
+
+                codePoint = char.ConvertToUtf32(text, i);
+                i++;
+            }
+
+            if (IsHanCodePoint(codePoint)) return true;
+        }
+
+        return false;
+    }
+
+    private static bool IsHanCodePoint(int codePoint)
+    {
+        return (codePoint >= 0x3400 && codePoint <= 0x4DBF)   // CJK Unified Ideographs Extension A
+            || (codePoint >= 0x4E00 && codePoint <= 0x9FFF)   // CJK Unified Ideographs
+            || (codePoint >= 0xF900 && codePoint <= 0xFAFF)   // CJK Compatibility Ideographs
+            || (codePoint >= 0x20000 && codePoint <= 0x2A6DF) // Extension B
+            || (codePoint >= 0x2A700 && codePoint <= 0x2B73F) // Extension C
+            || (codePoint >= 0x2B740 && codePoint <= 0x2B81F) // Extension D
+            || (codePoint >= 0x2B820 && codePoint <= 0x2CEAF) // Extension E
+            || (codePoint >= 0x2CEB0 && codePoint <= 0x2EBEF) // Extension F
+            || (codePoint >= 0x2EBF0 && codePoint <= 0x2EE5F) // Extension I
+            || (codePoint >= 0x2F800 && codePoint <= 0x2FA1F) // Compatibility Ideographs Supplement
+            || (codePoint >= 0x30000 && codePoint <= 0x3134F) // Extension G
+            || (codePoint >= 0x31350 && codePoint <= 0x323AF); // Extension H
+    }
+
+    private static bool ProviderContainsHan(IWordListProvider provider)
+    {
+        if (provider == null) return false;
+
+        var providerWords = provider.GetWords();
+        if (ContainsHanCharacters(providerWords)) return true;
+
+        var chineseEntries = provider.GetChineseWords();
+        if (ChineseWordsContainHan(chineseEntries)) return true;
+
+        var mixedEntries = provider.GetMixedWords();
+        if (mixedEntries != null)
+        {
+            foreach (var word in mixedEntries)
+                if (MixedEntryContainsHan(word)) return true;
+        }
+
+        return false;
+    }
+
+    private static bool ContainsHanCharacters(List<string> values)
+    {
+        if (values == null) return false;
+        foreach (var value in values)
+            if (ContainsHanCharacters(value)) return true;
+        return false;
+    }
+
+    private static bool ChineseEntriesContainHan(List<ChinesePhaseEntry> entries)
+    {
+        if (entries == null) return false;
+        foreach (var entry in entries)
+            if (entry != null && ContainsHanCharacters(entry.character)) return true;
+        return false;
+    }
+
+    private static bool ChineseWordsContainHan(List<ChineseWordEntry> entries)
+    {
+        if (entries == null) return false;
+        foreach (var word in entries)
+        {
+            if (word != null &&
+                (ContainsHanCharacters(word.display) || ChineseEntriesContainHan(word.entries)))
+                return true;
+        }
+        return false;
+    }
+
+    private static bool MixedEntryContainsHan(MixedWordEntry word)
+    {
+        if (word?.segments == null) return false;
+        foreach (var segment in word.segments)
+        {
+            if (segment == null) continue;
+            if (ContainsHanCharacters(segment.text) || ChineseEntriesContainHan(segment.entries)) return true;
+        }
+        return false;
+    }
+
+    private bool CurrentListContainsHan()
+    {
+        return ProviderContainsHan(activeProvider)
+            || ContainsHanCharacters(words)
+            || ChineseWordsContainHan(chineseWords)
+            || (mixedWords != null && mixedWords.Exists(MixedEntryContainsHan));
+    }
+
+    private bool CanModifyCurrentList(string addedText = null)
+    {
+        return AllowChineseAndMixed
+            || (!CurrentListContainsHan() && !ContainsHanCharacters(addedText));
     }
 
     // Returns the ChineseWordEntry for the given index (null if not a Chinese list or out of range)
@@ -157,8 +300,10 @@ public class PhaseManager : SingletonBehaviour<PhaseManager>
         }
     }
 
-    public void AddPhase(string word, int index = 0)
+    public bool AddPhase(string word, int index = 0)
     {
+        if (!CanAddWords || HasReachedWordLimit || !CanModifyCurrentList(word)) return false;
+
         words.Insert(index, word);
         // In Mixed mode, keep mixedWords in sync so the entry persists after save/reload
         if (CurrentLanguageMode == LanguageMode.Mixed)
@@ -172,6 +317,7 @@ public class PhaseManager : SingletonBehaviour<PhaseManager>
             });
         }
         OnWordListChanged?.Invoke();
+        return true;
     }
 
     /// <summary>
@@ -179,8 +325,12 @@ public class PhaseManager : SingletonBehaviour<PhaseManager>
     /// If the current list is English-only, converts it to Mixed mode by wrapping
     /// existing entries as single-segment English MixedWordEntry objects.
     /// </summary>
-    public void AddMixedPhase(MixedWordEntry entry)
+    public bool AddMixedPhase(MixedWordEntry entry)
     {
+        if (entry == null || !CanAddWords || HasReachedWordLimit || !CanModifyCurrentList()
+            || (!AllowChineseAndMixed && MixedEntryContainsHan(entry)))
+            return false;
+
         // Build display string for the phase list
         var sb = new System.Text.StringBuilder();
         foreach (var seg in entry.segments)
@@ -214,10 +364,12 @@ public class PhaseManager : SingletonBehaviour<PhaseManager>
         mixedWords.Insert(0, entry);
         words.Insert(0, display);
         OnWordListChanged?.Invoke();
+        return true;
     }
 
     public void RemovePhase(int index)
     {
+        if (!CanEditLists || !CanModifyCurrentList()) return;
         if (index < 0 || index >= words.Count) return;
 
         words.RemoveAt(index);
@@ -232,6 +384,7 @@ public class PhaseManager : SingletonBehaviour<PhaseManager>
 
     public void MovePhase(int fromIndex, int toIndex)
     {
+        if (!CanEditLists || !CanModifyCurrentList()) return;
         if (fromIndex < 0 || fromIndex >= words.Count) return;
         if (toIndex < 0 || toIndex >= words.Count) return;
 
@@ -258,6 +411,12 @@ public class PhaseManager : SingletonBehaviour<PhaseManager>
 
     public void SaveCurrentList()
     {
+        if (!AllowChineseAndMixed && CurrentListContainsHan())
+        {
+            Debug.LogWarning("[PhaseManager] Chinese content is disabled; the current Chinese list was not saved.");
+            return;
+        }
+
         if (activeProvider is LevelWordListProvider lvlProvider)
         {
             lvlProvider.SetWords(words);

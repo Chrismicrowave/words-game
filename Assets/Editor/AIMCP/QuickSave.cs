@@ -22,7 +22,7 @@ public static class QuickSave
         }
         UnityEditor.SceneManagement.EditorSceneManager.SaveScene(scene);
         AssetDatabase.SaveAssets();
-        System.IO.File.WriteAllText("Library/AgentMirror/.generate-snapshots-signal", "save");
-        Debug.Log($"[QuickSave] Saved '{scene.path}' + snapshots triggered");
+
+        Debug.Log($"[QuickSave] Saved '{scene.path}'");
     }
 }

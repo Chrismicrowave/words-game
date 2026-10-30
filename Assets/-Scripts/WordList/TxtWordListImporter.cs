@@ -4,7 +4,9 @@ using UnityEngine;
 
 public static class TxtWordListImporter
 {
-    public static FileWordListProvider ImportFromTxt(string txtPath)
+    public static FileWordListProvider ImportFromTxt(
+        string txtPath,
+        System.Func<IWordListProvider, bool> allowOverwrite = null)
     {
         string[] lines = File.ReadAllLines(txtPath);
         var words = new List<string>();
@@ -22,9 +24,15 @@ public static class TxtWordListImporter
         );
 
         var provider = new FileWordListProvider(jsonPath);
+        if (allowOverwrite != null && !allowOverwrite(provider))
+            return null;
+
         provider.ResetToEnglish(); // clear stale Chinese/Mixed data from any previous import at this path
         provider.SetName(displayName);
         provider.SetWords(words);
+        if (allowOverwrite != null && !allowOverwrite(provider))
+            return null;
+
         provider.Save();
 
         return provider;

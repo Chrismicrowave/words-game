@@ -1,8 +1,173 @@
 {
   "hooks": {
-    "PreToolUse": {
-      "Edit": "powershell -ExecutionPolicy Bypass -File \"Tools/StopUnityPlayMode.ps1\"",
-      "Write": "powershell -ExecutionPolicy Bypass -File \"Tools/StopUnityPlayMode.ps1\""
-    }
+    "PreToolUse": [
+      {
+        "matcher": "mcp__coplay-mcp__get_game_object_info|mcp__coplay-mcp__list_game_objects_in_hierarchy|mcp__coplay-mcp__list_all_prefabs_with_bounding_boxes|mcp__coplay-mcp__capture_scene_object|mcp__coplay-mcp__capture_ui_canvas|mcp__coplay-mcp__list_files|mcp__coplay-mcp__search_files|mcp__coplay-mcp__get_animator_controller_data|mcp__coplay-mcp__get_animation_clip_data|mcp__coplay-mcp__get_blend_tree_state_data|mcp__coplay-mcp__list_model_animation_clips|^Glob$",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/ucc/redirect-preference.sh"
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/ucc/pre-git-commit-guard.sh"
+          }
+        ]
+      },
+      {
+        "matcher": "mcp__coplay-mcp__set_property|mcp__coplay-mcp__set_transform|mcp__coplay-mcp__set_rect_transform|mcp__coplay-mcp__add_component|mcp__coplay-mcp__remove_component|mcp__coplay-mcp__create_game_object|mcp__coplay-mcp__delete_game_object|mcp__coplay-mcp__duplicate_game_object|mcp__coplay-mcp__rename_game_object|mcp__coplay-mcp__parent_game_object|mcp__coplay-mcp__set_sibling_index|mcp__coplay-mcp__set_layer|mcp__coplay-mcp__set_tag|mcp__coplay-mcp__set_ui_text|mcp__coplay-mcp__set_ui_layout|mcp__coplay-mcp__create_ui_element|mcp__coplay-mcp__create_panel_settings_asset|mcp__coplay-mcp__create_material|mcp__coplay-mcp__assign_material|mcp__coplay-mcp__assign_material_to_fbx|mcp__coplay-mcp__assign_shader_to_material|mcp__coplay-mcp__rename_asset|mcp__coplay-mcp__duplicate_asset|mcp__coplay-mcp__create_scene|mcp__coplay-mcp__save_scene|mcp__coplay-mcp__open_scene|mcp__coplay-mcp__place_asset_in_scene|mcp__coplay-mcp__create_terrain|mcp__coplay-mcp__create_animation_clip|mcp__coplay-mcp__create_animator_controller|mcp__coplay-mcp__create_blend_tree_state|mcp__coplay-mcp__set_animation_curves|mcp__coplay-mcp__set_sprite_animation_curve|mcp__coplay-mcp__set_animation_clip_settings|mcp__coplay-mcp__modify_animator_controller|mcp__coplay-mcp__create_prefab|mcp__coplay-mcp__create_prefab_variant|mcp__coplay-mcp__add_nested_object_to_prefab|mcp__coplay-mcp__create_input_action_asset|mcp__coplay-mcp__add_action|mcp__coplay-mcp__add_action_map|mcp__coplay-mcp__add_bindings|mcp__coplay-mcp__add_composite_binding|mcp__coplay-mcp__add_control_scheme|mcp__coplay-mcp__remove_action|mcp__coplay-mcp__remove_action_map|mcp__coplay-mcp__remove_bindings|mcp__coplay-mcp__remove_control_scheme|mcp__coplay-mcp__rename_action|mcp__coplay-mcp__generate_input_action_wrapper_code|mcp__coplay-mcp__execute_script|mcp__coplay-mcp__add_persistent_listener|mcp__coplay-mcp__remove_persistent_listener|mcp__coplay-mcp__install_git_package|mcp__coplay-mcp__install_unity_package|mcp__coplay-mcp__remove_unity_package|mcp__coplay-mcp__export_package|mcp__coplay-mcp__generate_3d_model_from_image|mcp__coplay-mcp__generate_3d_model_from_text|mcp__coplay-mcp__generate_3d_model_texture|mcp__coplay-mcp__generate_music|mcp__coplay-mcp__generate_sfx|mcp__coplay-mcp__generate_tts|mcp__coplay-mcp__generate_or_edit_images|mcp__coplay-mcp__auto_rig_3d_model|mcp__coplay-mcp__apply_animation_to_rigged_model|mcp__coplay-mcp__create_coplay_task|mcp__coplay-mcp__set_unity_project_root",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/ucc/pre-write-guard.sh"
+          }
+        ]
+      },
+      {
+        "matcher": "mcp__coplay-mcp__save_scene",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/ucc/pre-save-scene-guard.sh"
+          }
+        ]
+      },
+      {
+        "matcher": "mcp__coplay-mcp__create_scene|mcp__coplay-mcp__execute_script|mcp__coplay-mcp__duplicate_asset|Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/ucc/pre-save-scene-guard.sh"
+          }
+        ]
+      },
+      {
+        "matcher": "^Edit$|^Write$",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/ucc/pre-save-scene-guard.sh"
+          },
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/ucc/pre-write-guard.sh"
+          },
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/ucc/pre-script-write-guard.sh"
+          }
+        ]
+      },
+      {
+        "matcher": "^Write$",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/ucc/pre-write-plan-format.sh \"$TOOL_FILE_PATH\""
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "play_game|stop_game|editor_play|editor_stop",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/ucc/sync-play-mode.sh"
+          }
+        ]
+      },
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/ucc/post-edit-script.sh"
+          }
+        ]
+      },
+      {
+        "matcher": ".*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/ucc/post-suggest-auto-commit.sh"
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/ucc/session-start.sh"
+          },
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/ucc/health-check.sh"
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/ucc/sync-play-mode.sh"
+          },
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/ucc/save-scene-baseline.sh"
+          },
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/ucc/user-prompt-submit.sh"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/ucc/stop-verify-play.sh"
+          }
+        ]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/ucc/stop.sh"
+          }
+        ]
+      }
+    ],
+    "PostCompact": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/ucc/post-compaction.sh"
+          }
+        ]
+      }
+    ]
+  },
+  "permissions": {
+    "allow": [
+      "mcp__coplay-mcp__play_game"
+    ]
   }
 }
