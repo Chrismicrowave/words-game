@@ -107,6 +107,90 @@ namespace Words.UiMockups.WordListHub.Tests
         }
 
         [Test]
+        public void WordListHubMockupScene_usesRequestedControlHeightsAndDropdownScroll()
+        {
+            Scene scene = SceneManager.GetSceneByPath(MockupScenePath);
+            bool openedForTest = !scene.IsValid() || !scene.isLoaded;
+            if (openedForTest)
+                scene = EditorSceneManager.OpenScene(MockupScenePath, OpenSceneMode.Additive);
+
+            try
+            {
+                Transform navigation = RequireNamedTransform(scene, "GlobalNavigation");
+                Assert.That(navigation.GetComponent<RectTransform>().sizeDelta.y, Is.EqualTo(75f));
+                foreach (string name in new[]
+                {
+                    "Nav_Challenges",
+                    "Nav_WordLibrary",
+                    "Nav_Community",
+                    "Nav_Achievements",
+                    "ResetMockData"
+                })
+                {
+                    Assert.That(RequireRect(navigation, name).sizeDelta.y, Is.EqualTo(63f), name);
+                }
+
+                Transform page = RequireNamedTransform(scene, "PageContent");
+                string[] orderedControls =
+                {
+                    "CreateList",
+                    "View_All",
+                    "View_Favorites",
+                    "LibrarySearch",
+                    "Filter_Language",
+                    "Filter_Played",
+                    "Filter_Sort",
+                    "Filter_Direction"
+                };
+                float previousX = float.NegativeInfinity;
+                foreach (string name in orderedControls)
+                {
+                    float currentX = RequireRect(page, name).anchoredPosition.x;
+                    Assert.That(currentX, Is.GreaterThan(previousX), name + " must preserve its left-to-right control order.");
+                    previousX = currentX;
+                }
+                Assert.That(RequireRect(page, "CreateList").anchoredPosition.x, Is.EqualTo(-645f));
+
+                foreach (string name in new[]
+                {
+                    "Filter_Language",
+                    "Filter_Played",
+                    "Filter_Sort",
+                    "Filter_Direction"
+                })
+                {
+                    Transform filter = page.Find(name);
+                    TMPro.TMP_Dropdown dropdown = filter.GetComponent<TMPro.TMP_Dropdown>();
+                    Assert.That(dropdown, Is.Not.Null, name);
+
+                    Transform template = filter.Find("Template");
+                    RectTransform templateRect = template.GetComponent<RectTransform>();
+                    float expectedHeight = Mathf.Min(
+                        720f,
+                        (dropdown.options.Count * 20f + 4f) * 3f);
+                    Assert.That(templateRect.sizeDelta.y, Is.EqualTo(expectedHeight), name + " popup height");
+
+                    ScrollRect scroll = template.GetComponent<ScrollRect>();
+                    Assert.That(scroll, Is.Not.Null, name + " must scroll");
+                    Assert.That(scroll.vertical, Is.True, name);
+                    Assert.That(scroll.horizontal, Is.False, name);
+
+                    Transform item = template.Find("Viewport/Content/Item");
+                    Assert.That(item.GetComponent<RectTransform>().sizeDelta.y, Is.EqualTo(40f));
+                    LayoutElement itemLayout = item.GetComponent<LayoutElement>();
+                    Assert.That(itemLayout.minHeight, Is.EqualTo(40f));
+                    Assert.That(itemLayout.preferredHeight, Is.EqualTo(40f));
+                    Assert.That(item.Find("Item Label").GetComponent<TMPro.TextMeshProUGUI>().fontSize, Is.EqualTo(20f));
+                }
+            }
+            finally
+            {
+                if (openedForTest)
+                    EditorSceneManager.CloseScene(scene, true);
+            }
+        }
+
+        [Test]
         public void LibraryGroups_areMutuallyExclusive_andCoverEveryFixtureOnce()
         {
             IReadOnlyList<MockupWordList> all = store.QueryLibrary(
@@ -809,6 +893,15 @@ namespace Words.UiMockups.WordListHub.Tests
             RectTransform rect = child.GetComponent<RectTransform>();
             Assert.That(rect, Is.Not.Null, path + " must have a RectTransform.");
             return rect;
+        }
+
+        private static Transform RequireNamedTransform(Scene scene, string name)
+        {
+            Transform transform = scene.GetRootGameObjects()
+                .SelectMany(root => root.GetComponentsInChildren<Transform>(true))
+                .FirstOrDefault(candidate => candidate.name == name);
+            Assert.That(transform, Is.Not.Null, name + " must exist.");
+            return transform;
         }
 
         private static void AssertRect(RectTransform rect, Vector2 position, Vector2 size)

@@ -52,7 +52,10 @@ namespace Words.UiMockups.WordListHub
         private static readonly Color PaperAlt = new Color(0.925f, 0.925f, 0.846f, 1f);
         private static readonly Color White = new Color(1f, 0.995f, 0.96f, 1f);
         private static readonly Color Sage = new Color(0.34f, 0.48f, 0.38f, 1f);
-        private const float DropdownItemHeight = 20f;
+        private const float DropdownLegacyItemHeight = 20f;
+        private const float DropdownItemHeight = 40f;
+        private const float DropdownMenuHeightScale = 3f;
+        private const float DropdownMenuMaxHeight = 720f;
 
         [SerializeField] private TMP_FontAsset primaryFont;
         [SerializeField] private TMP_FontAsset cjkFont;
@@ -192,7 +195,7 @@ namespace Words.UiMockups.WordListHub
             GameObject page = new GameObject("PageContent", typeof(RectTransform));
             pageRoot = page.transform;
             pageRoot.SetParent(generatedRoot, false);
-            SetStretch(pageRoot as RectTransform, 0f, 0f, 0f, 70f);
+            SetStretch(pageRoot as RectTransform, 0f, 0f, 0f, 95f);
             libraryListContent = null;
             libraryDetailPane = null;
             libraryScrollRect = null;
@@ -226,7 +229,7 @@ namespace Words.UiMockups.WordListHub
             GameObject nav = new GameObject("GlobalNavigation", typeof(RectTransform));
             nav.transform.SetParent(generatedRoot, false);
             SetRect(nav.GetComponent<RectTransform>(), new Vector2(1f, 1f), new Vector2(1f, 1f),
-                new Vector2(1f, 1f), new Vector2(-4f, -16f), new Vector2(860f, 50f));
+                new Vector2(1f, 1f), new Vector2(-4f, -16f), new Vector2(860f, 75f));
 
             HorizontalLayoutGroup layout = nav.AddComponent<HorizontalLayoutGroup>();
             layout.spacing = 8f;
@@ -236,19 +239,19 @@ namespace Words.UiMockups.WordListHub
             layout.childForceExpandWidth = false;
             layout.childForceExpandHeight = false;
 
-            CreateButton(nav.transform, "Nav_Challenges", "Challenges", 142f, 42f,
+            CreateButton(nav.transform, "Nav_Challenges", "Challenges", 142f, 63f,
                 currentPage == Page.Challenges ? Accent : PaperAlt,
                 wireEvents ? () => ChangePage(Page.Challenges) : null, 18f, currentPage == Page.Challenges);
-            CreateButton(nav.transform, "Nav_WordLibrary", "Word List", 154f, 42f,
+            CreateButton(nav.transform, "Nav_WordLibrary", "Word List", 154f, 63f,
                 currentPage == Page.Library ? Accent : PaperAlt,
                 wireEvents ? () => ChangePage(Page.Library) : null, 18f, currentPage == Page.Library);
-            CreateButton(nav.transform, "Nav_Community", "Community", 142f, 42f,
+            CreateButton(nav.transform, "Nav_Community", "Community", 142f, 63f,
                 currentPage == Page.Community ? Accent : PaperAlt,
                 wireEvents ? () => ChangePage(Page.Community) : null, 18f, currentPage == Page.Community);
-            CreateButton(nav.transform, "Nav_Achievements", "Achievements", 160f, 42f,
+            CreateButton(nav.transform, "Nav_Achievements", "Achievements", 160f, 63f,
                 currentPage == Page.Achievements ? Accent : PaperAlt,
                 wireEvents ? () => ChangePage(Page.Achievements) : null, 18f, currentPage == Page.Achievements);
-            CreateButton(nav.transform, "ResetMockData", "Reset mock data", 150f, 42f,
+            CreateButton(nav.transform, "ResetMockData", "Reset mock data", 150f, 63f,
                 PaperAlt, wireEvents ? ResetMockData : null, 15f, false);
         }
 
@@ -317,35 +320,35 @@ namespace Words.UiMockups.WordListHub
             CreateButton(pageRoot, "View_All", "All Lists", 112f, 40f,
                 query.View == MockupLibraryView.All ? Accent : PaperAlt,
                 wireEvents ? () => SetLibraryView(MockupLibraryView.All) : null,
-                18f, query.View == MockupLibraryView.All, new Vector2(-642f, 267f));
+                18f, query.View == MockupLibraryView.All, new Vector2(-510f, 267f));
             CreateButton(pageRoot, "View_Favorites", "★ Favorites", 134f, 40f,
                 query.View == MockupLibraryView.Favorites ? Accent : PaperAlt,
                 wireEvents ? () => SetLibraryView(MockupLibraryView.Favorites) : null,
-                18f, query.View == MockupLibraryView.Favorites, new Vector2(-510f, 267f));
+                18f, query.View == MockupLibraryView.Favorites, new Vector2(-385f, 267f));
 
             TMP_InputField search = CreateInputField(pageRoot, "LibrarySearch", "Search your lists…",
-                330f, 42f, new Vector2(-267f, 267f), wireEvents ? HandleSearchChanged : null);
+                330f, 42f, new Vector2(-150f, 267f), wireEvents ? HandleSearchChanged : null);
             search.SetTextWithoutNotify(librarySearchText);
 
             CreateDropdown(pageRoot, "Filter_Language",
                 new[] { "Language: All", "Language: English", "Language: Chinese", "Language: Mixed" },
-                (int)query.LanguageFilter, 148f, 40f, new Vector2(10f, 267f),
+                (int)query.LanguageFilter, 148f, 40f, new Vector2(95f, 267f),
                 wireEvents ? SetLanguageFilterFromDropdown : null);
             CreateDropdown(pageRoot, "Filter_Played",
                 new[] { "Played: All", "Played: Yes", "Played: No" },
-                (int)query.PlayedFilter, 142f, 40f, new Vector2(165f, 267f),
+                (int)query.PlayedFilter, 142f, 40f, new Vector2(245f, 267f),
                 wireEvents ? SetPlayedFilterFromDropdown : null);
             CreateDropdown(pageRoot, "Filter_Sort",
                 new[] { "Sort: Recently played", "Sort: Name", "Sort: Date added", "Sort: Date modified", "Sort: Word count", "Sort: Personal stars" },
-                (int)query.SortMode, 188f, 40f, new Vector2(345f, 267f),
+                (int)query.SortMode, 188f, 40f, new Vector2(425f, 267f),
                 wireEvents ? SetSortModeFromDropdown : null);
             CreateDropdown(pageRoot, "Filter_Direction",
                 new[] { "Ascending", "Descending" },
-                (int)query.SortDirection, 120f, 40f, new Vector2(503f, 267f),
+                (int)query.SortDirection, 120f, 40f, new Vector2(582f, 267f),
                 wireEvents ? SetSortDirectionFromDropdown : null);
             CreateButton(pageRoot, "CreateList", "+ New List", 142f, 40f,
                 AccentDark, wireEvents ? OpenNewListDialog : null, 17f, true,
-                new Vector2(645f, 267f));
+                new Vector2(-645f, 267f));
 
             GameObject listPane = CreatePanel("LibraryListPane", pageRoot, White);
             SetRect(listPane.GetComponent<RectTransform>(), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f),
@@ -1860,7 +1863,9 @@ namespace Words.UiMockups.WordListHub
             RectTransform templateRect = template.GetComponent<RectTransform>();
             SetRect(templateRect, new Vector2(0f, 0f), new Vector2(1f, 0f),
                 new Vector2(0.5f, 1f), new Vector2(0f, 2f),
-                new Vector2(0f, Mathf.Min(240f, options.Count * DropdownItemHeight + 4f)));
+                new Vector2(0f, Mathf.Min(
+                    DropdownMenuMaxHeight,
+                    (options.Count * DropdownLegacyItemHeight + 4f) * DropdownMenuHeightScale)));
             Image templateImage = template.GetComponent<Image>();
             templateImage.sprite = uiResources.background;
             templateImage.type = Image.Type.Sliced;
@@ -1926,8 +1931,8 @@ namespace Words.UiMockups.WordListHub
                 typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
             checkmarkObject.transform.SetParent(item.transform, false);
             SetRect(checkmarkObject.GetComponent<RectTransform>(), new Vector2(0f, 0.5f),
-                new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(10f, 0f),
-                new Vector2(18f, 18f));
+                new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(20f, 0f),
+                new Vector2(36f, 36f));
             Image checkmark = checkmarkObject.GetComponent<Image>();
             checkmark.sprite = uiResources.checkmark;
             checkmark.type = Image.Type.Sliced;
@@ -1935,11 +1940,11 @@ namespace Words.UiMockups.WordListHub
             checkmark.raycastTarget = false;
 
             TextMeshProUGUI optionLabel = CreateText(item.transform, "Item Label", string.Empty,
-                14f, Ink, TextAlignmentOptions.MidlineLeft, false);
-            SetStretch(optionLabel.rectTransform, 34f, 8f, 1f, 1f);
+                20f, Ink, TextAlignmentOptions.MidlineLeft, false);
+            SetStretch(optionLabel.rectTransform, 50f, 12f, 3f, 3f);
             optionLabel.enableAutoSizing = true;
-            optionLabel.fontSizeMin = 10f;
-            optionLabel.fontSizeMax = 14f;
+            optionLabel.fontSizeMin = 14f;
+            optionLabel.fontSizeMax = 20f;
             optionLabel.textWrappingMode = TextWrappingModes.NoWrap;
             optionLabel.overflowMode = TextOverflowModes.Overflow;
 
