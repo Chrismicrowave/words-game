@@ -180,7 +180,18 @@ namespace Words.UiMockups.WordListHub.Tests
                     LayoutElement itemLayout = item.GetComponent<LayoutElement>();
                     Assert.That(itemLayout.minHeight, Is.EqualTo(40f));
                     Assert.That(itemLayout.preferredHeight, Is.EqualTo(40f));
-                    Assert.That(item.Find("Item Label").GetComponent<TMPro.TextMeshProUGUI>().fontSize, Is.EqualTo(20f));
+
+                    RectTransform checkmark = RequireRect(item, "Item Checkmark");
+                    AssertRect(checkmark, Vector2.zero, new Vector2(24f, 24f));
+                    Assert.That(checkmark.anchorMin, Is.EqualTo(new Vector2(0f, 0.5f)));
+                    Assert.That(checkmark.anchorMax, Is.EqualTo(new Vector2(0f, 0.5f)));
+                    Assert.That(checkmark.pivot, Is.EqualTo(new Vector2(0f, 0.5f)));
+
+                    RectTransform label = RequireRect(item, "Item Label");
+                    AssertRect(label, new Vector2(17f, 0f), new Vector2(-42f, -6f));
+                    Assert.That(label.anchorMin, Is.EqualTo(Vector2.zero));
+                    Assert.That(label.anchorMax, Is.EqualTo(Vector2.one));
+                    Assert.That(label.GetComponent<TMPro.TextMeshProUGUI>().fontSize, Is.EqualTo(20f));
                 }
             }
             finally

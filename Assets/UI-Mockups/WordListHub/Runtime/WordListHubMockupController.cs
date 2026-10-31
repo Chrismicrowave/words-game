@@ -1931,8 +1931,8 @@ namespace Words.UiMockups.WordListHub
                 typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
             checkmarkObject.transform.SetParent(item.transform, false);
             SetRect(checkmarkObject.GetComponent<RectTransform>(), new Vector2(0f, 0.5f),
-                new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(20f, 0f),
-                new Vector2(36f, 36f));
+                new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), Vector2.zero,
+                new Vector2(24f, 24f));
             Image checkmark = checkmarkObject.GetComponent<Image>();
             checkmark.sprite = uiResources.checkmark;
             checkmark.type = Image.Type.Sliced;
@@ -1941,7 +1941,7 @@ namespace Words.UiMockups.WordListHub
 
             TextMeshProUGUI optionLabel = CreateText(item.transform, "Item Label", string.Empty,
                 20f, Ink, TextAlignmentOptions.MidlineLeft, false);
-            SetStretch(optionLabel.rectTransform, 50f, 12f, 3f, 3f);
+            SetStretch(optionLabel.rectTransform, 38f, 4f, 3f, 3f);
             optionLabel.enableAutoSizing = true;
             optionLabel.fontSizeMin = 14f;
             optionLabel.fontSizeMax = 20f;
