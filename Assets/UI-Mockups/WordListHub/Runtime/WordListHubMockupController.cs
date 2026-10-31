@@ -320,34 +320,34 @@ namespace Words.UiMockups.WordListHub
             CreateButton(pageRoot, "View_All", "All Lists", 112f, 40f,
                 query.View == MockupLibraryView.All ? Accent : PaperAlt,
                 wireEvents ? () => SetLibraryView(MockupLibraryView.All) : null,
-                18f, query.View == MockupLibraryView.All, new Vector2(-510f, 267f));
+                18f, query.View == MockupLibraryView.All, new Vector2(-512f, 267f));
             CreateButton(pageRoot, "View_Favorites", "★ Favorites", 134f, 40f,
                 query.View == MockupLibraryView.Favorites ? Accent : PaperAlt,
                 wireEvents ? () => SetLibraryView(MockupLibraryView.Favorites) : null,
-                18f, query.View == MockupLibraryView.Favorites, new Vector2(-385f, 267f));
+                18f, query.View == MockupLibraryView.Favorites, new Vector2(-383f, 267f));
 
             TMP_InputField search = CreateInputField(pageRoot, "LibrarySearch", "Search your lists…",
-                330f, 42f, new Vector2(-150f, 267f), wireEvents ? HandleSearchChanged : null);
+                300f, 42f, new Vector2(-160f, 267f), wireEvents ? HandleSearchChanged : null);
             search.SetTextWithoutNotify(librarySearchText);
 
             CreateDropdown(pageRoot, "Filter_Language",
                 new[] { "Language: All", "Language: English", "Language: Chinese", "Language: Mixed" },
-                (int)query.LanguageFilter, 148f, 40f, new Vector2(95f, 267f),
+                (int)query.LanguageFilter, 200f, 40f, new Vector2(96f, 267f),
                 wireEvents ? SetLanguageFilterFromDropdown : null);
             CreateDropdown(pageRoot, "Filter_Played",
                 new[] { "Played: All", "Played: Yes", "Played: No" },
-                (int)query.PlayedFilter, 142f, 40f, new Vector2(245f, 267f),
+                (int)query.PlayedFilter, 150f, 40f, new Vector2(277f, 267f),
                 wireEvents ? SetPlayedFilterFromDropdown : null);
             CreateDropdown(pageRoot, "Filter_Sort",
                 new[] { "Sort: Recently played", "Sort: Name", "Sort: Date added", "Sort: Date modified", "Sort: Word count", "Sort: Personal stars" },
-                (int)query.SortMode, 188f, 40f, new Vector2(425f, 267f),
+                (int)query.SortMode, 230f, 40f, new Vector2(473f, 267f),
                 wireEvents ? SetSortModeFromDropdown : null);
             CreateDropdown(pageRoot, "Filter_Direction",
                 new[] { "Ascending", "Descending" },
-                (int)query.SortDirection, 120f, 40f, new Vector2(582f, 267f),
+                (int)query.SortDirection, 160f, 40f, new Vector2(675f, 267f),
                 wireEvents ? SetSortDirectionFromDropdown : null);
             CreateButton(pageRoot, "CreateList", "+ New List", 142f, 40f,
-                AccentDark, wireEvents ? OpenNewListDialog : null, 17f, true,
+                AccentDark, wireEvents ? OpenNewListDialog : null, 18f, true,
                 new Vector2(-645f, 267f));
 
             GameObject listPane = CreatePanel("LibraryListPane", pageRoot, White);
@@ -524,47 +524,55 @@ namespace Words.UiMockups.WordListHub
             wordsTextFitter.horizontalFit = ContentSizeFitter.FitMode.Unconstrained;
             wordsTextFitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
 
-            string detailStatus = ListBadge(item);
-            string versionNote = item.PreviousContentRecords.Count > 0
-                ? "Current words are a new version; earlier records are kept separately."
-                : item.HasBeenPlayed ? "Personal best for the current content version." : "Finish a run to add a personal record.";
-            detailStatus = string.IsNullOrEmpty(detailStatus)
-                ? versionNote
-                : detailStatus + "  ·  " + versionNote;
-            CreateText(pane, "DetailStatus", detailStatus, 12f, Sage,
-                TextAlignmentOptions.MidlineLeft, false, new Vector2(0f, -159f), new Vector2(650f, 18f));
-
             CreateButton(pane, "Action_Favorite", item.IsFavorite ? "★ Saved" : "☆ Save",
-                126f, 40f, PaperAlt, wireEvents ? () => ToggleFavorite(item.Id) : null,
-                15f, item.IsFavorite, new Vector2(-248f, -187f));
+                126f, 34f, PaperAlt, wireEvents ? () => ToggleFavorite(item.Id) : null,
+                15f, item.IsFavorite, new Vector2(-248f, -194f));
             bool publicationIsActive = item.IsPubliclyVisible
                 || item.PublicationStatus == MockupPublicationStatus.Published
                 || item.PublicationStatus == MockupPublicationStatus.UpdateNeeded;
+
+            Transform feedbackPanel = CreatePanel(
+                "DetailFeedbackPanel",
+                pane,
+                new Color(0.90f, 0.91f, 0.82f, 1f)).transform;
+            SetRect(feedbackPanel.GetComponent<RectTransform>(), new Vector2(0.5f, 0.5f),
+                new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f),
+                new Vector2(185f, -162f), new Vector2(350f, 28f));
+            TextMeshProUGUI feedbackText = CreateText(
+                feedbackPanel,
+                "DetailStatus",
+                DetailFeedbackMessage(item, publicationIsActive),
+                11f,
+                Sage,
+                TextAlignmentOptions.MidlineLeft,
+                false,
+                Vector2.zero,
+                new Vector2(326f, 24f));
+            feedbackText.enableAutoSizing = true;
+            feedbackText.fontSizeMin = 8f;
+            feedbackText.fontSizeMax = 11f;
+            feedbackText.textWrappingMode = TextWrappingModes.Normal;
+            feedbackText.overflowMode = TextOverflowModes.Ellipsis;
+
             if (!publicationIsActive)
             {
                 CreateButton(pane, "Action_DeleteLocal",
                     item.IsReadOnly ? "Remove download" : "Delete local",
-                    126f, 40f, PaperAlt,
+                    126f, 34f, PaperAlt,
                     wireEvents ? () => RequestDeleteList(item.Id) : null,
-                    13f, false, new Vector2(-110f, -187f));
+                    13f, false, new Vector2(-110f, -194f));
             }
-            else
-            {
-                CreateText(pane, "DeleteLocalHint", "Unpublish before deleting",
-                    12f, MutedInk, TextAlignmentOptions.Center, false,
-                    new Vector2(-110f, -187f), new Vector2(150f, 28f));
-            }
-            CreateButton(pane, "Action_PlayLibrary", "Play", 172f, 38f, AccentDark,
+            CreateButton(pane, "Action_PlayLibrary", "Play", 172f, 34f, AccentDark,
                 wireEvents ? () => BeginLibraryMockPlay(item.Id) : null,
-                15f, true, new Vector2(-185f, -231f));
+                15f, true, new Vector2(-185f, -233f));
 
             bool hasPublishedBinding = item.Ownership == MockupOwnership.Owned
                 && !string.IsNullOrEmpty(item.RemoteItemId);
             string editLabel = item.IsReadOnly ? "Make an editable copy" :
                 hasPublishedBinding ? "Edit details" : "Edit list";
-            CreateButton(pane, "Action_Edit", editLabel, item.IsReadOnly ? 205f : 132f, 40f,
+            CreateButton(pane, "Action_Edit", editLabel, item.IsReadOnly ? 205f : 132f, 34f,
                 Accent, wireEvents ? () => EditOrCopy(item.Id) : null, 14f, true,
-                item.IsReadOnly ? new Vector2(70f, -187f) : new Vector2(35f, -187f));
+                item.IsReadOnly ? new Vector2(70f, -194f) : new Vector2(35f, -194f));
 
             if (!item.IsReadOnly)
             {
@@ -573,24 +581,24 @@ namespace Words.UiMockups.WordListHub
                 bool isUnpublished = item.PublicationStatus == MockupPublicationStatus.Unpublished;
                 string publishLabel = needsUpdate ? "Update publication" :
                     isPublished ? "Published" : isUnpublished ? "Publish again" : "Publish list";
-                Button publishButton = CreateButton(pane, "Action_Publish", publishLabel, 170f, 40f,
+                Button publishButton = CreateButton(pane, "Action_Publish", publishLabel, 170f, 34f,
                     needsUpdate ? AccentDark : PaperAlt,
                     wireEvents && !isPublished
                         ? () => PublishOrUpdate(item.Id, item.PublicationStatus)
                         : null,
-                    13f, needsUpdate, new Vector2(260f, -187f));
+                    13f, needsUpdate, new Vector2(260f, -194f));
                 publishButton.interactable = !isPublished || needsUpdate;
 
                 if (hasPublishedBinding)
                 {
-                    CreateButton(pane, "Action_CopyEditWords", "Copy & edit words", 205f, 38f,
+                    CreateButton(pane, "Action_CopyEditWords", "Copy & edit words", 205f, 34f,
                         Accent, wireEvents ? () => OpenEditDialog(item.Id, true) : null,
-                        13f, true, new Vector2(35f, -231f));
+                        13f, true, new Vector2(35f, -233f));
                     if (isPublished || needsUpdate)
                     {
-                        CreateButton(pane, "Action_Unpublish", "Unpublish", 170f, 38f,
+                        CreateButton(pane, "Action_Unpublish", "Unpublish", 170f, 34f,
                             PaperAlt, wireEvents ? () => Unpublish(item.Id) : null,
-                            13f, false, new Vector2(260f, -231f));
+                            13f, false, new Vector2(260f, -233f));
                     }
                 }
             }
@@ -874,6 +882,7 @@ namespace Words.UiMockups.WordListHub
         private void SelectLibraryItem(string mockId)
         {
             selectedListId = mockId;
+            lastActionMessage = string.Empty;
             RefreshLibraryPage();
         }
 
@@ -1358,9 +1367,12 @@ namespace Words.UiMockups.WordListHub
         private void UpdateFooter()
         {
             if (footerText != null)
-                footerText.text = string.IsNullOrEmpty(lastActionMessage)
+            {
+                string footerMessage = currentPage == Page.Library ? string.Empty : lastActionMessage;
+                footerText.text = string.IsNullOrEmpty(footerMessage)
                     ? "LOCAL MOCKUP  ·  SAMPLE DATA ONLY"
-                    : "LOCAL MOCKUP  ·  " + lastActionMessage + "  ·  SAMPLE DATA ONLY";
+                    : "LOCAL MOCKUP  ·  " + footerMessage + "  ·  SAMPLE DATA ONLY";
+            }
         }
 
         private void OpenNewListDialog()
@@ -1806,6 +1818,29 @@ namespace Words.UiMockups.WordListHub
             return string.Empty;
         }
 
+        private string DetailFeedbackMessage(MockupWordList item, bool publicationIsActive)
+        {
+            if (!string.IsNullOrEmpty(lastActionMessage))
+                return lastActionMessage;
+
+            var messages = new List<string>();
+            string badge = ListBadge(item);
+            if (!string.IsNullOrEmpty(badge))
+                messages.Add(badge);
+
+            if (item.PreviousContentRecords.Count > 0)
+                messages.Add("Previous-version record archived.");
+            else if (item.HasBeenPlayed)
+                messages.Add("Best saved for this version.");
+            else
+                messages.Add("No personal best yet.");
+
+            if (publicationIsActive && !item.IsReadOnly)
+                messages.Add("Unpublish before deleting.");
+
+            return string.Join("  ·  ", messages);
+        }
+
         private TMP_Dropdown CreateDropdown(
             Transform parent,
             string name,
@@ -1848,11 +1883,11 @@ namespace Words.UiMockups.WordListHub
             dropdown.colors = colors;
 
             TextMeshProUGUI caption = CreateText(root.transform, "Caption", options[safeSelectedIndex],
-                15f, Ink, TextAlignmentOptions.MidlineLeft, false);
+                18f, Ink, TextAlignmentOptions.MidlineLeft, false);
             SetStretch(caption.rectTransform, 12f, 30f, 2f, 2f);
             dropdown.captionText = caption;
 
-            TextMeshProUGUI arrow = CreateText(root.transform, "Arrow", "▾", 17f, AccentDark,
+            TextMeshProUGUI arrow = CreateText(root.transform, "Arrow", "▾", 18f, AccentDark,
                 TextAlignmentOptions.Center, true);
             SetRect(arrow.rectTransform, new Vector2(1f, 0.5f), new Vector2(1f, 0.5f),
                 new Vector2(1f, 0.5f), new Vector2(-8f, 0f), new Vector2(22f, 24f));
@@ -1931,7 +1966,7 @@ namespace Words.UiMockups.WordListHub
                 typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
             checkmarkObject.transform.SetParent(item.transform, false);
             SetRect(checkmarkObject.GetComponent<RectTransform>(), new Vector2(0f, 0.5f),
-                new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), Vector2.zero,
+                new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(10f, 0f),
                 new Vector2(24f, 24f));
             Image checkmark = checkmarkObject.GetComponent<Image>();
             checkmark.sprite = uiResources.checkmark;
@@ -1940,11 +1975,11 @@ namespace Words.UiMockups.WordListHub
             checkmark.raycastTarget = false;
 
             TextMeshProUGUI optionLabel = CreateText(item.transform, "Item Label", string.Empty,
-                20f, Ink, TextAlignmentOptions.MidlineLeft, false);
+                18f, Ink, TextAlignmentOptions.MidlineLeft, false);
             SetStretch(optionLabel.rectTransform, 38f, 4f, 3f, 3f);
             optionLabel.enableAutoSizing = true;
-            optionLabel.fontSizeMin = 14f;
-            optionLabel.fontSizeMax = 20f;
+            optionLabel.fontSizeMin = 16f;
+            optionLabel.fontSizeMax = 18f;
             optionLabel.textWrappingMode = TextWrappingModes.NoWrap;
             optionLabel.overflowMode = TextOverflowModes.Overflow;
 

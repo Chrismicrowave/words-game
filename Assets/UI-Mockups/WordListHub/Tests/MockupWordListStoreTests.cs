@@ -64,22 +64,22 @@ namespace Words.UiMockups.WordListHub.Tests
                 RectTransform header = RequireRect(detail, "DetailHeaderPanel");
                 RectTransform record = RequireRect(detail, "DetailRecordPanel");
                 RectTransform words = RequireRect(detail, "DetailWordsPanel");
-                RectTransform status = RequireRect(detail, "DetailStatus");
+                RectTransform feedback = RequireRect(detail, "DetailFeedbackPanel");
 
                 AssertRect(header, new Vector2(0f, 160f), new Vector2(680f, 124f));
                 AssertRect(record, new Vector2(-170f, -38f), new Vector2(320f, 220f));
                 AssertRect(words, new Vector2(170f, -38f), new Vector2(320f, 220f));
-                AssertRect(status, new Vector2(0f, -159f), new Vector2(650f, 18f));
+                AssertRect(feedback, new Vector2(185f, -162f), new Vector2(350f, 28f));
 
                 Rect headerRect = GetAnchoredRect(header);
                 Rect recordRect = GetAnchoredRect(record);
                 Rect wordsRect = GetAnchoredRect(words);
-                Rect statusRect = GetAnchoredRect(status);
+                Rect feedbackRect = GetAnchoredRect(feedback);
                 Assert.That(headerRect.Overlaps(recordRect), Is.False);
                 Assert.That(headerRect.Overlaps(wordsRect), Is.False);
                 Assert.That(recordRect.Overlaps(wordsRect), Is.False);
-                Assert.That(statusRect.Overlaps(recordRect), Is.False);
-                Assert.That(statusRect.Overlaps(wordsRect), Is.False);
+                Assert.That(feedbackRect.Overlaps(recordRect), Is.False);
+                Assert.That(feedbackRect.Overlaps(wordsRect), Is.False);
 
                 foreach (string path in new[]
                 {
@@ -89,7 +89,7 @@ namespace Words.UiMockups.WordListHub.Tests
                     "DetailRecordPanel/RecordStars",
                     "DetailRecordPanel/RecordTime",
                     "DetailWordsPanel/DetailWordsScroll/Viewport/Content/DetailWords",
-                    "DetailStatus"
+                    "DetailFeedbackPanel/DetailStatus"
                 })
                 {
                     Transform textTransform = detail.Find(path);
@@ -98,6 +98,12 @@ namespace Words.UiMockups.WordListHub.Tests
                     Assert.That(text, Is.Not.Null, path + " must contain TMP text.");
                     Assert.That(text.text, Is.Not.Empty, path + " must contain preview text.");
                 }
+
+                string feedbackText = detail.Find("DetailFeedbackPanel/DetailStatus")
+                    .GetComponent<TMPro.TextMeshProUGUI>().text;
+                Assert.That(feedbackText, Does.Contain("Update needed"));
+                Assert.That(feedbackText, Does.Contain("Best saved for this version."));
+                Assert.That(feedbackText, Does.Contain("Unpublish before deleting."));
             }
             finally
             {
@@ -150,6 +156,10 @@ namespace Words.UiMockups.WordListHub.Tests
                     previousX = currentX;
                 }
                 Assert.That(RequireRect(page, "CreateList").anchoredPosition.x, Is.EqualTo(-645f));
+                Assert.That(RequireRect(page, "Filter_Language").sizeDelta.x, Is.EqualTo(200f));
+                Assert.That(RequireRect(page, "Filter_Played").sizeDelta.x, Is.EqualTo(150f));
+                Assert.That(RequireRect(page, "Filter_Sort").sizeDelta.x, Is.EqualTo(230f));
+                Assert.That(RequireRect(page, "Filter_Direction").sizeDelta.x, Is.EqualTo(160f));
 
                 foreach (string name in new[]
                 {
@@ -162,6 +172,9 @@ namespace Words.UiMockups.WordListHub.Tests
                     Transform filter = page.Find(name);
                     TMPro.TMP_Dropdown dropdown = filter.GetComponent<TMPro.TMP_Dropdown>();
                     Assert.That(dropdown, Is.Not.Null, name);
+                    Assert.That(dropdown.captionText.fontSize, Is.EqualTo(18f), name + " caption size");
+                    Assert.That(filter.Find("Arrow").GetComponent<TMPro.TextMeshProUGUI>().fontSize,
+                        Is.EqualTo(18f), name + " arrow size");
 
                     Transform template = filter.Find("Template");
                     RectTransform templateRect = template.GetComponent<RectTransform>();
@@ -182,7 +195,7 @@ namespace Words.UiMockups.WordListHub.Tests
                     Assert.That(itemLayout.preferredHeight, Is.EqualTo(40f));
 
                     RectTransform checkmark = RequireRect(item, "Item Checkmark");
-                    AssertRect(checkmark, Vector2.zero, new Vector2(24f, 24f));
+                    AssertRect(checkmark, new Vector2(10f, 0f), new Vector2(24f, 24f));
                     Assert.That(checkmark.anchorMin, Is.EqualTo(new Vector2(0f, 0.5f)));
                     Assert.That(checkmark.anchorMax, Is.EqualTo(new Vector2(0f, 0.5f)));
                     Assert.That(checkmark.pivot, Is.EqualTo(new Vector2(0f, 0.5f)));
@@ -191,7 +204,10 @@ namespace Words.UiMockups.WordListHub.Tests
                     AssertRect(label, new Vector2(17f, 0f), new Vector2(-42f, -6f));
                     Assert.That(label.anchorMin, Is.EqualTo(Vector2.zero));
                     Assert.That(label.anchorMax, Is.EqualTo(Vector2.one));
-                    Assert.That(label.GetComponent<TMPro.TextMeshProUGUI>().fontSize, Is.EqualTo(20f));
+                    TMPro.TextMeshProUGUI labelText = label.GetComponent<TMPro.TextMeshProUGUI>();
+                    Assert.That(labelText.fontSize, Is.EqualTo(18f));
+                    Assert.That(labelText.fontSizeMin, Is.EqualTo(16f));
+                    Assert.That(labelText.fontSizeMax, Is.EqualTo(18f));
                 }
             }
             finally

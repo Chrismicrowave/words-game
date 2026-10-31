@@ -28,6 +28,12 @@ controller 使用内存 store 和 fixture，不访问正式 gameplay、Steam、�
 
 builder 在允许重建已有 preview 时还会把旧场景复制到系统 Temp 下 `words-wordlist-hub-preview-*` 目录并写 manifest。上面的 `_scene_backups` 路径是可直接定位的工作区备份；两种备份用途不同。
 
+## 运行时 UI 与阻塞弹窗的处理约定
+
+- mockup 的运行时 UI 由 `WordListHubMockupController.RenderLibraryDetail()`、`CreateDropdown()` 等方法动态创建。直接修改已生成 GameObject 的 RectTransform 只对当前序列化预览有效；进入 Play Mode 的 `Awake()` 或执行 `BuildPreviewInEditor()` 时会被源码重新生成。需要长期保留的 Inspector 调整必须先提取为 controller 参数，再重建并保存场景。
+- Unity 的 `Scene(s) Have Been Modified` 等模态窗口会阻塞主线程，Pipeline 的编译、测试和 `eval` 请求会表现为长时间 running/timeout，但 `unity status` 仍可能显示 Editor ready。此时必须用 Computer Use 检查 Unity 窗口和截图；保存确认可点击 `Save` 或按 `Return`。不能把 Pipeline 的 running 状态当作测试正在正常执行。
+- Play Mode 的 `Awake()` 会重建 UI，退出后场景可能重新变为 dirty。完成运行验收后应再次保存场景，并确认 `scene get_hierarchy` 返回 `isDirty=false`。
+
 ## 上一轮源码与运行证据（历史）
 
 以下是上一轮的源码与运行观察，仅作背景，不表示本轮实现状态或通过结果：
