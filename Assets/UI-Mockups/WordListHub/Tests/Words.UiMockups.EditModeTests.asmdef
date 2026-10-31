@@ -3,6 +3,7 @@
     "rootNamespace": "Words.UiMockups.WordListHub.Tests",
     "references": [
         "Words.UiMockups",
+        "Unity.TextMeshPro",
         "UnityEngine.UI"
     ],
     "includePlatforms": [

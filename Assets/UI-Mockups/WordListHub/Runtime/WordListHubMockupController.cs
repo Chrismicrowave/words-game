@@ -447,7 +447,7 @@ namespace Words.UiMockups.WordListHub
                 new Vector2(0.5f, 0.5f), new Vector2(0f, 160f), new Vector2(680f, 124f));
 
             CreateText(header, "DetailEyebrow", "LIST DETAILS", 13f, MutedInk,
-                TextAlignmentOptions.MidlineLeft, true, new Vector2(0f, 47f), new Vector2(616f, 18f));
+                TextAlignmentOptions.MidlineLeft, true, new Vector2(0f, 47f), new Vector2(616f, 22f));
             TextMeshProUGUI detailTitle = CreateText(header, "DetailTitle", item.Title, 27f, Ink,
                 TextAlignmentOptions.MidlineLeft, true, new Vector2(0f, 20f), new Vector2(616f, 38f),
                 useCjk: useCjk);
@@ -475,26 +475,26 @@ namespace Words.UiMockups.WordListHub
                 + "   ·   " + item.WordCount + " WORDS"
                 + "   ·   REVISION " + item.ContentRevision;
             CreateText(header, "DetailMetadata", metadata, 13f, AccentDark,
-                TextAlignmentOptions.MidlineLeft, true, new Vector2(0f, -46f), new Vector2(616f, 18f));
+                TextAlignmentOptions.MidlineLeft, true, new Vector2(0f, -44f), new Vector2(616f, 22f));
 
             Transform recordPanel = CreatePanel("DetailRecordPanel", pane, new Color(0.90f, 0.91f, 0.82f, 1f)).transform;
             SetRect(recordPanel.GetComponent<RectTransform>(), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f),
                 new Vector2(0.5f, 0.5f), new Vector2(-170f, -38f), new Vector2(320f, 220f));
             CreateText(recordPanel, "RecordHeader", "YOUR BEST RUN", 14f, MutedInk,
-                TextAlignmentOptions.MidlineLeft, true, new Vector2(0f, 75f), new Vector2(280f, 20f));
+                TextAlignmentOptions.MidlineLeft, true, new Vector2(0f, 75f), new Vector2(280f, 22f));
             CreateText(recordPanel, "RecordStarsLabel", "STARS", 12f, MutedInk,
                 TextAlignmentOptions.MidlineLeft, true, new Vector2(0f, 48f), new Vector2(280f, 18f));
             int earnedStars = Mathf.Clamp(item.PersonalStars ?? 0, 0, 5);
             string stars = new string('★', earnedStars) + new string('☆', 5 - earnedStars);
             CreateText(recordPanel, "RecordStars", stars, 29f, AccentDark,
-                TextAlignmentOptions.MidlineLeft, true, new Vector2(0f, 19f), new Vector2(280f, 36f));
+                TextAlignmentOptions.MidlineLeft, true, new Vector2(0f, 17f), new Vector2(280f, 48f));
             CreateText(recordPanel, "RecordTimeLabel", "BEST TIME", 12f, MutedInk,
                 TextAlignmentOptions.MidlineLeft, true, new Vector2(0f, -18f), new Vector2(280f, 18f));
             string time = item.BestTimeSeconds.HasValue
                 ? item.BestTimeSeconds.Value.ToString("0.0") + " s"
                 : "No run yet";
             CreateText(recordPanel, "RecordTime", time, 24f, Ink,
-                TextAlignmentOptions.MidlineLeft, true, new Vector2(0f, -48f), new Vector2(280f, 34f));
+                TextAlignmentOptions.MidlineLeft, true, new Vector2(0f, -48f), new Vector2(280f, 40f));
             CreateText(recordPanel, "RecordNote",
                 item.PreviousContentRecords.Count > 0
                     ? "Earlier content version records are archived."
@@ -506,7 +506,7 @@ namespace Words.UiMockups.WordListHub
             SetRect(wordsPanel.GetComponent<RectTransform>(), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f),
                 new Vector2(0.5f, 0.5f), new Vector2(170f, -38f), new Vector2(320f, 220f));
             CreateText(wordsPanel, "DetailWordsLabel", "WORDS  ·  " + item.WordCount, 14f, MutedInk,
-                TextAlignmentOptions.MidlineLeft, true, new Vector2(0f, 75f), new Vector2(280f, 20f));
+                TextAlignmentOptions.MidlineLeft, true, new Vector2(0f, 75f), new Vector2(280f, 22f));
             Transform wordsContent = CreateScrollContent(wordsPanel, "DetailWordsScroll", 294f, 156f,
                 new Vector2(0f, -18f));
             string words = item.Words == null || item.Words.Count == 0
@@ -529,7 +529,7 @@ namespace Words.UiMockups.WordListHub
                 ? versionNote
                 : detailStatus + "  ·  " + versionNote;
             CreateText(pane, "DetailStatus", detailStatus, 12f, Sage,
-                TextAlignmentOptions.MidlineLeft, false, new Vector2(0f, -155f), new Vector2(650f, 18f));
+                TextAlignmentOptions.MidlineLeft, false, new Vector2(0f, -159f), new Vector2(650f, 18f));
 
             CreateButton(pane, "Action_Favorite", item.IsFavorite ? "★ Saved" : "☆ Save",
                 126f, 40f, PaperAlt, wireEvents ? () => ToggleFavorite(item.Id) : null,

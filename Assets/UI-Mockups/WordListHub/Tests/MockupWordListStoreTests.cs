@@ -47,6 +47,66 @@ namespace Words.UiMockups.WordListHub.Tests
         }
 
         [Test]
+        public void WordListHubMockupScene_detailUsesHeaderRecordAndWordColumns()
+        {
+            Scene scene = SceneManager.GetSceneByPath(MockupScenePath);
+            bool openedForTest = !scene.IsValid() || !scene.isLoaded;
+            if (openedForTest)
+                scene = EditorSceneManager.OpenScene(MockupScenePath, OpenSceneMode.Additive);
+
+            try
+            {
+                Transform detail = scene.GetRootGameObjects()
+                    .SelectMany(root => root.GetComponentsInChildren<Transform>(true))
+                    .FirstOrDefault(transform => transform.name == "LibraryDetailPane");
+                Assert.That(detail, Is.Not.Null, "The library detail pane must exist in the saved mockup scene.");
+
+                RectTransform header = RequireRect(detail, "DetailHeaderPanel");
+                RectTransform record = RequireRect(detail, "DetailRecordPanel");
+                RectTransform words = RequireRect(detail, "DetailWordsPanel");
+                RectTransform status = RequireRect(detail, "DetailStatus");
+
+                AssertRect(header, new Vector2(0f, 160f), new Vector2(680f, 124f));
+                AssertRect(record, new Vector2(-170f, -38f), new Vector2(320f, 220f));
+                AssertRect(words, new Vector2(170f, -38f), new Vector2(320f, 220f));
+                AssertRect(status, new Vector2(0f, -159f), new Vector2(650f, 18f));
+
+                Rect headerRect = GetAnchoredRect(header);
+                Rect recordRect = GetAnchoredRect(record);
+                Rect wordsRect = GetAnchoredRect(words);
+                Rect statusRect = GetAnchoredRect(status);
+                Assert.That(headerRect.Overlaps(recordRect), Is.False);
+                Assert.That(headerRect.Overlaps(wordsRect), Is.False);
+                Assert.That(recordRect.Overlaps(wordsRect), Is.False);
+                Assert.That(statusRect.Overlaps(recordRect), Is.False);
+                Assert.That(statusRect.Overlaps(wordsRect), Is.False);
+
+                foreach (string path in new[]
+                {
+                    "DetailHeaderPanel/DetailTitle",
+                    "DetailHeaderPanel/DetailDescription",
+                    "DetailHeaderPanel/DetailMetadata",
+                    "DetailRecordPanel/RecordStars",
+                    "DetailRecordPanel/RecordTime",
+                    "DetailWordsPanel/DetailWordsScroll/Viewport/Content/DetailWords",
+                    "DetailStatus"
+                })
+                {
+                    Transform textTransform = detail.Find(path);
+                    Assert.That(textTransform, Is.Not.Null, path + " must exist.");
+                    TMPro.TextMeshProUGUI text = textTransform.GetComponent<TMPro.TextMeshProUGUI>();
+                    Assert.That(text, Is.Not.Null, path + " must contain TMP text.");
+                    Assert.That(text.text, Is.Not.Empty, path + " must contain preview text.");
+                }
+            }
+            finally
+            {
+                if (openedForTest)
+                    EditorSceneManager.CloseScene(scene, true);
+            }
+        }
+
+        [Test]
         public void LibraryGroups_areMutuallyExclusive_andCoverEveryFixtureOnce()
         {
             IReadOnlyList<MockupWordList> all = store.QueryLibrary(
@@ -740,6 +800,30 @@ namespace Words.UiMockups.WordListHub.Tests
             Assert.That(item.PreviousContentRecords[0].PersonalStars, Is.EqualTo(oldStars));
             Assert.That(item.PreviousContentRecords[0].BestTimeSeconds, Is.EqualTo(oldBestTime));
             Assert.That(item.PublicationStatus, Is.EqualTo(MockupPublicationStatus.NotPublished));
+        }
+
+        private static RectTransform RequireRect(Transform root, string path)
+        {
+            Transform child = root.Find(path);
+            Assert.That(child, Is.Not.Null, path + " must exist.");
+            RectTransform rect = child.GetComponent<RectTransform>();
+            Assert.That(rect, Is.Not.Null, path + " must have a RectTransform.");
+            return rect;
+        }
+
+        private static void AssertRect(RectTransform rect, Vector2 position, Vector2 size)
+        {
+            Assert.That(rect.anchoredPosition, Is.EqualTo(position));
+            Assert.That(rect.sizeDelta, Is.EqualTo(size));
+        }
+
+        private static Rect GetAnchoredRect(RectTransform rect)
+        {
+            return new Rect(
+                rect.anchoredPosition.x - rect.sizeDelta.x * rect.pivot.x,
+                rect.anchoredPosition.y - rect.sizeDelta.y * rect.pivot.y,
+                rect.sizeDelta.x,
+                rect.sizeDelta.y);
         }
 
         private void AssertViewContainsOnly(MockupLibraryView view, MockupLibraryGroup expectedGroup)
