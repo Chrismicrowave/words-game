@@ -425,8 +425,6 @@ namespace Words.UiMockups.WordListHub
         private void RenderLibraryDetail(Transform pane, bool wireEvents)
         {
             ClearChildren(pane);
-            CreateText(pane, "DetailEyebrow", "LIST DETAILS", 15f, MutedInk,
-                TextAlignmentOptions.MidlineLeft, true, new Vector2(0f, 222f), new Vector2(620f, 24f));
 
             IReadOnlyList<MockupWordList> visibleItems = store.QueryLibrary(query);
             MockupWordList item = store.FindById(selectedListId);
@@ -443,46 +441,80 @@ namespace Words.UiMockups.WordListHub
                 return;
             }
 
-            CreateText(pane, "DetailTitle", item.Title, 30f, Ink,
-                TextAlignmentOptions.MidlineLeft, true, new Vector2(0f, 184f), new Vector2(650f, 52f));
-            CreateText(pane, "DetailDescription", string.IsNullOrWhiteSpace(item.Description)
+            bool useCjk = item.Language == MockupLanguage.Chinese || item.Language == MockupLanguage.Mixed;
+            Transform header = CreatePanel("DetailHeaderPanel", pane, PaperAlt).transform;
+            SetRect(header.GetComponent<RectTransform>(), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f),
+                new Vector2(0.5f, 0.5f), new Vector2(0f, 160f), new Vector2(680f, 124f));
+
+            CreateText(header, "DetailEyebrow", "LIST DETAILS", 13f, MutedInk,
+                TextAlignmentOptions.MidlineLeft, true, new Vector2(0f, 47f), new Vector2(616f, 18f));
+            TextMeshProUGUI detailTitle = CreateText(header, "DetailTitle", item.Title, 27f, Ink,
+                TextAlignmentOptions.MidlineLeft, true, new Vector2(0f, 20f), new Vector2(616f, 38f),
+                useCjk: useCjk);
+            detailTitle.enableAutoSizing = true;
+            detailTitle.fontSizeMin = 21f;
+            detailTitle.fontSizeMax = 27f;
+            detailTitle.textWrappingMode = TextWrappingModes.NoWrap;
+            detailTitle.overflowMode = TextOverflowModes.Ellipsis;
+
+            TextMeshProUGUI detailDescription = CreateText(header, "DetailDescription",
+                string.IsNullOrWhiteSpace(item.Description)
                     ? "A word list ready for your next practice session."
                     : item.Description,
-                18f, MutedInk, TextAlignmentOptions.TopLeft, false,
-                new Vector2(0f, 132f), new Vector2(650f, 58f));
+                16f, MutedInk, TextAlignmentOptions.TopLeft, false,
+                new Vector2(0f, -7f), new Vector2(616f, 36f), useCjk: useCjk);
+            detailDescription.textWrappingMode = TextWrappingModes.Normal;
+            detailDescription.overflowMode = TextOverflowModes.Ellipsis;
 
-            string origin = item.IsReadOnly
-                ? "COMMUNITY DOWNLOAD  ·  BY " + (string.IsNullOrEmpty(item.RemoteAuthor) ? "COMMUNITY MEMBER" : item.RemoteAuthor)
-                : GroupLabel(item.Group).ToUpperInvariant();
-            CreateText(pane, "DetailOrigin", origin, 15f, AccentDark,
-                TextAlignmentOptions.MidlineLeft, true, new Vector2(0f, 82f), new Vector2(650f, 22f));
+            string author = item.IsReadOnly
+                ? (string.IsNullOrEmpty(item.RemoteAuthor) ? "COMMUNITY MEMBER" : item.RemoteAuthor)
+                : "YOU";
+            string metadata = "BY " + author
+                + "   ·   " + GroupLabel(item.Group).ToUpperInvariant()
+                + "   ·   " + LanguageLabel(item.Language)
+                + "   ·   " + item.WordCount + " WORDS"
+                + "   ·   REVISION " + item.ContentRevision;
+            CreateText(header, "DetailMetadata", metadata, 13f, AccentDark,
+                TextAlignmentOptions.MidlineLeft, true, new Vector2(0f, -46f), new Vector2(616f, 18f));
 
-            CreateText(pane, "DetailStats",
-                LanguageLabel(item.Language) + "     ·     " + item.WordCount + " words     ·     Revision " + item.ContentRevision,
-                16f, Ink, TextAlignmentOptions.MidlineLeft, false,
-                new Vector2(0f, 55f), new Vector2(650f, 22f));
+            Transform recordPanel = CreatePanel("DetailRecordPanel", pane, new Color(0.90f, 0.91f, 0.82f, 1f)).transform;
+            SetRect(recordPanel.GetComponent<RectTransform>(), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f),
+                new Vector2(0.5f, 0.5f), new Vector2(-170f, -38f), new Vector2(320f, 220f));
+            CreateText(recordPanel, "RecordHeader", "YOUR BEST RUN", 14f, MutedInk,
+                TextAlignmentOptions.MidlineLeft, true, new Vector2(0f, 75f), new Vector2(280f, 20f));
+            CreateText(recordPanel, "RecordStarsLabel", "STARS", 12f, MutedInk,
+                TextAlignmentOptions.MidlineLeft, true, new Vector2(0f, 48f), new Vector2(280f, 18f));
+            int earnedStars = Mathf.Clamp(item.PersonalStars ?? 0, 0, 5);
+            string stars = new string('★', earnedStars) + new string('☆', 5 - earnedStars);
+            CreateText(recordPanel, "RecordStars", stars, 29f, AccentDark,
+                TextAlignmentOptions.MidlineLeft, true, new Vector2(0f, 19f), new Vector2(280f, 36f));
+            CreateText(recordPanel, "RecordTimeLabel", "BEST TIME", 12f, MutedInk,
+                TextAlignmentOptions.MidlineLeft, true, new Vector2(0f, -18f), new Vector2(280f, 18f));
+            string time = item.BestTimeSeconds.HasValue
+                ? item.BestTimeSeconds.Value.ToString("0.0") + " s"
+                : "No run yet";
+            CreateText(recordPanel, "RecordTime", time, 24f, Ink,
+                TextAlignmentOptions.MidlineLeft, true, new Vector2(0f, -48f), new Vector2(280f, 34f));
+            CreateText(recordPanel, "RecordNote",
+                item.PreviousContentRecords.Count > 0
+                    ? "Earlier content version records are archived."
+                    : item.HasBeenPlayed ? "Best record for this content version." : "Finish a run to set your record.",
+                12f, MutedInk, TextAlignmentOptions.BottomLeft, false,
+                new Vector2(0f, -87f), new Vector2(280f, 22f));
 
-            CreatePanel("RecordStrip", pane, new Color(0.90f, 0.91f, 0.82f, 1f));
-            Transform recordStrip = pane.Find("RecordStrip");
-            SetRect(recordStrip.GetComponent<RectTransform>(), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f),
-                new Vector2(0.5f, 0.5f), new Vector2(0f, 8f), new Vector2(650f, 58f));
-            CreateText(recordStrip, "RecordHeader", "YOUR BEST RUN", 12f, MutedInk,
-                TextAlignmentOptions.MidlineLeft, true, new Vector2(0f, 16f), new Vector2(580f, 16f));
-            string stars = item.PersonalStars.HasValue ? new string('★', Mathf.Clamp(item.PersonalStars.Value, 0, 5)) : "—";
-            string time = item.BestTimeSeconds.HasValue ? item.BestTimeSeconds.Value.ToString("0.0") + " s" : "No time yet";
-            CreateText(recordStrip, "RecordValue", stars + "     " + time, 19f, AccentDark,
-                TextAlignmentOptions.MidlineLeft, true, new Vector2(0f, -8f), new Vector2(580f, 24f));
-
-            CreateText(pane, "DetailWordsLabel", "WORDS  ·  " + item.WordCount, 14f, MutedInk,
-                TextAlignmentOptions.MidlineLeft, true, new Vector2(0f, -38f), new Vector2(650f, 20f));
-            Transform wordsContent = CreateScrollContent(pane, "DetailWordsScroll", 650f, 100f,
-                new Vector2(0f, -89f));
+            Transform wordsPanel = CreatePanel("DetailWordsPanel", pane, White).transform;
+            SetRect(wordsPanel.GetComponent<RectTransform>(), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f),
+                new Vector2(0.5f, 0.5f), new Vector2(170f, -38f), new Vector2(320f, 220f));
+            CreateText(wordsPanel, "DetailWordsLabel", "WORDS  ·  " + item.WordCount, 14f, MutedInk,
+                TextAlignmentOptions.MidlineLeft, true, new Vector2(0f, 75f), new Vector2(280f, 20f));
+            Transform wordsContent = CreateScrollContent(wordsPanel, "DetailWordsScroll", 294f, 156f,
+                new Vector2(0f, -18f));
             string words = item.Words == null || item.Words.Count == 0
                 ? "No words in this list."
                 : string.Join("\n", item.Words);
             TextMeshProUGUI wordsText = CreateText(wordsContent, "DetailWords", words, 16f, Ink,
                 TextAlignmentOptions.TopLeft, false,
-                useCjk: item.Language == MockupLanguage.Chinese || item.Language == MockupLanguage.Mixed);
+                useCjk: useCjk);
             wordsText.overflowMode = TextOverflowModes.Overflow;
             wordsText.textWrappingMode = TextWrappingModes.Normal;
             ContentSizeFitter wordsTextFitter = wordsText.gameObject.AddComponent<ContentSizeFitter>();
@@ -490,14 +522,14 @@ namespace Words.UiMockups.WordListHub
             wordsTextFitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
 
             string detailStatus = ListBadge(item);
-            string recordNote = item.PreviousContentRecords.Count > 0
-                ? "Earlier content version records are archived."
+            string versionNote = item.PreviousContentRecords.Count > 0
+                ? "Current words are a new version; earlier records are kept separately."
                 : item.HasBeenPlayed ? "Personal best for the current content version." : "Finish a run to add a personal record.";
             detailStatus = string.IsNullOrEmpty(detailStatus)
-                ? recordNote
-                : detailStatus + "  ·  " + recordNote;
+                ? versionNote
+                : detailStatus + "  ·  " + versionNote;
             CreateText(pane, "DetailStatus", detailStatus, 12f, Sage,
-                TextAlignmentOptions.MidlineLeft, false, new Vector2(0f, -152f), new Vector2(650f, 18f));
+                TextAlignmentOptions.MidlineLeft, false, new Vector2(0f, -155f), new Vector2(650f, 18f));
 
             CreateButton(pane, "Action_Favorite", item.IsFavorite ? "★ Saved" : "☆ Save",
                 126f, 40f, PaperAlt, wireEvents ? () => ToggleFavorite(item.Id) : null,
