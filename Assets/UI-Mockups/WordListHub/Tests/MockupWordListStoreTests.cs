@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using NUnit.Framework;
+using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -209,6 +210,34 @@ namespace Words.UiMockups.WordListHub.Tests
                     Assert.That(labelText.fontSizeMin, Is.EqualTo(16f));
                     Assert.That(labelText.fontSizeMax, Is.EqualTo(18f));
                 }
+            }
+            finally
+            {
+                if (openedForTest)
+                    EditorSceneManager.CloseScene(scene, true);
+            }
+        }
+
+        [Test]
+        public void WordListHubMockupScene_serializesAuthoredLayoutOverrides()
+        {
+            Scene scene = SceneManager.GetSceneByPath(MockupScenePath);
+            bool openedForTest = !scene.IsValid() || !scene.isLoaded;
+            if (openedForTest)
+                scene = EditorSceneManager.OpenScene(MockupScenePath, OpenSceneMode.Additive);
+
+            try
+            {
+                WordListHubMockupController controller = scene.GetRootGameObjects()
+                    .SelectMany(root => root.GetComponentsInChildren<WordListHubMockupController>(true))
+                    .Single();
+                SerializedObject serialized = new SerializedObject(controller);
+                SerializedProperty overrides = serialized.FindProperty("authoredLayoutOverrides");
+
+                Assert.That(overrides, Is.Not.Null);
+                Assert.That(overrides.isArray, Is.True);
+                Assert.That(overrides.arraySize, Is.GreaterThan(0),
+                    "Saving the mockup scene must capture its authored RectTransform layout.");
             }
             finally
             {

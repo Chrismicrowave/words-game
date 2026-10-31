@@ -29,6 +29,35 @@ namespace Words.UiMockups.WordListHub
     /// </summary>
     public sealed class WordListHubMockupController : MonoBehaviour
     {
+        [Serializable]
+        private sealed class UiLayoutOverride
+        {
+            public string path;
+            public string objectName;
+            public Vector2 anchorMin;
+            public Vector2 anchorMax;
+            public Vector2 pivot;
+            public Vector2 anchoredPosition;
+            public Vector2 sizeDelta;
+            public Vector3 localScale;
+            public Quaternion localRotation;
+            public bool hasText;
+            public float fontSize;
+            public float fontSizeMin;
+            public float fontSizeMax;
+            public bool enableAutoSizing;
+            public TextAlignmentOptions alignment;
+            public TextWrappingModes textWrappingMode;
+            public TextOverflowModes overflowMode;
+            public bool hasLayoutElement;
+            public float minWidth;
+            public float minHeight;
+            public float preferredWidth;
+            public float preferredHeight;
+            public float flexibleWidth;
+            public float flexibleHeight;
+        }
+
         private enum Page
         {
             Challenges,
@@ -69,6 +98,8 @@ namespace Words.UiMockups.WordListHub
         [SerializeField] private Sprite twoWordsLockedIcon;
         [SerializeField] private Sprite wordWithDUnlockedIcon;
         [SerializeField] private Sprite wordWithDLockedIcon;
+        [SerializeField, HideInInspector] private List<UiLayoutOverride> authoredLayoutOverrides =
+            new List<UiLayoutOverride>();
 
         private readonly HashSet<MockupLibraryGroup> collapsedGroups =
             new HashSet<MockupLibraryGroup>();
@@ -126,8 +157,66 @@ namespace Words.UiMockups.WordListHub
 
         private void Awake()
         {
+            // Preserve layout changes made directly in the saved scene before
+            // the functional view rebuilds its generated hierarchy.
+            CaptureAuthoredLayout();
             EnsureStore();
             BuildView(true);
+        }
+
+        [ContextMenu("Capture Authored UI Layout")]
+        public void CaptureAuthoredLayout()
+        {
+            Transform prior = card != null ? card.Find("HubGenerated") : transform.Find("Card/HubGenerated");
+            if (prior == null)
+                return;
+
+            authoredLayoutOverrides.Clear();
+            foreach (RectTransform rect in prior.GetComponentsInChildren<RectTransform>(true))
+            {
+                if (rect.name.StartsWith("TMP SubMeshUI", StringComparison.Ordinal))
+                    continue;
+
+                var layout = new UiLayoutOverride
+                {
+                    path = GetRelativeSiblingPath(prior, rect),
+                    objectName = rect.name,
+                    anchorMin = rect.anchorMin,
+                    anchorMax = rect.anchorMax,
+                    pivot = rect.pivot,
+                    anchoredPosition = rect.anchoredPosition,
+                    sizeDelta = rect.sizeDelta,
+                    localScale = rect.localScale,
+                    localRotation = rect.localRotation
+                };
+
+                TMP_Text text = rect.GetComponent<TMP_Text>();
+                if (text != null)
+                {
+                    layout.hasText = true;
+                    layout.fontSize = text.fontSize;
+                    layout.fontSizeMin = text.fontSizeMin;
+                    layout.fontSizeMax = text.fontSizeMax;
+                    layout.enableAutoSizing = text.enableAutoSizing;
+                    layout.alignment = text.alignment;
+                    layout.textWrappingMode = text.textWrappingMode;
+                    layout.overflowMode = text.overflowMode;
+                }
+
+                LayoutElement layoutElement = rect.GetComponent<LayoutElement>();
+                if (layoutElement != null)
+                {
+                    layout.hasLayoutElement = true;
+                    layout.minWidth = layoutElement.minWidth;
+                    layout.minHeight = layoutElement.minHeight;
+                    layout.preferredWidth = layoutElement.preferredWidth;
+                    layout.preferredHeight = layoutElement.preferredHeight;
+                    layout.flexibleWidth = layoutElement.flexibleWidth;
+                    layout.flexibleHeight = layoutElement.flexibleHeight;
+                }
+
+                authoredLayoutOverrides.Add(layout);
+            }
         }
 
         private void EnsureStore()
@@ -222,6 +311,84 @@ namespace Words.UiMockups.WordListHub
 
             RenderPage(wireEvents);
             ApplySlicedImages(transform);
+            ApplyAuthoredLayoutOverrides();
+        }
+
+        private void ApplyAuthoredLayoutOverrides()
+        {
+            if (generatedRoot == null || authoredLayoutOverrides.Count == 0)
+                return;
+
+            LayoutRebuilder.ForceRebuildLayoutImmediate(generatedRoot as RectTransform);
+            foreach (UiLayoutOverride layout in authoredLayoutOverrides)
+            {
+                Transform target = FindByRelativeSiblingPath(generatedRoot, layout.path);
+                if (target == null || target.name != layout.objectName || !(target is RectTransform rect))
+                    continue;
+
+                rect.anchorMin = layout.anchorMin;
+                rect.anchorMax = layout.anchorMax;
+                rect.pivot = layout.pivot;
+                rect.anchoredPosition = layout.anchoredPosition;
+                rect.sizeDelta = layout.sizeDelta;
+                rect.localScale = layout.localScale;
+                rect.localRotation = layout.localRotation;
+
+                TMP_Text text = rect.GetComponent<TMP_Text>();
+                if (layout.hasText && text != null)
+                {
+                    text.fontSize = layout.fontSize;
+                    text.fontSizeMin = layout.fontSizeMin;
+                    text.fontSizeMax = layout.fontSizeMax;
+                    text.enableAutoSizing = layout.enableAutoSizing;
+                    text.alignment = layout.alignment;
+                    text.textWrappingMode = layout.textWrappingMode;
+                    text.overflowMode = layout.overflowMode;
+                }
+
+                LayoutElement layoutElement = rect.GetComponent<LayoutElement>();
+                if (layout.hasLayoutElement && layoutElement != null)
+                {
+                    layoutElement.minWidth = layout.minWidth;
+                    layoutElement.minHeight = layout.minHeight;
+                    layoutElement.preferredWidth = layout.preferredWidth;
+                    layoutElement.preferredHeight = layout.preferredHeight;
+                    layoutElement.flexibleWidth = layout.flexibleWidth;
+                    layoutElement.flexibleHeight = layout.flexibleHeight;
+                }
+            }
+        }
+
+        private static string GetRelativeSiblingPath(Transform root, Transform target)
+        {
+            var indices = new List<int>();
+            Transform current = target;
+            while (current != null && current != root)
+            {
+                indices.Add(current.GetSiblingIndex());
+                current = current.parent;
+            }
+            indices.Reverse();
+            return string.Join("/", indices);
+        }
+
+        private static Transform FindByRelativeSiblingPath(Transform root, string path)
+        {
+            if (root == null || string.IsNullOrEmpty(path))
+                return root;
+
+            Transform current = root;
+            foreach (string segment in path.Split('/'))
+            {
+                if (!int.TryParse(segment, out int index)
+                    || index < 0
+                    || index >= current.childCount)
+                {
+                    return null;
+                }
+                current = current.GetChild(index);
+            }
+            return current;
         }
 
         private void BuildGlobalNavigation(bool wireEvents)
