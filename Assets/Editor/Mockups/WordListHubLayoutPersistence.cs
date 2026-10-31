@@ -1,34 +1,11 @@
 using System;
-using System.Linq;
-using UnityEditor;
-using UnityEngine;
-using UnityEngine.SceneManagement;
-using Words.UiMockups.WordListHub;
 
-internal sealed class WordListHubLayoutPersistence : AssetModificationProcessor
+/// <summary>
+/// Deprecated asset retained to preserve its Unity GUID. Authored UI is saved as
+/// ordinary scene content; this type intentionally has no AssetModificationProcessor
+/// base class or save callback.
+/// </summary>
+[Obsolete("Authored Word List Hub layout is stored directly in the scene.")]
+internal sealed class WordListHubLayoutPersistence
 {
-    private const string MockupScenePath = "Assets/Scenes/UI-Mockups/WordListHubMockup.unity";
-
-    private static string[] OnWillSaveAssets(string[] paths)
-    {
-        if (Application.isPlaying
-            || EditorApplication.isPlayingOrWillChangePlaymode
-            || !paths.Any(path => string.Equals(
-                path.Replace('\\', '/'),
-                MockupScenePath,
-                StringComparison.OrdinalIgnoreCase)))
-        {
-            return paths;
-        }
-
-        Scene scene = SceneManager.GetSceneByPath(MockupScenePath);
-        if (!scene.IsValid() || !scene.isLoaded)
-            return paths;
-
-        WordListHubMockupController controller = scene.GetRootGameObjects()
-            .SelectMany(root => root.GetComponentsInChildren<WordListHubMockupController>(true))
-            .FirstOrDefault();
-        controller?.CaptureAuthoredLayout();
-        return paths;
-    }
 }

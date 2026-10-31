@@ -1,6 +1,6 @@
 # Word List UI mockup handoff
 
-**状态：** 2026-10-31。本轮 corrected source 已由更新后的 fresh DLL 编译；EditMode 为 33 passed / 0 failed，目标交互 smoke 已完成。`BuildPreviewInEditor` 已刷新并保存派生场景，scene clean。没有生成本轮最终像素截图；下方记录实际几何、mesh 与交互证据。旧 D3D12 崩溃的触发原因仍未确定。上一轮 31 项测试和截图仅作历史记录。所有社区、发布与成绩行为均为 mock，未接入真实 Steam；Words 模型也不是最终生产 schema 或存档迁移方案。
+**当前状态：** 2026-11-01。Scene-authored layout 迁移已保存并通过关闭/重载核验，Missing Script 为 0。独立对比确认原 Library 的 939 个对象 ID 与布局/样式 baseline 保持，迁移新增的 61 个 Image 均为 Sliced，`Action_Delete` binding 已持久化。37 项 EditMode 测试全部通过（37 passed / 0 failed）。Play smoke 已验证四页导航、筛选、下载并选中、创建/编辑/删除及成就筛选；操作后退出 Play，场景保持 clean，Console 无错误。当前仍是使用 fixture/store 的 UI mock，没有连接真实后端或 Steam；Words 模型也不是最终生产 schema 或存档迁移方案。
 
 本文与 [`community-v1-discussion-summary.md`](community-v1-discussion-summary.md) 配合使用；分组和阶段决策以该汇总文档为准。
 
@@ -8,7 +8,7 @@
 
 先在独立场景里组合现有 UI 与 Word List、Community、Achievements 流程，完成导航、文案、状态和交互的用户验收；确认 UX 后，再定义正式数据结构、存档兼容与成绩内容绑定，最后迁移正式场景并接入 Steam Workshop。mockup 仅用于设计验证，不证明游戏已上线社区、审核或新成就功能。
 
-Editor builder 从 `Assets/Scenes/mainGame.unity` 读取 `Menus/LevelPanel` 的视觉树和资源，在独立场景中创建 Canvas、EventSystem、预览 Camera 和克隆 UI；它会剥离克隆子树中的非视觉脚本并校验场景隔离。输出是 `Assets/Scenes/UI-Mockups/WordListHubMockup.unity`。源码位于 [`WordListHubMockupBuilder.cs`](../Assets/Editor/Mockups/WordListHubMockupBuilder.cs)。
+旧 Editor builder 曾从 `Assets/Scenes/mainGame.unity` 派生预览 UI；该入口现已安全退役，调用会抛出说明，不再创建或覆盖场景。新的显式迁移入口是 [`WordListHubSceneMigrationTool.cs`](../Assets/Editor/Mockups/WordListHubSceneMigrationTool.cs)，菜单为 `Tools/Mockups/Migrate Word List Hub Scene Layout`，静态入口为 `Words.UiMockups.Editor.WordListHubSceneMigrationTool.MigratePreviewScene`。迁移目标始终是现有 `Assets/Scenes/UI-Mockups/WordListHubMockup.unity`，不会读取或改写 `mainGame`。
 
 controller 使用内存 store 和 fixture，不访问正式 gameplay、Steam、玩家偏好或持久存档。关闭并重开场景后，mock 状态不应被当作保存数据。正式词表 schema、旧存档兼容迁移、成绩与内容版本的绑定规则仍待后续阶段定义。当前 `MockupWordList.Words` 等字段只是为原型交互准备，不承诺正式 JSON 或 C# 数据形状。
 
@@ -16,25 +16,32 @@ controller 使用内存 store 和 fixture，不访问正式 gameplay、Steam、�
 
 | 路径 | 用途 |
 |---|---|
-| `Assets/Editor/Mockups/WordListHubMockupBuilder.cs` | 隔离场景 builder；菜单项 `Tools/Mockups/Build Word List Hub Preview Scene` |
+| `Assets/Editor/Mockups/WordListHubMockupBuilder.cs` | 已退役的兼容菜单；调用时安全抛错，不生成或覆盖 Scene |
+| `Assets/Editor/Mockups/WordListHubSceneMigrationTool.cs` | 显式、幂等的场景迁移；菜单项 `Tools/Mockups/Migrate Word List Hub Scene Layout` |
+| `Assets/Editor/Mockups/WordListHubLayoutPersistence.cs` | 为保留旧 GUID 而留下的 deprecated 空类；不含保存钩子 |
 | `Assets/Scenes/UI-Mockups/WordListHubMockup.unity` | 当前独立 mockup scene |
 | `Assets/UI-Mockups/WordListHub/Runtime/WordListHubMockupController.cs` | 导航、页面、动态 UI、表单校验与 mock 交互 |
+| `Assets/UI-Mockups/WordListHub/Runtime/WordListHubSceneBindings.cs` | Scene-authored 页面、控件和动态模板引用；与 controller 位于同一 GameObject |
 | `Assets/UI-Mockups/WordListHub/Runtime/MockupWordListStore.cs` | 内存 fixture、分组、Play/Download、编辑、发布、点赞和举报状态 |
 | `Assets/UI-Mockups/WordListHub/Runtime/MockupWordListModel.cs` | 原型专用数据模型；不代表生产 schema |
-| `Assets/UI-Mockups/WordListHub/Tests/MockupWordListStoreTests.cs` | EditMode 测试源码；本轮 33 passed / 0 failed；上一轮 31 项结果保留作历史记录 |
+| `Assets/UI-Mockups/WordListHub/Tests/MockupWordListStoreTests.cs` | EditMode 测试源码；37 passed / 0 failed |
 | `Assets/UI-Mockups/WordListHub/Art/Placeholders/` | 六张成就锁定/解锁占位图 |
 | `Assets/UI-Mockups/WordListHub/Fonts/` | mockup 字体资源 |
 | `D:/Files/Desktop/Unity/Projects/GDS4 Game-a-Week/02-words/_scene_backups/WordListHubMockup-20261031-171903` | 本轮预览场景的稳定备份路径；文件当前存在 |
 
-builder 在允许重建已有 preview 时还会把旧场景复制到系统 Temp 下 `words-wordlist-hub-preview-*` 目录并写 manifest。上面的 `_scene_backups` 路径是可直接定位的工作区备份；两种备份用途不同。
+`_scene_backups` 下列路径是迁移前的历史备份。旧 builder 的 Temp 重建流程已退役；新的迁移工具执行时会在项目 `Library/WordListHubSceneMigrationBackups` 下保存目标 Scene 与 `.meta`。
 
-## 运行时 UI 与阻塞弹窗的处理约定
+## Scene-authored UI 与迁移约定
 
-- mockup 的运行时 UI 由 `WordListHubMockupController.RenderLibraryDetail()`、`CreateDropdown()` 等方法动态创建。直接修改已生成 GameObject 的 RectTransform 只对当前序列化预览有效；进入 Play Mode 的 `Awake()` 或执行 `BuildPreviewInEditor()` 时会被源码重新生成。需要长期保留的 Inspector 调整必须先提取为 controller 参数，再重建并保存场景。
-- 为保留设计者在 Scene 中所做的排版调整，controller 现在会序列化 `authoredLayoutOverrides`：保存 mockup scene 时，`WordListHubLayoutPersistence` 自动采集 `HubGenerated` 下的 RectTransform、TMP 字号/自动缩放/排版和 LayoutElement 尺寸；`Awake()` 会在重建前采集当前场景状态，并在每次重建后按确定的 sibling path 重新应用。该机制保证当前已生成页面的手工排版不会被 Play Mode 或页面重建覆盖。
-- 该覆盖机制仍是兼容层，不是最终 Prefab 架构。它按当前层级的 sibling path 匹配，能可靠保留现有页面的几何与字体设置；后续新增或重排层级时仍应检查覆盖结果。完成 UX 后，正式页面应迁移为 Prefab/Scene 驱动，控制器只绑定数据与事件。
-- Unity 的 `Scene(s) Have Been Modified` 等模态窗口会阻塞主线程，Pipeline 的编译、测试和 `eval` 请求会表现为长时间 running/timeout，但 `unity status` 仍可能显示 Editor ready。此时必须用 Computer Use 检查 Unity 窗口和截图；保存确认可点击 `Save` 或按 `Return`。不能把 Pipeline 的 running 状态当作测试正在正常执行。
-- Play Mode 的 `Awake()` 会重建 UI，退出后场景可能重新变为 dirty。完成运行验收后应再次保存场景，并确认 `scene get_hierarchy` 返回 `isDirty=false`。
+- 固定页面、导航、footer、表单和弹窗是 Scene 内容。`WordListHubSceneBindings` 与 `WordListHubMockupController` 必须挂在同一个 GameObject；controller 读取显式引用，切换页面时对绑定的页面根执行 `SetActive`。
+- Library 是现有排版的权威来源。迁移只在其外侧追加 Community、Achievements、Challenges、Modal 和隐藏的 `SceneTemplates`；不重建 Library。动态 Library/Community 行和 Achievement 卡片从 inactive Scene 模板克隆，`WordListHubRuntimeInstance` 只标记运行时克隆。
+- **以后修改固定 UI：** 在 `Assets/Scenes/UI-Mockups/WordListHubMockup.unity` 直接编辑页面、导航、footer、表单、弹窗和按钮。固定 UI 由 controller 通过 bindings 操作，不会在运行时销毁重建。
+- **以后修改动态外观：** 在 `HubGenerated/SceneTemplates` 编辑 inactive 的 Library 行、Community 行和 Achievement 卡片模板；修改会影响之后生成的克隆。滚动内容与行/卡片排布由 Scene 中对应的 `LayoutGroup`、RectTransform 和 LayoutElement 控制，也在 Scene Inspector 中编辑。
+- **以后修改下拉菜单外观：** 在对应 Scene `TMP_Dropdown` 的 `Template` 子树中调整 `Item`、Toggle 和勾选标记；选项文字与筛选行为由绑定和 controller 管理。
+- 迁移入口只针对现有目标 Scene，目标缺失或 dirty 时中止；执行前把 Scene 与 `.meta` 备份到项目 `Library/WordListHubSceneMigrationBackups`。它会比较 Library 迁移前后的层级、组件顺序、RectTransform、Graphic/TMP 和 Layout 属性，只有明确新增的 `Action_Delete` 分支可从父树对比中排除，并会单独校验该分支。任何其它 Library 改动都会拒绝保存。绑定控件上的持久 UnityEvent 只移除 target 为该 controller 的回调；其它对象的回调保留。
+- 迁移已保存并通过关闭/重载核验。它只向既有 Scene 追加缺失页面、模板和弹窗并绑定引用，不重建 Library；目标 Scene dirty 时拒绝运行。迁移失败且磁盘 Scene/.meta hash 未变时，工具从磁盘恢复目标 Scene；磁盘状态改变时不会自动覆盖文件，并会报告失败。旧 `WordListHubMockupBuilder` 菜单只抛出退役说明，不能重建场景。
+- `authoredLayoutOverrides` 与旧保存钩子已移除；`WordListHubLayoutPersistence.cs` 仅为空的 deprecated 类以保留 GUID。Play Mode 不再销毁并重建固定页面；运行时数据和动态行/卡片仍是临时 mock 状态。
+- Unity 的 `Scene(s) Have Been Modified` 等模态窗口会阻塞主线程，Pipeline 的编译、测试和 `eval` 请求会表现为长时间 running/timeout，但 `unity status` 仍可能显示 Editor ready。此时必须由唯一 Unity 操作者确认实际 Editor 状态；不能把 Pipeline 的 running 状态当作测试正在正常执行。
 
 ## 上一轮源码与运行证据（历史）
 
@@ -71,9 +78,9 @@ builder 在允许重建已有 preview 时还会把旧场景复制到系统 Temp 
 
 上一轮事件监听检查说明：Dropdown smoke 中报告的 1 个 listener 是运行时监听数；部分 Button 的 `persistentEventCount = 0` 不代表未接线，因为 controller 在运行时通过 `button.onClick.AddListener(onClick.Invoke)` 绑定回调。上一轮 EditMode 测试记录为 **31 passed / 0 failed**；本轮对源码有改动，这个结果不能作为本轮通过证据。
 
-## 本轮实现证据与验收状态
+## 迁移前实现证据与验收状态（历史；不代表当前 Scene-authored 迁移）
 
-### 已观察到
+### 历史观察
 
 - 更新后的 fresh DLL 晚于 corrected source；EditMode 33 passed / 0 failed。通过该 DLL 运行 `BuildPreviewInEditor` 后，派生 mockup scene 已刷新并保存，scene 为 clean。
 - Play 场景中 My Lists 有 6 项、Community Downloads 有 3 项、My Published 有 3 项。折叠 Community Downloads 只隐藏该组自身的 rows。
@@ -93,7 +100,7 @@ builder 在允许重建已有 preview 时还会把旧场景复制到系统 Temp 
 - 已完成一次后台小步 30 fps 临时 cap 验证，未修改项目图形配置；Play Mode 停止后 fps 恢复为 `-1`。这次验证没有确定 D3D12 崩溃的触发原因。
 - 本轮最终验证未观察到新的 GPU error 或 API interruption；这不改变旧 crash log 记录，也不能确定旧崩溃原因或声称已修复。
 
-### 本轮验收结果
+### 迁移前验收结果
 
 - 33 项 EditMode tests、下载与 Play 导航、scroll/selection 保持、Dropdown 20 px 行高、Inline Words 滚动、CreateVersion 内容门控与复制，以及 Café 同项删除后重新下载均已验收通过。
 - Inline Words 的 72 词几何/mesh/scroll 检查及 preview/actions 不重叠的运行时检查已通过；CreateVersion 与列表操作有真实交互证据。未生成本轮最终像素截图，因此不能称截图视觉验收通过。
@@ -107,7 +114,7 @@ builder 在允许重建已有 preview 时还会把旧场景复制到系统 Temp 
 | Words 预览与 Dropdown | 详情直接预览完整 Words，使用独立滚动区；Dropdown Item 行高 20 px，与正式原版一致 | 72 词预览 TMP 914 字符、content 1680.1、viewport 100，offset 从 0 到 1580.1 再回到 0；几何/mesh/交互检查及与操作区无重叠已验收。Item 高度 20 px 已验收；未生成最终像素截图 |
 | CreateVersion 编辑门控 | Words/Language 没有实际内容变化时禁用并显示就地原因；实际变化才启用；确认后建新 local ID、无 remote identity，不改原 published 项 | 已实测不改内容与只改标题时 disabled，实际改 `TMP_InputField.text` 中的词后启用；确认新增一条 My Lists 本地副本，数量 12→13，原 published 项的 ID、分组、remote ID 和 Words 不变 |
 | 固定内容与缓存 | 移除旧 `UpdateAvailable` 内容更新 fixture/path；相同 remoteId 内容不得自动覆盖缓存；未来 metadata sync 另议 | 当前 mockup Runtime/Tests 中未发现旧 `UpdateAvailable` 路径或 fixture；Café 删除后重下生成新 local ID，远端来源保持不变。metadata sync 另议 |
-| 当前验证 | 本轮 EditMode、fresh DLL 与派生 scene | 33 passed / 0 failed；fresh DLL 在 corrected source 之后生成；`BuildPreviewInEditor` 已刷新并保存派生 scene，scene clean；目标交互 smoke 已完成。无本轮最终像素截图；旧 D3D12 崩溃原因仍未知 |
+| 迁移前验证 | 当时的 EditMode、fresh DLL 与派生 scene | 33 passed / 0 failed；fresh DLL 在当时 corrected source 之后生成；旧 `BuildPreviewInEditor` 曾刷新并保存派生 scene。该结果不验证当前 Scene-authored 迁移；旧 D3D12 崩溃原因仍未知 |
 | 历史验证 | 上轮 EditMode 31 passed / 0 failed，及旧截图、功能 smoke | 仅历史记录；不得当作本轮验证 |
 
 ## Steam 投票、举报和下架的界限
@@ -121,7 +128,7 @@ builder 在允许重建已有 preview 时还会把旧场景复制到系统 Temp 
 
 上一轮 pipeline 截图为 `Temp/pipeline-screenshots/WordListHub-Final-Library-footer-eae03fbfac9548a696c02b886a74732f.png`。当时 Library 页可见、Play Mode 已停止、saved=true、dirty=false、compiling=false；`mainGame` 与 Build Settings hashes 未变，编译 `failed=false`、0 errors，EditMode 31 passed / 0 failed。这些仍是上一轮记录；本轮当前验证状态见上方证据区。真实 Steam Workshop 未接入。
 
-如需重建 preview，先确认正式 scene 与 mockup scene 都已妥善保存，并确认目标预览未在加载状态。builder 的重建入口会先保存旧 preview 到 Temp；稳定工作区备份为：
+不要调用旧 builder 重建 preview；它现在只会报错退出。布局迁移入口为 `Words.UiMockups.Editor.WordListHubSceneMigrationTool.MigratePreviewScene`，只在明确执行时保存既有目标 Scene；dirty 场景会被拒绝，执行前会备份，失败时按未变的磁盘副本恢复目标 Scene。已经迁移的布局以后直接在 Scene 与模板中编辑，不需要再运行迁移工具。以下路径是迁移前的稳定工作区备份：
 
 ```text
 D:/Files/Desktop/Unity/Projects/GDS4 Game-a-Week/02-words/_scene_backups/WordListHubMockup-20261031-171903
@@ -129,8 +136,7 @@ D:/Files/Desktop/Unity/Projects/GDS4 Game-a-Week/02-words/_scene_backups/WordLis
 
 ## 后续阶段
 
-1. **独立 functional mock：** 完成当前场景的可操作状态和控件。
-2. **用户验收 UX：** 在 Unity 中逐页操作，确认导航、表单、分组、离线与文案后再定稿。
-3. **正式数据结构与兼容：** 定义生产 schema、旧存档迁移和导入导出兼容；确定成绩按可玩内容版本绑定。当前 mock Words 不作为最终 schema。
-4. **Steam Workshop 双账号闭环：** 使用两个测试账号验证发布、浏览、下载、点赞、举报和作者更新；当前阶段不建设自有服务器。
-5. **后续 leaderboard 与审核自动化：** 再评估公开排行榜、人工复核工具和 AI 辅助；AI 不自动隐藏或下架。
+1. **完成 mockup 验收：** 当前 37 项 EditMode 测试和本轮 Play smoke 已通过。后续若继续迭代交互，需重新运行相关验证；视觉截图验收仍需单独留证。
+2. **正式数据结构与兼容：** 定义生产 schema、旧存档迁移和导入导出兼容；确定成绩按可玩内容版本绑定。当前 mock Words 不作为最终 schema。
+3. **Steam Workshop 双账号闭环：** 使用两个测试账号验证发布、浏览、下载、点赞、举报和作者更新；当前阶段不建设自有服务器。
+4. **后续 leaderboard 与审核自动化：** 再评估公开排行榜、人工复核工具和 AI 辅助；AI 不自动隐藏或下架。

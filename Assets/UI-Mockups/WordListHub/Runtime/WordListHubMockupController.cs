@@ -4,24 +4,11 @@ using System.Collections.Generic;
 using System.Linq;
 using TMPro;
 using UnityEngine;
+using UnityEngine.Events;
 using UnityEngine.UI;
 
 namespace Words.UiMockups.WordListHub
 {
-    internal sealed class MockupSlicedDropdown : TMP_Dropdown
-    {
-        protected override GameObject CreateBlocker(Canvas rootCanvas)
-        {
-            GameObject blocker = base.CreateBlocker(rootCanvas);
-            if (blocker != null)
-            {
-                foreach (Image image in blocker.GetComponentsInChildren<Image>(true))
-                    image.type = Image.Type.Sliced;
-            }
-            return blocker;
-        }
-    }
-
     /// <summary>
     /// Local-only interaction layer for the isolated Word List Hub mockup scene.
     /// All state lives in a fresh MockupWordListStore and is discarded when the scene
@@ -29,35 +16,6 @@ namespace Words.UiMockups.WordListHub
     /// </summary>
     public sealed class WordListHubMockupController : MonoBehaviour
     {
-        [Serializable]
-        private sealed class UiLayoutOverride
-        {
-            public string path;
-            public string objectName;
-            public Vector2 anchorMin;
-            public Vector2 anchorMax;
-            public Vector2 pivot;
-            public Vector2 anchoredPosition;
-            public Vector2 sizeDelta;
-            public Vector3 localScale;
-            public Quaternion localRotation;
-            public bool hasText;
-            public float fontSize;
-            public float fontSizeMin;
-            public float fontSizeMax;
-            public bool enableAutoSizing;
-            public TextAlignmentOptions alignment;
-            public TextWrappingModes textWrappingMode;
-            public TextOverflowModes overflowMode;
-            public bool hasLayoutElement;
-            public float minWidth;
-            public float minHeight;
-            public float preferredWidth;
-            public float preferredHeight;
-            public float flexibleWidth;
-            public float flexibleHeight;
-        }
-
         private enum Page
         {
             Challenges,
@@ -73,38 +31,23 @@ namespace Words.UiMockups.WordListHub
             InProgress
         }
 
-        private static readonly Color Ink = new Color(0.17f, 0.17f, 0.15f, 1f);
-        private static readonly Color MutedInk = new Color(0.39f, 0.39f, 0.35f, 1f);
-        private static readonly Color Accent = new Color(0.722f, 0.467f, 0.353f, 1f);
-        private static readonly Color AccentDark = new Color(0.49f, 0.27f, 0.20f, 1f);
-        private static readonly Color Paper = new Color(0.963f, 0.953f, 0.889f, 1f);
-        private static readonly Color PaperAlt = new Color(0.925f, 0.925f, 0.846f, 1f);
-        private static readonly Color White = new Color(1f, 0.995f, 0.96f, 1f);
-        private static readonly Color Sage = new Color(0.34f, 0.48f, 0.38f, 1f);
-        private const float DropdownLegacyItemHeight = 20f;
-        private const float DropdownItemHeight = 40f;
-        private const float DropdownMenuHeightScale = 3f;
-        private const float DropdownMenuMaxHeight = 720f;
-
         [SerializeField] private TMP_FontAsset primaryFont;
         [SerializeField] private TMP_FontAsset cjkFont;
         [SerializeField] private Sprite standardSprite;
         [SerializeField] private Sprite backgroundSprite;
         [SerializeField] private Sprite inputFieldSprite;
         [SerializeField] private Sprite maskSprite;
+        [SerializeField] private WordListHubSceneBindings sceneBindings;
         [SerializeField] private Sprite firstWordUnlockedIcon;
         [SerializeField] private Sprite firstWordLockedIcon;
         [SerializeField] private Sprite twoWordsUnlockedIcon;
         [SerializeField] private Sprite twoWordsLockedIcon;
         [SerializeField] private Sprite wordWithDUnlockedIcon;
         [SerializeField] private Sprite wordWithDLockedIcon;
-        [SerializeField, HideInInspector] private List<UiLayoutOverride> authoredLayoutOverrides =
-            new List<UiLayoutOverride>();
 
         private readonly HashSet<MockupLibraryGroup> collapsedGroups =
             new HashSet<MockupLibraryGroup>();
 
-        private DefaultControls.Resources uiResources;
         private MockupWordListStore store;
         private MockupLibraryQuery query;
         private Page currentPage = Page.Library;
@@ -144,79 +87,223 @@ namespace Words.UiMockups.WordListHub
         private MockupLanguage editLanguage = MockupLanguage.English;
         private bool copyEditingMode;
         private bool editWordsReadOnly;
+        private string pendingPlayListId;
+        private Coroutine communityScrollRoutine;
 
         /// <summary>
-        /// Called once by the Editor scene builder so the saved mockup scene contains
-        /// visible preview UI. Play mode rebuilds the same view and wires local events.
+        /// Retained for source compatibility with any stale Editor menu. Rebuilding
+        /// authored UI from this entry point is intentionally disabled.
         /// </summary>
+        [Obsolete("Use the explicit scene migration tool; this entry point cannot rebuild the UI.")]
         public void BuildPreviewInEditor()
         {
-            EnsureStore();
-            BuildView(false);
+            throw new InvalidOperationException(
+                "The Word List Hub is Scene-authored. Use the safe one-time Editor migration tool.");
         }
 
         private void Awake()
         {
-            // Preserve layout changes made directly in the saved scene before
-            // the functional view rebuilds its generated hierarchy.
-            CaptureAuthoredLayout();
             EnsureStore();
-            BuildView(true);
+            BindAuthoredScene();
+            BindSceneEvents();
+            SetPageActive(currentPage);
+            RefreshCurrentPage();
         }
 
-        [ContextMenu("Capture Authored UI Layout")]
-        public void CaptureAuthoredLayout()
+        private void BindAuthoredScene()
         {
-            Transform prior = card != null ? card.Find("HubGenerated") : transform.Find("Card/HubGenerated");
-            if (prior == null)
+            if (sceneBindings == null)
+                sceneBindings = GetComponent<WordListHubSceneBindings>();
+            if (sceneBindings == null)
+                throw new InvalidOperationException("WordListHubSceneBindings is missing from the mockup scene.");
+
+            card = sceneBindings.card;
+            generatedRoot = sceneBindings.hubRoot;
+            footerText = sceneBindings.footer;
+            libraryListContent = sceneBindings.library.listContent;
+            libraryScrollRect = sceneBindings.library.listScroll;
+            libraryDetailPane = sceneBindings.library.detailPane;
+            communityListContent = sceneBindings.community.listContent;
+            communityDetailPane = sceneBindings.community.detailPane;
+
+            if (sceneBindings.pages == null)
+                throw new InvalidOperationException("No authored page references are assigned.");
+            foreach (WordListHubSceneBindings.PageBinding binding in sceneBindings.pages)
+            {
+                if (binding == null || binding.root == null)
+                    continue;
+                if ((Page)binding.page == currentPage)
+                    pageRoot = binding.root.transform;
+            }
+
+            if (card == null || generatedRoot == null || pageRoot == null
+                || libraryListContent == null || libraryDetailPane == null)
+            {
+                throw new InvalidOperationException(
+                    "The Word List Hub scene bindings are incomplete. Run the safe one-time migration tool.");
+            }
+
+            BindDialogReferences();
+        }
+
+        private void BindDialogReferences()
+        {
+            WordListHubSceneBindings.ModalBinding modal = sceneBindings.modal;
+            if (modal == null)
                 return;
 
-            authoredLayoutOverrides.Clear();
-            foreach (RectTransform rect in prior.GetComponentsInChildren<RectTransform>(true))
+            dialogContentRoot = modal.root != null ? modal.root.transform : null;
+            WordListHubSceneBindings.FormBinding create = modal.newList;
+            if (create != null)
             {
-                if (rect.name.StartsWith("TMP SubMeshUI", StringComparison.Ordinal))
+                newListTitleInput = create.titleInput;
+                newListDescriptionInput = create.descriptionInput;
+                newListTagsInput = create.tagsInput;
+                newListWordsInput = create.wordsInput;
+                dialogValidationText = create.validationText;
+            }
+
+            WordListHubSceneBindings.FormBinding edit = modal.editList;
+            if (edit != null)
+            {
+                editTitleInput = edit.titleInput;
+                editDescriptionInput = edit.descriptionInput;
+                editTagsInput = edit.tagsInput;
+                editWordsInput = edit.wordsInput;
+                editSaveHintText = edit.saveHintText;
+                editSaveButton = edit.saveButton;
+            }
+        }
+
+        private void BindSceneEvents()
+        {
+            BindButton(sceneBindings.navChallenges, () => ChangePage(Page.Challenges));
+            BindButton(sceneBindings.navLibrary, () => ChangePage(Page.Library));
+            BindButton(sceneBindings.navCommunity, () => ChangePage(Page.Community));
+            BindButton(sceneBindings.navAchievements, () => ChangePage(Page.Achievements));
+            BindButton(sceneBindings.resetMockData, ResetMockData);
+
+            WordListHubSceneBindings.LibraryPageBinding library = sceneBindings.library;
+            BindButton(library.allLists, () => SetLibraryView(MockupLibraryView.All));
+            BindButton(library.favorites, () => SetLibraryView(MockupLibraryView.Favorites));
+            BindButton(library.createList, OpenNewListDialog);
+            BindInput(library.searchInput, HandleSearchChanged);
+            BindDropdown(library.languageFilter, SetLanguageFilterFromDropdown);
+            BindDropdown(library.playedFilter, SetPlayedFilterFromDropdown);
+            BindDropdown(library.sortFilter, SetSortModeFromDropdown);
+            BindDropdown(library.directionFilter, SetSortDirectionFromDropdown);
+
+            if (library.groups != null)
+            {
+                foreach (WordListHubSceneBindings.GroupBinding groupBinding in library.groups)
+                {
+                    if (groupBinding == null
+                        || !Enum.TryParse(groupBinding.groupKey, true, out MockupLibraryGroup group))
+                    {
+                        continue;
+                    }
+                    BindButton(groupBinding.button, () => ToggleGroup(group));
+                }
+            }
+
+            WordListHubSceneBindings.CommunityPageBinding community = sceneBindings.community;
+            BindDropdown(community.connectionState, SetMockOnlineFromDropdown);
+            BindInput(community.searchInput, HandleCommunitySearchChanged);
+            BindDropdown(sceneBindings.achievements.filter, SetAchievementFilterFromDropdown);
+            BindButton(sceneBindings.challenges.dailyChallenge, () => ChangePage(Page.Library));
+            BindButton(sceneBindings.challenges.weeklyChallenge, () => ChangePage(Page.Library));
+
+            WordListHubSceneBindings.ModalBinding modal = sceneBindings.modal;
+            if (modal == null)
+                return;
+            if (modal.newList != null)
+            {
+                BindDropdown(modal.newList.languageDropdown, SetNewListLanguageFromDropdown);
+                BindButton(modal.newList.cancelButton, CloseDialog);
+                BindButton(modal.newList.saveButton, CreateNewList);
+            }
+            if (modal.editList != null)
+            {
+                BindDropdown(modal.editList.languageDropdown, SetEditLanguageFromDropdown);
+                BindInput(modal.editList.wordsInput, HandleEditWordsChanged);
+                BindButton(modal.editList.cancelButton, CloseDialog);
+                BindButton(modal.editList.saveButton, SaveEditClicked);
+            }
+            if (modal.contentChange != null)
+            {
+                BindButton(modal.contentChange.confirmButton, ApplyEdit);
+                BindButton(modal.contentChange.cancelButton, RenderEditDialog);
+            }
+            if (modal.deleteList != null)
+            {
+                BindButton(modal.deleteList.confirmButton, ConfirmDeleteList);
+                BindButton(modal.deleteList.cancelButton, CancelDeleteList);
+            }
+            if (modal.playResult != null)
+                BindButton(modal.playResult.confirmButton, () => CompleteMockRun(pendingPlayListId));
+        }
+
+        private void SetPageActive(Page page)
+        {
+            WordListHubPage requested = ToScenePage(page);
+            pageRoot = null;
+            foreach (WordListHubSceneBindings.PageBinding binding in sceneBindings.pages)
+            {
+                if (binding == null || binding.root == null)
                     continue;
 
-                var layout = new UiLayoutOverride
-                {
-                    path = GetRelativeSiblingPath(prior, rect),
-                    objectName = rect.name,
-                    anchorMin = rect.anchorMin,
-                    anchorMax = rect.anchorMax,
-                    pivot = rect.pivot,
-                    anchoredPosition = rect.anchoredPosition,
-                    sizeDelta = rect.sizeDelta,
-                    localScale = rect.localScale,
-                    localRotation = rect.localRotation
-                };
-
-                TMP_Text text = rect.GetComponent<TMP_Text>();
-                if (text != null)
-                {
-                    layout.hasText = true;
-                    layout.fontSize = text.fontSize;
-                    layout.fontSizeMin = text.fontSizeMin;
-                    layout.fontSizeMax = text.fontSizeMax;
-                    layout.enableAutoSizing = text.enableAutoSizing;
-                    layout.alignment = text.alignment;
-                    layout.textWrappingMode = text.textWrappingMode;
-                    layout.overflowMode = text.overflowMode;
-                }
-
-                LayoutElement layoutElement = rect.GetComponent<LayoutElement>();
-                if (layoutElement != null)
-                {
-                    layout.hasLayoutElement = true;
-                    layout.minWidth = layoutElement.minWidth;
-                    layout.minHeight = layoutElement.minHeight;
-                    layout.preferredWidth = layoutElement.preferredWidth;
-                    layout.preferredHeight = layoutElement.preferredHeight;
-                    layout.flexibleWidth = layoutElement.flexibleWidth;
-                    layout.flexibleHeight = layoutElement.flexibleHeight;
-                }
-
-                authoredLayoutOverrides.Add(layout);
+                bool active = binding.page == requested;
+                binding.root.SetActive(active);
+                if (active)
+                    pageRoot = binding.root.transform;
             }
+
+            if (pageRoot == null)
+                throw new InvalidOperationException("The requested page is not assigned in WordListHubSceneBindings: " + requested);
+        }
+
+        private static WordListHubPage ToScenePage(Page page)
+        {
+            switch (page)
+            {
+                case Page.Challenges: return WordListHubPage.Challenges;
+                case Page.Community: return WordListHubPage.Community;
+                case Page.Achievements: return WordListHubPage.Achievements;
+                default: return WordListHubPage.Library;
+            }
+        }
+
+        private static void BindButton(WordListHubSceneBindings.ButtonBinding binding, UnityAction action)
+        {
+            if (binding != null)
+                BindButton(binding.button, action);
+        }
+
+        private static void BindButton(Button button, UnityAction action)
+        {
+            if (button == null)
+                return;
+            button.onClick.RemoveAllListeners();
+            if (action != null)
+                button.onClick.AddListener(action);
+        }
+
+        private static void BindDropdown(TMP_Dropdown dropdown, UnityAction<int> action)
+        {
+            if (dropdown == null)
+                return;
+            dropdown.onValueChanged.RemoveAllListeners();
+            if (action != null)
+                dropdown.onValueChanged.AddListener(action);
+        }
+
+        private static void BindInput(TMP_InputField input, UnityAction<string> action)
+        {
+            if (input == null)
+                return;
+            input.onValueChanged.RemoveAllListeners();
+            if (action != null)
+                input.onValueChanged.AddListener(action);
         }
 
         private void EnsureStore()
@@ -225,202 +312,9 @@ namespace Words.UiMockups.WordListHub
                 store = MockupWordListStore.CreateWithFixtures();
             if (query == null)
                 query = new MockupLibraryQuery();
-
-            uiResources = new DefaultControls.Resources
-            {
-                standard = standardSprite,
-                background = backgroundSprite,
-                inputField = inputFieldSprite,
-                knob = standardSprite,
-                checkmark = standardSprite,
-                dropdown = standardSprite,
-                mask = maskSprite
-            };
         }
 
-        private void BuildView(bool wireEvents)
-        {
-            StopLibraryScrollRoutine();
-            card = transform.Find("Card");
-            if (card == null)
-                throw new InvalidOperationException("The mockup clone is missing its Card visual root.");
 
-            VerticalLayoutGroup oldLayout = card.GetComponent<VerticalLayoutGroup>();
-            if (oldLayout != null)
-                oldLayout.enabled = false;
-
-            TMP_Text title = card.Find("Title") != null
-                ? card.Find("Title").GetComponent<TMP_Text>()
-                : null;
-            if (title == null)
-                throw new InvalidOperationException("The mockup clone is missing the original TMP title.");
-
-            title.text = "WORD LIST HUB";
-            title.font = primaryFont != null ? primaryFont : title.font;
-            title.fontSize = 29f;
-            title.fontStyle = FontStyles.Bold;
-            title.color = Ink;
-            title.alignment = TextAlignmentOptions.MidlineLeft;
-            title.raycastTarget = false;
-            SetRect(title.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f),
-                new Vector2(0f, 1f), new Vector2(34f, -19f), new Vector2(430f, 54f));
-
-            Transform prior = card.Find("HubGenerated");
-            if (prior != null)
-            {
-                if (Application.isPlaying)
-                    Destroy(prior.gameObject);
-                else
-                    DestroyImmediate(prior.gameObject);
-            }
-
-            GameObject root = new GameObject("HubGenerated", typeof(RectTransform));
-            generatedRoot = root.transform;
-            generatedRoot.SetParent(card, false);
-            SetStretch(generatedRoot as RectTransform, 28f, 24f, 28f, 82f);
-
-            BuildGlobalNavigation(wireEvents);
-
-            GameObject page = new GameObject("PageContent", typeof(RectTransform));
-            pageRoot = page.transform;
-            pageRoot.SetParent(generatedRoot, false);
-            SetStretch(pageRoot as RectTransform, 0f, 0f, 0f, 95f);
-            libraryListContent = null;
-            libraryDetailPane = null;
-            libraryScrollRect = null;
-            communityListContent = null;
-            communityDetailPane = null;
-
-            GameObject notice = new GameObject("SampleDataWatermark", typeof(RectTransform));
-            notice.transform.SetParent(generatedRoot, false);
-            RectTransform noticeRect = notice.GetComponent<RectTransform>();
-            noticeRect.anchorMin = Vector2.zero;
-            noticeRect.anchorMax = new Vector2(1f, 0f);
-            noticeRect.pivot = new Vector2(0.5f, 0f);
-            noticeRect.sizeDelta = new Vector2(-24f, 32f);
-            noticeRect.anchoredPosition = new Vector2(0f, -20f);
-            footerText = CreateText(notice.transform, "NoticeText",
-                "LOCAL MOCKUP  ·  SAMPLE DATA ONLY", 16f, AccentDark,
-                TextAlignmentOptions.MidlineLeft, true);
-            SetStretch(footerText.rectTransform, 0f, 0f, 0f, 0f);
-            footerText.overflowMode = TextOverflowModes.Overflow;
-            footerText.textWrappingMode = TextWrappingModes.NoWrap;
-            footerText.enableAutoSizing = true;
-            footerText.fontSizeMin = 10f;
-            footerText.fontSizeMax = 16f;
-
-            RenderPage(wireEvents);
-            ApplySlicedImages(transform);
-            ApplyAuthoredLayoutOverrides();
-        }
-
-        private void ApplyAuthoredLayoutOverrides()
-        {
-            if (generatedRoot == null || authoredLayoutOverrides.Count == 0)
-                return;
-
-            LayoutRebuilder.ForceRebuildLayoutImmediate(generatedRoot as RectTransform);
-            foreach (UiLayoutOverride layout in authoredLayoutOverrides)
-            {
-                Transform target = FindByRelativeSiblingPath(generatedRoot, layout.path);
-                if (target == null || target.name != layout.objectName || !(target is RectTransform rect))
-                    continue;
-
-                rect.anchorMin = layout.anchorMin;
-                rect.anchorMax = layout.anchorMax;
-                rect.pivot = layout.pivot;
-                rect.anchoredPosition = layout.anchoredPosition;
-                rect.sizeDelta = layout.sizeDelta;
-                rect.localScale = layout.localScale;
-                rect.localRotation = layout.localRotation;
-
-                TMP_Text text = rect.GetComponent<TMP_Text>();
-                if (layout.hasText && text != null)
-                {
-                    text.fontSize = layout.fontSize;
-                    text.fontSizeMin = layout.fontSizeMin;
-                    text.fontSizeMax = layout.fontSizeMax;
-                    text.enableAutoSizing = layout.enableAutoSizing;
-                    text.alignment = layout.alignment;
-                    text.textWrappingMode = layout.textWrappingMode;
-                    text.overflowMode = layout.overflowMode;
-                }
-
-                LayoutElement layoutElement = rect.GetComponent<LayoutElement>();
-                if (layout.hasLayoutElement && layoutElement != null)
-                {
-                    layoutElement.minWidth = layout.minWidth;
-                    layoutElement.minHeight = layout.minHeight;
-                    layoutElement.preferredWidth = layout.preferredWidth;
-                    layoutElement.preferredHeight = layout.preferredHeight;
-                    layoutElement.flexibleWidth = layout.flexibleWidth;
-                    layoutElement.flexibleHeight = layout.flexibleHeight;
-                }
-            }
-        }
-
-        private static string GetRelativeSiblingPath(Transform root, Transform target)
-        {
-            var indices = new List<int>();
-            Transform current = target;
-            while (current != null && current != root)
-            {
-                indices.Add(current.GetSiblingIndex());
-                current = current.parent;
-            }
-            indices.Reverse();
-            return string.Join("/", indices);
-        }
-
-        private static Transform FindByRelativeSiblingPath(Transform root, string path)
-        {
-            if (root == null || string.IsNullOrEmpty(path))
-                return root;
-
-            Transform current = root;
-            foreach (string segment in path.Split('/'))
-            {
-                if (!int.TryParse(segment, out int index)
-                    || index < 0
-                    || index >= current.childCount)
-                {
-                    return null;
-                }
-                current = current.GetChild(index);
-            }
-            return current;
-        }
-
-        private void BuildGlobalNavigation(bool wireEvents)
-        {
-            GameObject nav = new GameObject("GlobalNavigation", typeof(RectTransform));
-            nav.transform.SetParent(generatedRoot, false);
-            SetRect(nav.GetComponent<RectTransform>(), new Vector2(1f, 1f), new Vector2(1f, 1f),
-                new Vector2(1f, 1f), new Vector2(-4f, -16f), new Vector2(860f, 75f));
-
-            HorizontalLayoutGroup layout = nav.AddComponent<HorizontalLayoutGroup>();
-            layout.spacing = 8f;
-            layout.childAlignment = TextAnchor.MiddleRight;
-            layout.childControlWidth = false;
-            layout.childControlHeight = false;
-            layout.childForceExpandWidth = false;
-            layout.childForceExpandHeight = false;
-
-            CreateButton(nav.transform, "Nav_Challenges", "Challenges", 142f, 63f,
-                currentPage == Page.Challenges ? Accent : PaperAlt,
-                wireEvents ? () => ChangePage(Page.Challenges) : null, 18f, currentPage == Page.Challenges);
-            CreateButton(nav.transform, "Nav_WordLibrary", "Word List", 154f, 63f,
-                currentPage == Page.Library ? Accent : PaperAlt,
-                wireEvents ? () => ChangePage(Page.Library) : null, 18f, currentPage == Page.Library);
-            CreateButton(nav.transform, "Nav_Community", "Community", 142f, 63f,
-                currentPage == Page.Community ? Accent : PaperAlt,
-                wireEvents ? () => ChangePage(Page.Community) : null, 18f, currentPage == Page.Community);
-            CreateButton(nav.transform, "Nav_Achievements", "Achievements", 160f, 63f,
-                currentPage == Page.Achievements ? Accent : PaperAlt,
-                wireEvents ? () => ChangePage(Page.Achievements) : null, 18f, currentPage == Page.Achievements);
-            CreateButton(nav.transform, "ResetMockData", "Reset mock data", 150f, 63f,
-                PaperAlt, wireEvents ? ResetMockData : null, 15f, false);
-        }
 
         private void ResetMockData()
         {
@@ -437,527 +331,36 @@ namespace Words.UiMockups.WordListHub
             collapsedGroups.Clear();
             editDraft = null;
             editingListId = null;
-            editTitleInput = null;
-            editDescriptionInput = null;
-            newListTitleInput = null;
-            newListDescriptionInput = null;
-            newListWordsInput = null;
-            newListTagsInput = null;
-            editWordsInput = null;
-            editTagsInput = null;
-            dialogValidationText = null;
             newListLanguage = MockupLanguage.English;
             editLanguage = MockupLanguage.English;
             copyEditingMode = false;
             editWordsReadOnly = false;
-            BuildView(true);
+            SetPageActive(currentPage);
+            RefreshCurrentPage();
         }
 
         private void ChangePage(Page page)
         {
             currentPage = page;
             lastActionMessage = string.Empty;
-            BuildView(true);
+            SetPageActive(page);
+            RefreshCurrentPage();
         }
 
         private void RenderPage(bool wireEvents)
         {
-            ClearChildren(pageRoot);
-            UpdateFooter();
-
-            switch (currentPage)
-            {
-                case Page.Challenges:
-                    BuildChallengesPage(wireEvents);
-                    break;
-                case Page.Community:
-                    BuildCommunityPage(wireEvents);
-                    break;
-                case Page.Achievements:
-                    BuildAchievementsPage(wireEvents);
-                    break;
-                default:
-                    BuildLibraryPage(wireEvents);
-                    break;
-            }
+            SetPageActive(currentPage);
+            RefreshCurrentPage();
         }
 
-        private void BuildLibraryPage(bool wireEvents)
-        {
-            CreateButton(pageRoot, "View_All", "All Lists", 112f, 40f,
-                query.View == MockupLibraryView.All ? Accent : PaperAlt,
-                wireEvents ? () => SetLibraryView(MockupLibraryView.All) : null,
-                18f, query.View == MockupLibraryView.All, new Vector2(-512f, 267f));
-            CreateButton(pageRoot, "View_Favorites", "★ Favorites", 134f, 40f,
-                query.View == MockupLibraryView.Favorites ? Accent : PaperAlt,
-                wireEvents ? () => SetLibraryView(MockupLibraryView.Favorites) : null,
-                18f, query.View == MockupLibraryView.Favorites, new Vector2(-383f, 267f));
 
-            TMP_InputField search = CreateInputField(pageRoot, "LibrarySearch", "Search your lists…",
-                300f, 42f, new Vector2(-160f, 267f), wireEvents ? HandleSearchChanged : null);
-            search.SetTextWithoutNotify(librarySearchText);
 
-            CreateDropdown(pageRoot, "Filter_Language",
-                new[] { "Language: All", "Language: English", "Language: Chinese", "Language: Mixed" },
-                (int)query.LanguageFilter, 200f, 40f, new Vector2(96f, 267f),
-                wireEvents ? SetLanguageFilterFromDropdown : null);
-            CreateDropdown(pageRoot, "Filter_Played",
-                new[] { "Played: All", "Played: Yes", "Played: No" },
-                (int)query.PlayedFilter, 150f, 40f, new Vector2(277f, 267f),
-                wireEvents ? SetPlayedFilterFromDropdown : null);
-            CreateDropdown(pageRoot, "Filter_Sort",
-                new[] { "Sort: Recently played", "Sort: Name", "Sort: Date added", "Sort: Date modified", "Sort: Word count", "Sort: Personal stars" },
-                (int)query.SortMode, 230f, 40f, new Vector2(473f, 267f),
-                wireEvents ? SetSortModeFromDropdown : null);
-            CreateDropdown(pageRoot, "Filter_Direction",
-                new[] { "Ascending", "Descending" },
-                (int)query.SortDirection, 160f, 40f, new Vector2(675f, 267f),
-                wireEvents ? SetSortDirectionFromDropdown : null);
-            CreateButton(pageRoot, "CreateList", "+ New List", 142f, 40f,
-                AccentDark, wireEvents ? OpenNewListDialog : null, 18f, true,
-                new Vector2(-645f, 267f));
 
-            GameObject listPane = CreatePanel("LibraryListPane", pageRoot, White);
-            SetRect(listPane.GetComponent<RectTransform>(), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f),
-                new Vector2(0.5f, 0.5f), new Vector2(-380f, -30f), new Vector2(740f, 510f));
-            CreateText(listPane.transform, "ListPaneTitle", "YOUR COLLECTION", 18f, MutedInk,
-                TextAlignmentOptions.MidlineLeft, true, new Vector2(0f, 226f), new Vector2(690f, 34f));
 
-            Transform listContent = CreateScrollContent(listPane.transform, "LibraryScroll", 710f, 445f,
-                new Vector2(0f, -22f));
-            libraryListContent = listContent;
-            libraryScrollRect = GetScrollRectForContent(listContent);
-            RenderLibraryGroups(listContent, wireEvents);
 
-            GameObject detailPane = CreatePanel("LibraryDetailPane", pageRoot, Paper);
-            SetRect(detailPane.GetComponent<RectTransform>(), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f),
-                new Vector2(0.5f, 0.5f), new Vector2(380f, -30f), new Vector2(740f, 510f));
-            libraryDetailPane = detailPane.transform;
-            RenderLibraryDetail(detailPane.transform, wireEvents);
-        }
 
-        private void RenderLibraryGroups(Transform content, bool wireEvents)
-        {
-            IReadOnlyList<MockupWordList> items = store.QueryLibrary(query);
-            if (!items.Any())
-            {
-                CreateText(content, "EmptyLibrary", "No lists match these filters.", 18f, MutedInk,
-                    TextAlignmentOptions.Center, false, Vector2.zero, new Vector2(650f, 70f));
-                return;
-            }
 
-            foreach (MockupLibraryGroup group in Enum.GetValues(typeof(MockupLibraryGroup)))
-            {
-                List<MockupWordList> groupItems = items.Where(item => item.Group == group).ToList();
-                bool collapsed = collapsedGroups.Contains(group);
-                Button header = CreateButton(content, "Group_" + group, GroupLabel(group) +
-                        "  ·  " + groupItems.Count + (collapsed ? "    >" : "    v"),
-                    680f, 38f, PaperAlt,
-                    wireEvents ? () => ToggleGroup(group) : null, 17f, true);
-                LayoutElement headerLayout = header.GetComponent<LayoutElement>();
-                headerLayout.preferredHeight = 38f;
-                headerLayout.minHeight = 38f;
 
-                if (collapsed)
-                    continue;
-
-                foreach (MockupWordList item in groupItems)
-                {
-                    CreateLibraryItemRow(content, item, item.Id == selectedListId, wireEvents);
-                }
-            }
-        }
-
-        private void CreateLibraryItemRow(Transform parent, MockupWordList item, bool selected, bool wireEvents)
-        {
-            Color fill = selected ? new Color(0.97f, 0.90f, 0.82f, 1f) : White;
-            Button button = CreateButton(parent, "LibraryItem_" + item.Id, "", 680f, 76f, fill,
-                wireEvents ? () => SelectLibraryItem(item.Id) : null, 14f, false);
-            LayoutElement layout = button.GetComponent<LayoutElement>();
-            layout.preferredHeight = 76f;
-            layout.minHeight = 76f;
-
-            string favorite = item.IsFavorite ? "★" : "☆";
-            CreateText(button.transform, "FavoriteMark", favorite, 21f, AccentDark,
-                TextAlignmentOptions.Center, false, new Vector2(-310f, 0f), new Vector2(34f, 34f));
-            CreateText(button.transform, "ListTitle", item.Title, 20f, Ink,
-                TextAlignmentOptions.MidlineLeft, true, new Vector2(-35f, 15f), new Vector2(450f, 30f));
-            CreateText(button.transform, "ListMetadata",
-                LanguageLabel(item.Language) + "  ·  " + item.WordCount + " words  ·  " + RecordLabel(item),
-                16f, MutedInk, TextAlignmentOptions.MidlineLeft, false,
-                new Vector2(-35f, -16f), new Vector2(450f, 24f));
-            string badge = ListBadge(item);
-            if (!string.IsNullOrEmpty(badge))
-                CreateText(button.transform, "ListBadge", badge.ToUpperInvariant(), 13f, AccentDark,
-                    TextAlignmentOptions.MidlineRight, true, new Vector2(264f, -16f), new Vector2(132f, 22f));
-        }
-
-        private void RenderLibraryDetail(Transform pane, bool wireEvents)
-        {
-            ClearChildren(pane);
-
-            IReadOnlyList<MockupWordList> visibleItems = store.QueryLibrary(query);
-            MockupWordList item = store.FindById(selectedListId);
-            if (item == null || !visibleItems.Any(candidate => candidate.Id == selectedListId))
-            {
-                item = visibleItems.FirstOrDefault();
-                selectedListId = item != null ? item.Id : null;
-            }
-
-            if (item == null)
-            {
-                CreateText(pane, "NoSelection", "Choose a list to see its details.", 18f, MutedInk,
-                    TextAlignmentOptions.Center, false, Vector2.zero, new Vector2(620f, 68f));
-                return;
-            }
-
-            bool useCjk = item.Language == MockupLanguage.Chinese || item.Language == MockupLanguage.Mixed;
-            Transform header = CreatePanel("DetailHeaderPanel", pane, PaperAlt).transform;
-            SetRect(header.GetComponent<RectTransform>(), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f),
-                new Vector2(0.5f, 0.5f), new Vector2(0f, 160f), new Vector2(680f, 124f));
-
-            CreateText(header, "DetailEyebrow", "LIST DETAILS", 13f, MutedInk,
-                TextAlignmentOptions.MidlineLeft, true, new Vector2(0f, 47f), new Vector2(616f, 22f));
-            TextMeshProUGUI detailTitle = CreateText(header, "DetailTitle", item.Title, 27f, Ink,
-                TextAlignmentOptions.MidlineLeft, true, new Vector2(0f, 20f), new Vector2(616f, 38f),
-                useCjk: useCjk);
-            detailTitle.enableAutoSizing = true;
-            detailTitle.fontSizeMin = 21f;
-            detailTitle.fontSizeMax = 27f;
-            detailTitle.textWrappingMode = TextWrappingModes.NoWrap;
-            detailTitle.overflowMode = TextOverflowModes.Ellipsis;
-
-            TextMeshProUGUI detailDescription = CreateText(header, "DetailDescription",
-                string.IsNullOrWhiteSpace(item.Description)
-                    ? "A word list ready for your next practice session."
-                    : item.Description,
-                16f, MutedInk, TextAlignmentOptions.TopLeft, false,
-                new Vector2(0f, -7f), new Vector2(616f, 36f), useCjk: useCjk);
-            detailDescription.textWrappingMode = TextWrappingModes.Normal;
-            detailDescription.overflowMode = TextOverflowModes.Ellipsis;
-
-            string author = item.IsReadOnly
-                ? (string.IsNullOrEmpty(item.RemoteAuthor) ? "COMMUNITY MEMBER" : item.RemoteAuthor)
-                : "YOU";
-            string metadata = "BY " + author
-                + "   ·   " + GroupLabel(item.Group).ToUpperInvariant()
-                + "   ·   " + LanguageLabel(item.Language)
-                + "   ·   " + item.WordCount + " WORDS"
-                + "   ·   REVISION " + item.ContentRevision;
-            CreateText(header, "DetailMetadata", metadata, 13f, AccentDark,
-                TextAlignmentOptions.MidlineLeft, true, new Vector2(0f, -44f), new Vector2(616f, 22f));
-
-            Transform recordPanel = CreatePanel("DetailRecordPanel", pane, new Color(0.90f, 0.91f, 0.82f, 1f)).transform;
-            SetRect(recordPanel.GetComponent<RectTransform>(), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f),
-                new Vector2(0.5f, 0.5f), new Vector2(-170f, -38f), new Vector2(320f, 220f));
-            CreateText(recordPanel, "RecordHeader", "YOUR BEST RUN", 14f, MutedInk,
-                TextAlignmentOptions.MidlineLeft, true, new Vector2(0f, 75f), new Vector2(280f, 22f));
-            CreateText(recordPanel, "RecordStarsLabel", "STARS", 12f, MutedInk,
-                TextAlignmentOptions.MidlineLeft, true, new Vector2(0f, 48f), new Vector2(280f, 18f));
-            int earnedStars = Mathf.Clamp(item.PersonalStars ?? 0, 0, 5);
-            string stars = new string('★', earnedStars) + new string('☆', 5 - earnedStars);
-            CreateText(recordPanel, "RecordStars", stars, 29f, AccentDark,
-                TextAlignmentOptions.MidlineLeft, true, new Vector2(0f, 17f), new Vector2(280f, 48f));
-            CreateText(recordPanel, "RecordTimeLabel", "BEST TIME", 12f, MutedInk,
-                TextAlignmentOptions.MidlineLeft, true, new Vector2(0f, -18f), new Vector2(280f, 18f));
-            string time = item.BestTimeSeconds.HasValue
-                ? item.BestTimeSeconds.Value.ToString("0.0") + " s"
-                : "No run yet";
-            CreateText(recordPanel, "RecordTime", time, 24f, Ink,
-                TextAlignmentOptions.MidlineLeft, true, new Vector2(0f, -48f), new Vector2(280f, 40f));
-            CreateText(recordPanel, "RecordNote",
-                item.PreviousContentRecords.Count > 0
-                    ? "Earlier content version records are archived."
-                    : item.HasBeenPlayed ? "Best record for this content version." : "Finish a run to set your record.",
-                12f, MutedInk, TextAlignmentOptions.BottomLeft, false,
-                new Vector2(0f, -87f), new Vector2(280f, 22f));
-
-            Transform wordsPanel = CreatePanel("DetailWordsPanel", pane, White).transform;
-            SetRect(wordsPanel.GetComponent<RectTransform>(), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f),
-                new Vector2(0.5f, 0.5f), new Vector2(170f, -38f), new Vector2(320f, 220f));
-            CreateText(wordsPanel, "DetailWordsLabel", "WORDS  ·  " + item.WordCount, 14f, MutedInk,
-                TextAlignmentOptions.MidlineLeft, true, new Vector2(0f, 75f), new Vector2(280f, 22f));
-            Transform wordsContent = CreateScrollContent(wordsPanel, "DetailWordsScroll", 294f, 156f,
-                new Vector2(0f, -18f));
-            string words = item.Words == null || item.Words.Count == 0
-                ? "No words in this list."
-                : string.Join("\n", item.Words);
-            TextMeshProUGUI wordsText = CreateText(wordsContent, "DetailWords", words, 16f, Ink,
-                TextAlignmentOptions.TopLeft, false,
-                useCjk: useCjk);
-            wordsText.overflowMode = TextOverflowModes.Overflow;
-            wordsText.textWrappingMode = TextWrappingModes.Normal;
-            ContentSizeFitter wordsTextFitter = wordsText.gameObject.AddComponent<ContentSizeFitter>();
-            wordsTextFitter.horizontalFit = ContentSizeFitter.FitMode.Unconstrained;
-            wordsTextFitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
-
-            CreateButton(pane, "Action_Favorite", item.IsFavorite ? "★ Saved" : "☆ Save",
-                126f, 34f, PaperAlt, wireEvents ? () => ToggleFavorite(item.Id) : null,
-                15f, item.IsFavorite, new Vector2(-248f, -194f));
-            bool publicationIsActive = item.IsPubliclyVisible
-                || item.PublicationStatus == MockupPublicationStatus.Published
-                || item.PublicationStatus == MockupPublicationStatus.UpdateNeeded;
-
-            Transform feedbackPanel = CreatePanel(
-                "DetailFeedbackPanel",
-                pane,
-                new Color(0.90f, 0.91f, 0.82f, 1f)).transform;
-            SetRect(feedbackPanel.GetComponent<RectTransform>(), new Vector2(0.5f, 0.5f),
-                new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f),
-                new Vector2(185f, -162f), new Vector2(350f, 28f));
-            TextMeshProUGUI feedbackText = CreateText(
-                feedbackPanel,
-                "DetailStatus",
-                DetailFeedbackMessage(item, publicationIsActive),
-                11f,
-                Sage,
-                TextAlignmentOptions.MidlineLeft,
-                false,
-                Vector2.zero,
-                new Vector2(326f, 24f));
-            feedbackText.enableAutoSizing = true;
-            feedbackText.fontSizeMin = 8f;
-            feedbackText.fontSizeMax = 11f;
-            feedbackText.textWrappingMode = TextWrappingModes.Normal;
-            feedbackText.overflowMode = TextOverflowModes.Ellipsis;
-
-            if (!publicationIsActive)
-            {
-                CreateButton(pane, "Action_DeleteLocal",
-                    item.IsReadOnly ? "Remove download" : "Delete local",
-                    126f, 34f, PaperAlt,
-                    wireEvents ? () => RequestDeleteList(item.Id) : null,
-                    13f, false, new Vector2(-110f, -194f));
-            }
-            CreateButton(pane, "Action_PlayLibrary", "Play", 172f, 34f, AccentDark,
-                wireEvents ? () => BeginLibraryMockPlay(item.Id) : null,
-                15f, true, new Vector2(-185f, -233f));
-
-            bool hasPublishedBinding = item.Ownership == MockupOwnership.Owned
-                && !string.IsNullOrEmpty(item.RemoteItemId);
-            string editLabel = item.IsReadOnly ? "Make an editable copy" :
-                hasPublishedBinding ? "Edit details" : "Edit list";
-            CreateButton(pane, "Action_Edit", editLabel, item.IsReadOnly ? 205f : 132f, 34f,
-                Accent, wireEvents ? () => EditOrCopy(item.Id) : null, 14f, true,
-                item.IsReadOnly ? new Vector2(70f, -194f) : new Vector2(35f, -194f));
-
-            if (!item.IsReadOnly)
-            {
-                bool needsUpdate = item.PublicationStatus == MockupPublicationStatus.UpdateNeeded;
-                bool isPublished = item.PublicationStatus == MockupPublicationStatus.Published;
-                bool isUnpublished = item.PublicationStatus == MockupPublicationStatus.Unpublished;
-                string publishLabel = needsUpdate ? "Update publication" :
-                    isPublished ? "Published" : isUnpublished ? "Publish again" : "Publish list";
-                Button publishButton = CreateButton(pane, "Action_Publish", publishLabel, 170f, 34f,
-                    needsUpdate ? AccentDark : PaperAlt,
-                    wireEvents && !isPublished
-                        ? () => PublishOrUpdate(item.Id, item.PublicationStatus)
-                        : null,
-                    13f, needsUpdate, new Vector2(260f, -194f));
-                publishButton.interactable = !isPublished || needsUpdate;
-
-                if (hasPublishedBinding)
-                {
-                    CreateButton(pane, "Action_CopyEditWords", "Copy & edit words", 205f, 34f,
-                        Accent, wireEvents ? () => OpenEditDialog(item.Id, true) : null,
-                        13f, true, new Vector2(35f, -233f));
-                    if (isPublished || needsUpdate)
-                    {
-                        CreateButton(pane, "Action_Unpublish", "Unpublish", 170f, 34f,
-                            PaperAlt, wireEvents ? () => Unpublish(item.Id) : null,
-                            13f, false, new Vector2(260f, -233f));
-                    }
-                }
-            }
-        }
-
-        private void BuildCommunityPage(bool wireEvents)
-        {
-            CreateText(pageRoot, "CommunityHeading", "DISCOVER COMMUNITY LISTS", 18f, MutedInk,
-                TextAlignmentOptions.MidlineLeft, true, new Vector2(-540f, 267f), new Vector2(420f, 36f));
-            CreateDropdown(pageRoot, "MockConnectionState",
-                new[] { "Mock network: Online", "Mock network: Offline" },
-                store.IsOnline ? 0 : 1, 210f, 40f, new Vector2(0f, 267f),
-                wireEvents ? SetMockOnlineFromDropdown : null);
-            TMP_InputField search = CreateInputField(pageRoot, "CommunitySearch", "Search shared lists…",
-                360f, 42f, new Vector2(480f, 267f), wireEvents ? HandleCommunitySearchChanged : null);
-            search.SetTextWithoutNotify(communitySearchText);
-
-            GameObject listPane = CreatePanel("CommunityListPane", pageRoot, White);
-            SetRect(listPane.GetComponent<RectTransform>(), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f),
-                new Vector2(0.5f, 0.5f), new Vector2(-460f, -30f), new Vector2(580f, 510f));
-            CreateText(listPane.transform, "CommunityListTitle", "POPULAR THIS WEEK", 17f, MutedInk,
-                TextAlignmentOptions.MidlineLeft, true, new Vector2(0f, 226f), new Vector2(520f, 34f));
-            Transform content = CreateScrollContent(listPane.transform, "CommunityScroll", 550f, 445f,
-                new Vector2(0f, -22f));
-            communityListContent = content;
-            RenderDiscoveryRows(content, wireEvents);
-
-            GameObject detailPane = CreatePanel("CommunityDetailPane", pageRoot, Paper);
-            SetRect(detailPane.GetComponent<RectTransform>(), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f),
-                new Vector2(0.5f, 0.5f), new Vector2(320f, -30f), new Vector2(900f, 510f));
-            communityDetailPane = detailPane.transform;
-            RenderDiscoveryDetail(detailPane.transform, wireEvents);
-        }
-
-        private void RenderDiscoveryRows(Transform content, bool wireEvents)
-        {
-            IEnumerable<MockupDiscoveryItem> items = store.VisibleDiscoveryItems;
-            if (!string.IsNullOrWhiteSpace(communitySearchText))
-            {
-                string term = communitySearchText.Trim();
-                items = items.Where(item => Contains(item.Title, term) || Contains(item.Description, term));
-            }
-
-            List<MockupDiscoveryItem> results = items.ToList();
-            if (string.IsNullOrEmpty(selectedDiscoveryId) || !results.Any(item => item.RemoteItemId == selectedDiscoveryId))
-                selectedDiscoveryId = results.FirstOrDefault() != null ? results[0].RemoteItemId : null;
-
-            if (results.Count == 0)
-            {
-                CreateText(content, "EmptyCommunity", "No shared lists match this search.", 17f, MutedInk,
-                    TextAlignmentOptions.Center, false, Vector2.zero, new Vector2(500f, 70f));
-                return;
-            }
-
-            foreach (MockupDiscoveryItem item in results)
-            {
-                bool selected = item.RemoteItemId == selectedDiscoveryId;
-                Button row = CreateButton(content, "DiscoveryItem_" + item.RemoteItemId,
-                    "", 520f, 92f, selected ? new Color(0.97f, 0.90f, 0.82f, 1f) : White,
-                    wireEvents ? () => SelectDiscoveryItem(item.RemoteItemId) : null, 14f, false);
-                LayoutElement layout = row.GetComponent<LayoutElement>();
-                layout.preferredHeight = 92f;
-                layout.minHeight = 92f;
-                CreateText(row.transform, "DiscoveryTitle", item.Title, 19f, Ink,
-                    TextAlignmentOptions.MidlineLeft, true, new Vector2(-35f, 20f), new Vector2(430f, 28f));
-                CreateText(row.transform, "DiscoveryMeta",
-                    LanguageLabel(item.Language) + "  ·  " + item.WordCount + " words  ·  " + item.LikeCount + " likes",
-                    16f, MutedInk, TextAlignmentOptions.MidlineLeft, false,
-                    new Vector2(-35f, -14f), new Vector2(430f, 24f));
-                string status = item.Status == MockupDiscoveryStatus.New ? "NEW" : "UPDATED";
-                CreateText(row.transform, "DiscoveryStatus", status, 13f, AccentDark,
-                    TextAlignmentOptions.MidlineRight, true, new Vector2(204f, -34f), new Vector2(130f, 18f));
-            }
-        }
-
-        private void RenderDiscoveryDetail(Transform pane, bool wireEvents)
-        {
-            ClearChildren(pane);
-            CreateText(pane, "DiscoveryEyebrow", "COMMUNITY WORD LIST", 15f, MutedInk,
-                TextAlignmentOptions.MidlineLeft, true, new Vector2(0f, 222f), new Vector2(800f, 24f));
-            MockupDiscoveryItem item = store.FindDiscoveryItem(selectedDiscoveryId);
-            if (item == null)
-            {
-                CreateText(pane, "NoDiscoverySelection", "Choose a shared list to see its details.",
-                    18f, MutedInk, TextAlignmentOptions.Center, false, Vector2.zero, new Vector2(700f, 70f));
-                return;
-            }
-
-            CreateText(pane, "DiscoveryDetailTitle", item.Title, 30f, Ink,
-                TextAlignmentOptions.MidlineLeft, true, new Vector2(0f, 162f), new Vector2(760f, 52f));
-            CreateText(pane, "DiscoveryDetailDesc", item.Description, 18f, MutedInk,
-                TextAlignmentOptions.TopLeft, false, new Vector2(0f, 106f), new Vector2(760f, 62f));
-            CreateText(pane, "DiscoveryAuthor", "PUBLISHED BY  " + item.RemoteAuthor, 15f, AccentDark,
-                TextAlignmentOptions.MidlineLeft, true, new Vector2(0f, 51f), new Vector2(760f, 24f));
-
-            CreatePanel("DiscoverySample", pane, new Color(0.90f, 0.91f, 0.82f, 1f));
-            Transform sample = pane.Find("DiscoverySample");
-            SetRect(sample.GetComponent<RectTransform>(), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f),
-                new Vector2(0.5f, 0.5f), new Vector2(0f, -30f), new Vector2(760f, 138f));
-            CreateText(sample, "SampleLabel", "SAMPLE CONTENT  ·  " + LanguageLabel(item.Language) +
-                    "  ·  " + item.WordCount + " words", 14f, MutedInk,
-                TextAlignmentOptions.MidlineLeft, true, new Vector2(0f, 42f), new Vector2(700f, 24f));
-            string sampleWords = item.Words == null || item.Words.Count == 0
-                ? string.Empty
-                : string.Join("    ", item.Words.Take(8));
-            CreateText(sample, "SampleWords", sampleWords,
-                22f, Ink, TextAlignmentOptions.MidlineLeft, true,
-                new Vector2(0f, 0f), new Vector2(700f, 48f),
-                item.Language == MockupLanguage.Chinese || item.Language == MockupLanguage.Mixed);
-
-            CreateText(pane, "CommunityTrustNote", "Download adds a read-only copy to your library. It does not favorite the list.",
-                16f, MutedInk, TextAlignmentOptions.MidlineLeft, false,
-                new Vector2(0f, -122f), new Vector2(760f, 28f));
-
-            CreateButton(pane, "Action_Like", (item.IsLiked ? "♥ Liked" : "♡ Like") + "  ·  " + item.LikeCount,
-                172f, 44f, item.IsLiked ? Accent : PaperAlt,
-                wireEvents ? () => ToggleLike(item.RemoteItemId) : null, 15f, item.IsLiked,
-                new Vector2(-252f, -172f));
-            Button download = CreateButton(pane, "Action_Download",
-                item.IsDownloaded ? "In Community Downloads" : "Download to Community Downloads",
-                250f, 44f, item.IsDownloaded ? Sage : AccentDark,
-                wireEvents ? () => DownloadDiscoveryItem(item.RemoteItemId) : null,
-                16f, true, new Vector2(30f, -172f));
-            download.interactable = !item.IsDownloaded;
-            CreateButton(pane, "Action_Play", "Play", 172f, 44f, AccentDark,
-                wireEvents ? () => BeginMockPlay(item.RemoteItemId) : null,
-                16f, true, new Vector2(260f, -172f));
-            CreateButton(pane, "Action_Report", "Report & hide for me", 190f, 40f, PaperAlt,
-                wireEvents ? () => ReportAndHideDiscoveryItem(item.RemoteItemId) : null,
-                14f, false, new Vector2(0f, -222f));
-        }
-
-        private void BuildAchievementsPage(bool wireEvents)
-        {
-            CreateText(pageRoot, "AchievementsHeading", "ACHIEVEMENTS", 18f, MutedInk,
-                TextAlignmentOptions.MidlineLeft, true, new Vector2(-600f, 267f), new Vector2(320f, 38f));
-            CreateText(pageRoot, "AchievementsCaption", "SAMPLE PROGRESS  ·  LOCAL PREVIEW", 15f, MutedInk,
-                TextAlignmentOptions.MidlineRight, false, new Vector2(480f, 267f), new Vector2(340f, 38f));
-
-            CreateDropdown(pageRoot, "AchievementFilter",
-                new[] { "Show: All", "Show: Unlocked", "Show: In progress" },
-                (int)achievementFilter, 210f, 38f, new Vector2(0f, 216f),
-                wireEvents ? SetAchievementFilterFromDropdown : null);
-
-            IEnumerable<MockupAchievement> filtered = store.Achievements;
-            if (achievementFilter == AchievementFilter.Unlocked)
-                filtered = filtered.Where(item => item.Status == MockupAchievementStatus.Unlocked);
-            else if (achievementFilter == AchievementFilter.InProgress)
-                filtered = filtered.Where(item => item.Status == MockupAchievementStatus.InProgress);
-
-            List<MockupAchievement> achievements = filtered.ToList();
-            float cardWidth = achievements.Count == 1 ? 440f : 460f;
-            float gap = 18f;
-            float total = achievements.Count * cardWidth + Mathf.Max(0, achievements.Count - 1) * gap;
-            float startX = -total * 0.5f + cardWidth * 0.5f;
-            for (int index = 0; index < achievements.Count; index++)
-            {
-                float cardX = startX + index * (cardWidth + gap);
-                BuildAchievementCard(achievements[index], cardX, cardWidth);
-            }
-        }
-
-        private void BuildAchievementCard(MockupAchievement achievement, float x, float width)
-        {
-            Color fill = achievement.Status == MockupAchievementStatus.Unlocked ?
-                new Color(0.93f, 0.93f, 0.84f, 1f) : White;
-            GameObject cardView = CreatePanel("AchievementCard_" + achievement.Id, pageRoot, fill);
-            SetRect(cardView.GetComponent<RectTransform>(), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f),
-                new Vector2(0.5f, 0.5f), new Vector2(x, -26f), new Vector2(width, 340f));
-            Image iconImage = CreateImage(cardView.transform, "AchievementIcon", AchievementIcon(achievement),
-                new Vector2(-width * 0.5f + 72f, 16f), new Vector2(88f, 88f));
-            iconImage.color = achievement.Status == MockupAchievementStatus.Unlocked
-                ? Color.white
-                : achievement.Status == MockupAchievementStatus.Locked
-                    ? new Color(0.72f, 0.72f, 0.72f, 1f)
-                    : new Color(0.90f, 0.84f, 0.67f, 1f);
-            CreateText(cardView.transform, "AchievementState",
-                achievement.Status.ToString().Replace("InProgress", "In Progress").ToUpperInvariant(),
-                12f, achievement.Status == MockupAchievementStatus.Unlocked ? Sage : AccentDark,
-                TextAlignmentOptions.MidlineLeft, true, new Vector2(62f, 115f),
-                new Vector2(width - 164f, 24f));
-            CreateText(cardView.transform, "AchievementTitle", achievement.Title, 20f, Ink,
-                TextAlignmentOptions.TopLeft, true, new Vector2(64f, 68f),
-                new Vector2(width - 164f, 54f));
-            CreateText(cardView.transform, "AchievementDescription", achievement.Description, 16f, MutedInk,
-                TextAlignmentOptions.TopLeft, false, new Vector2(64f, -8f),
-                new Vector2(width - 164f, 88f));
-            CreateText(cardView.transform, "AchievementProgress", achievement.ProgressText, 18f,
-                achievement.Status == MockupAchievementStatus.Unlocked ? Sage : AccentDark,
-                TextAlignmentOptions.MidlineLeft, true, new Vector2(64f, -126f),
-                new Vector2(width - 164f, 32f));
-        }
 
         private Sprite AchievementIcon(MockupAchievement achievement)
         {
@@ -971,22 +374,6 @@ namespace Words.UiMockups.WordListHub
             }
         }
 
-        private void BuildChallengesPage(bool wireEvents)
-        {
-            GameObject panel = CreatePanel("ChallengesMockupPage", pageRoot, Paper);
-            SetRect(panel.GetComponent<RectTransform>(), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f),
-                new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(900f, 400f));
-            CreateText(panel.transform, "ChallengesMockupTitle", "CHALLENGE LEVELS", 30f, Ink,
-                TextAlignmentOptions.Center, true, new Vector2(0f, 95f), new Vector2(780f, 54f));
-            CreateText(panel.transform, "ChallengesMockupNote",
-                "Challenge selection stays in the existing Levels screen.\nThis isolated preview focuses on your word library, community lists and achievements.",
-                18f, MutedInk, TextAlignmentOptions.Center, false,
-                new Vector2(0f, 5f), new Vector2(780f, 100f));
-            CreateButton(panel.transform, "ChallengesBackToLibrary", "Open Word List",
-                220f, 48f, AccentDark,
-                wireEvents ? () => ChangePage(Page.Library) : null,
-                16f, true, new Vector2(0f, -116f));
-        }
 
         private void SetLibraryView(MockupLibraryView view)
         {
@@ -1093,7 +480,8 @@ namespace Words.UiMockups.WordListHub
             collapsedGroups.Remove(downloaded.Group);
             currentPage = Page.Library;
             lastActionMessage = "Added “" + downloaded.Title + "” to Community Downloads and cached it for offline use.";
-            BuildView(true);
+            SetPageActive(currentPage);
+            RefreshLibraryPage();
             ScheduleLibraryScrollRestore(0f, false, downloaded.Id);
         }
 
@@ -1134,46 +522,42 @@ namespace Words.UiMockups.WordListHub
 
         private void ShowMockPlayResult(MockupPlayResult result)
         {
+            WordListHubSceneBindings.ConfirmationBinding dialog = sceneBindings.modal.playResult;
             if (!result.Succeeded || result.List == null)
             {
-                OpenDialog("Mock play unavailable", 640f, 300f);
-                CreateText(dialogContentRoot, "MockPlayUnavailableMessage",
+                pendingPlayListId = null;
+                ShowConfirmation("Mock play unavailable",
                     result.Message + "\n\nThis is a local mockup. No live service or game was contacted.",
-                    16f, MutedInk, TextAlignmentOptions.Center, false,
-                    new Vector2(0f, 8f), new Vector2(540f, 112f));
-                CreateButton(dialogContentRoot, "MockPlayUnavailableClose", "Close", 150f, 42f,
-                    AccentDark, () =>
-                    {
-                        CloseDialog();
-                        RefreshCurrentPage();
-                    }, 15f, true, new Vector2(0f, -88f));
+                    "Close", string.Empty, dialog);
+                BindButton(dialog.confirmButton, () =>
+                {
+                    CloseDialog();
+                    RefreshCurrentPage();
+                });
                 return;
             }
 
             selectedListId = result.List.Id;
+            pendingPlayListId = result.List.Id;
             lastActionMessage = result.Message;
-            OpenDialog("Mock play · " + result.List.Title, 660f, 350f);
-            CreateText(dialogContentRoot, "MockPlayExplanation",
-                "This is a simulated play result only. No game scene will start.\n" +
-                "The local list stays in its library section if you cancel.",
-                16f, MutedInk, TextAlignmentOptions.Center, false,
-                new Vector2(0f, 24f), new Vector2(560f, 104f));
-            CreateButton(dialogContentRoot, "MockPlayComplete", "Complete mock run", 205f, 44f,
-                AccentDark, () => CompleteMockRun(result.List.Id), 15f, true,
-                new Vector2(125f, -92f));
-            CreateButton(dialogContentRoot, "MockPlayCancel", "Cancel", 150f, 44f,
-                PaperAlt, () =>
-                {
-                    lastActionMessage = "Mock play cancelled. The local list remains in its library section.";
-                    CloseDialog();
-                    RefreshCurrentPage();
-                }, 15f, false, new Vector2(-125f, -92f));
+            ShowConfirmation("Mock play · " + result.List.Title,
+                "This is a simulated play result only. No game scene will start.\n"
+                + "The local list stays in its library section if you cancel.",
+                "Complete mock run", "Cancel", dialog);
+            BindButton(dialog.confirmButton, () => CompleteMockRun(pendingPlayListId));
+            BindButton(dialog.cancelButton, () =>
+            {
+                pendingPlayListId = null;
+                lastActionMessage = "Mock play cancelled. The local list remains in its library section.";
+                CloseDialog();
+                RefreshCurrentPage();
+            });
         }
-
         private void CompleteMockRun(string mockId)
         {
             bool completed = store.CompleteRun(mockId, 3, 85f);
             MockupWordList item = store.FindById(mockId);
+            pendingPlayListId = null;
             CloseDialog();
             if (!completed || item == null)
             {
@@ -1183,31 +567,27 @@ namespace Words.UiMockups.WordListHub
             }
 
             lastActionMessage = "Mock run complete: 3 stars · 85.0 seconds. No game was launched.";
-            OpenDialog("Mock run complete", 620f, 310f);
-            CreateText(dialogContentRoot, "MockPlayResultMessage",
-                "3 stars  ·  85.0 seconds\nThis result was recorded in mock data only.",
-                17f, MutedInk, TextAlignmentOptions.Center, false,
-                new Vector2(0f, 22f), new Vector2(520f, 88f));
             string viewListLabel = item.Group == MockupLibraryGroup.CommunityDownloads
-                ? "View in Community Downloads"
-                : "View in My Lists";
-            CreateButton(dialogContentRoot, "MockPlayViewList", viewListLabel, 220f, 42f,
-                AccentDark, () =>
-                {
-                    currentPage = Page.Library;
-                    selectedListId = item.Id;
-                    ClearFiltersThatHide(item);
-                    CloseDialog();
-                    RefreshLibraryPage(false, true);
-                }, 15f, true, new Vector2(110f, -78f));
-            CreateButton(dialogContentRoot, "MockPlayResultClose", "Close", 140f, 42f,
-                PaperAlt, () =>
-                {
-                    CloseDialog();
-                    RefreshCurrentPage();
-                }, 15f, false, new Vector2(-110f, -78f));
+                ? "View in Community Downloads" : "View in My Lists";
+            WordListHubSceneBindings.ConfirmationBinding dialog = sceneBindings.modal.playResult;
+            ShowConfirmation("Mock run complete",
+                "3 stars  ·  85.0 seconds\nThis result was recorded in mock data only.",
+                viewListLabel, "Close", dialog);
+            BindButton(dialog.confirmButton, () =>
+            {
+                currentPage = Page.Library;
+                selectedListId = item.Id;
+                ClearFiltersThatHide(item);
+                CloseDialog();
+                SetPageActive(currentPage);
+                RefreshLibraryPage(false, true);
+            });
+            BindButton(dialog.cancelButton, () =>
+            {
+                CloseDialog();
+                RefreshCurrentPage();
+            });
         }
-
         private void EditOrCopy(string mockId)
         {
             MockupWordList item = store.FindById(mockId);
@@ -1273,19 +653,13 @@ namespace Words.UiMockups.WordListHub
             List<MockupWordList> visibleItems = store.QueryLibrary(query).ToList();
             pendingDeleteVisibleIndex = visibleItems.FindIndex(candidate => candidate.Id == mockId);
             pendingDeleteListId = mockId;
-            OpenDialog(item.IsReadOnly ? "Remove downloaded list?" : "Delete local list?", 620f, 300f);
-            CreateText(dialogContentRoot, "DeleteLocalExplanation",
+            ShowConfirmation(
+                item.IsReadOnly ? "Remove downloaded list?" : "Delete local list?",
                 item.IsReadOnly
                     ? "This removes the cached copy from Community Downloads. The community item remains available and can be downloaded again."
                     : "This removes the local list only. No published item will be deleted or changed.",
-                18f, Ink, TextAlignmentOptions.Center, false,
-                new Vector2(0f, 22f), new Vector2(540f, 110f));
-            CreateButton(dialogContentRoot, "DeleteLocalCancel", "Cancel", 150f, 42f, PaperAlt,
-                CancelDeleteList, 15f, false, new Vector2(-105f, -82f));
-            CreateButton(dialogContentRoot, "DeleteLocalConfirm",
                 item.IsReadOnly ? "Remove local copy" : "Delete local list",
-                190f, 42f, AccentDark, ConfirmDeleteList, 14f, true,
-                new Vector2(105f, -82f));
+                "Cancel", sceneBindings.modal.deleteList);
         }
 
         private void CancelDeleteList()
@@ -1344,22 +718,327 @@ namespace Words.UiMockups.WordListHub
         {
             if (currentPage != Page.Library)
                 return;
-            if (libraryListContent == null || libraryDetailPane == null)
-            {
-                BuildView(true);
-                ScheduleLibraryScrollRestore(0f, true,
-                    revealSelectedItem ? selectedListId : null);
-                return;
-            }
+            if (sceneBindings == null || libraryListContent == null || libraryDetailPane == null)
+                throw new InvalidOperationException("Library Scene bindings are missing.");
+
             float savedScrollY = libraryScrollRect != null && libraryScrollRect.content != null
                 ? libraryScrollRect.content.anchoredPosition.y
                 : 0f;
             string revealId = revealSelectedItem ? selectedListId : null;
-            ClearChildren(libraryListContent);
-            RenderLibraryGroups(libraryListContent, true);
-            RenderLibraryDetail(libraryDetailPane, true);
+
+            IReadOnlyList<MockupWordList> queried = store.QueryLibrary(query);
+            List<MockupWordList> items = queried.ToList();
+            WordListHubSceneBindings.LibraryPageBinding library = sceneBindings.library;
+            SyncLibraryControlValues(library);
+            DestroyOwnedRuntimeChildren(library.listContent);
+
+            var authoredById = library.authoredRows
+                .Where(row => row != null && !string.IsNullOrEmpty(row.listId))
+                .ToDictionary(row => row.listId, StringComparer.Ordinal);
+            var dynamicById = new Dictionary<string, WordListHubLibraryRowView>(StringComparer.Ordinal);
+
+            foreach (WordListHubSceneBindings.LibraryRowBinding row in library.authoredRows)
+            {
+                if (row == null)
+                    continue;
+                MockupWordList item = store.FindById(row.listId);
+                if (item == null)
+                {
+                    if (row.root != null)
+                        row.root.SetActive(false);
+                    continue;
+                }
+                UpdateLibraryRow(row, item);
+                if (row.root != null)
+                    row.root.SetActive(false);
+            }
+
+            foreach (MockupWordList item in items)
+            {
+                if (authoredById.ContainsKey(item.Id))
+                    continue;
+                WordListHubLibraryRowView view = InstantiateLibraryRow(library, item.Id);
+                if (view != null)
+                {
+                    dynamicById[item.Id] = view;
+                    UpdateLibraryRow(view, item);
+                    view.gameObject.SetActive(false);
+                }
+            }
+
+            int siblingIndex = 0;
+            foreach (MockupLibraryGroup group in Enum.GetValues(typeof(MockupLibraryGroup)))
+            {
+                List<MockupWordList> groupItems = items.Where(item => item.Group == group).ToList();
+                WordListHubSceneBindings.GroupBinding header = FindGroupBinding(library, group);
+                if (header != null)
+                {
+                    string arrow = collapsedGroups.Contains(group) ? "    >" : "    v";
+                    SetText(header.label, GroupLabel(group) + "  ·  " + groupItems.Count + arrow);
+                    if (header.button != null)
+                    {
+                        header.button.gameObject.SetActive(true);
+                        BindButton(header.button, () => ToggleGroup(group));
+                        header.button.transform.SetSiblingIndex(siblingIndex++);
+                    }
+                }
+
+                if (collapsedGroups.Contains(group))
+                    continue;
+
+                foreach (MockupWordList item in groupItems)
+                {
+                    if (authoredById.TryGetValue(item.Id, out WordListHubSceneBindings.LibraryRowBinding authored))
+                    {
+                        if (authored.root != null)
+                        {
+                            authored.root.SetActive(true);
+                            authored.root.transform.SetSiblingIndex(siblingIndex++);
+                        }
+                    }
+                    else if (dynamicById.TryGetValue(item.Id, out WordListHubLibraryRowView dynamicView))
+                    {
+                        dynamicView.gameObject.SetActive(true);
+                        dynamicView.transform.SetSiblingIndex(siblingIndex++);
+                    }
+                }
+            }
+
+            if (library.emptyNotice != null)
+            {
+                library.emptyNotice.text = "No lists match these filters.";
+                library.emptyNotice.gameObject.SetActive(items.Count == 0);
+            }
+
+            UpdateLibraryDetail(items);
             UpdateFooter();
             ScheduleLibraryScrollRestore(savedScrollY, moveScrollToTop, revealId);
+        }
+
+        private void SyncLibraryControlValues(WordListHubSceneBindings.LibraryPageBinding library)
+        {
+            if (library.searchInput != null)
+                library.searchInput.SetTextWithoutNotify(librarySearchText);
+            if (library.languageFilter != null)
+            {
+                SetDropdownOptions(library.languageFilter,
+                    new[] { "Language: All", "Language: English", "Language: Chinese", "Language: Mixed" },
+                    (int)query.LanguageFilter);
+                BindDropdown(library.languageFilter, SetLanguageFilterFromDropdown);
+            }
+            if (library.playedFilter != null)
+            {
+                SetDropdownOptions(library.playedFilter,
+                    new[] { "Played: All", "Played: Yes", "Played: No" }, (int)query.PlayedFilter);
+                BindDropdown(library.playedFilter, SetPlayedFilterFromDropdown);
+            }
+            if (library.sortFilter != null)
+            {
+                SetDropdownOptions(library.sortFilter,
+                    new[] { "Sort: Recently played", "Sort: Name", "Sort: Date added", "Sort: Date modified", "Sort: Word count", "Sort: Personal stars" },
+                    (int)query.SortMode);
+                BindDropdown(library.sortFilter, SetSortModeFromDropdown);
+            }
+            if (library.directionFilter != null)
+            {
+                SetDropdownOptions(library.directionFilter, new[] { "Ascending", "Descending" },
+                    (int)query.SortDirection);
+                BindDropdown(library.directionFilter, SetSortDirectionFromDropdown);
+            }
+            if (library.allLists != null)
+                SetButtonLabel(library.allLists, "All Lists");
+            if (library.favorites != null)
+                SetButtonLabel(library.favorites, "★ Favorites");
+        }
+
+        private static void SetDropdownOptions(TMP_Dropdown dropdown, IEnumerable<string> options, int value)
+        {
+            if (dropdown == null)
+                return;
+            dropdown.ClearOptions();
+            dropdown.AddOptions(options.ToList());
+            dropdown.SetValueWithoutNotify(Mathf.Clamp(value, 0, Mathf.Max(0, dropdown.options.Count - 1)));
+            dropdown.RefreshShownValue();
+        }
+
+        private WordListHubSceneBindings.GroupBinding FindGroupBinding(
+            WordListHubSceneBindings.LibraryPageBinding library,
+            MockupLibraryGroup group)
+        {
+            return library.groups?.FirstOrDefault(binding => binding != null
+                && string.Equals(binding.groupKey, group.ToString(), StringComparison.OrdinalIgnoreCase));
+        }
+
+        private WordListHubLibraryRowView InstantiateLibraryRow(
+            WordListHubSceneBindings.LibraryPageBinding library,
+            string listId)
+        {
+            if (library.rowTemplate == null)
+            {
+                Debug.LogError("The Library row template is not assigned in WordListHubSceneBindings.", this);
+                return null;
+            }
+
+            WordListHubLibraryRowView view = Instantiate(library.rowTemplate, library.listContent, false);
+            view.name = "LibraryItem_" + listId;
+            view.itemId = listId;
+            if (view.GetComponent<WordListHubRuntimeInstance>() == null)
+                view.gameObject.AddComponent<WordListHubRuntimeInstance>();
+            return view;
+        }
+
+        private void UpdateLibraryRow(WordListHubSceneBindings.LibraryRowBinding binding, MockupWordList item)
+        {
+            SetText(binding.favoriteMark, item.IsFavorite ? "★" : "☆");
+            SetText(binding.title, item.Title);
+            SetText(binding.metadata,
+                LanguageLabel(item.Language) + "  ·  " + item.WordCount + " words  ·  " + RecordLabel(item));
+            string badge = ListBadge(item);
+            SetText(binding.badge, badge.ToUpperInvariant());
+            if (binding.badgeRoot != null)
+                binding.badgeRoot.SetActive(!string.IsNullOrEmpty(badge));
+            BindButton(binding.button, () => SelectLibraryItem(item.Id));
+        }
+
+        private void UpdateLibraryRow(WordListHubLibraryRowView view, MockupWordList item)
+        {
+            if (view == null)
+                return;
+            view.itemId = item.Id;
+            SetText(view.favoriteMark, item.IsFavorite ? "★" : "☆");
+            SetText(view.title, item.Title);
+            SetText(view.metadata,
+                LanguageLabel(item.Language) + "  ·  " + item.WordCount + " words  ·  " + RecordLabel(item));
+            string badge = ListBadge(item);
+            SetText(view.badge, badge.ToUpperInvariant());
+            if (view.badgeRoot != null)
+                view.badgeRoot.SetActive(!string.IsNullOrEmpty(badge));
+            BindButton(view.button, () => SelectLibraryItem(item.Id));
+        }
+
+        private void UpdateLibraryDetail(IReadOnlyList<MockupWordList> visibleItems)
+        {
+            WordListHubSceneBindings.LibraryPageBinding library = sceneBindings.library;
+            MockupWordList item = store.FindById(selectedListId);
+            if (item == null || !visibleItems.Any(candidate => candidate.Id == selectedListId))
+            {
+                item = visibleItems.FirstOrDefault();
+                selectedListId = item != null ? item.Id : null;
+            }
+
+            if (item == null)
+            {
+                SetText(library.detailTitle, "Choose a list to see its details.");
+                SetText(library.detailDescription, string.Empty);
+                SetText(library.detailMetadata, string.Empty);
+                SetText(library.recordStars, string.Empty);
+                SetText(library.recordTime, string.Empty);
+                SetText(library.recordNote, string.Empty);
+                SetText(library.detailWordsLabel, "WORDS  ·  0");
+                SetText(library.detailWords, string.Empty);
+                SetText(library.detailStatus, string.Empty);
+                SetLibraryAction(library.favorite, string.Empty, false, null);
+                SetLibraryAction(library.delete, string.Empty, false, null);
+                SetLibraryAction(library.play, string.Empty, false, null);
+                SetLibraryAction(library.edit, string.Empty, false, null);
+                SetLibraryAction(library.copyEditWords, string.Empty, false, null);
+                SetLibraryAction(library.publish, string.Empty, false, null);
+                SetLibraryAction(library.unpublish, string.Empty, false, null);
+                return;
+            }
+
+            SetText(library.detailTitle, item.Title);
+            SetText(library.detailDescription, string.IsNullOrWhiteSpace(item.Description)
+                ? "A word list ready for your next practice session." : item.Description);
+            string author = item.IsReadOnly
+                ? (string.IsNullOrEmpty(item.RemoteAuthor) ? "COMMUNITY MEMBER" : item.RemoteAuthor)
+                : "YOU";
+            SetText(library.detailMetadata, "BY " + author + "   ·   " + GroupLabel(item.Group).ToUpperInvariant()
+                + "   ·   " + LanguageLabel(item.Language) + "   ·   " + item.WordCount + " WORDS"
+                + "   ·   REVISION " + item.ContentRevision);
+            int earnedStars = Mathf.Clamp(item.PersonalStars ?? 0, 0, 5);
+            SetText(library.recordStars, new string('★', earnedStars) + new string('☆', 5 - earnedStars));
+            SetText(library.recordTime, item.BestTimeSeconds.HasValue
+                ? item.BestTimeSeconds.Value.ToString("0.0") + " s" : "No run yet");
+            SetText(library.recordNote, item.PreviousContentRecords.Count > 0
+                ? "Earlier content version records are archived."
+                : item.HasBeenPlayed ? "Best record for this content version." : "Finish a run to set your record.");
+            SetText(library.detailWordsLabel, "WORDS  ·  " + item.WordCount);
+            SetText(library.detailWords, item.Words == null || item.Words.Count == 0
+                ? "No words in this list." : string.Join("\n", item.Words));
+
+            bool publicationIsActive = item.IsPubliclyVisible
+                || item.PublicationStatus == MockupPublicationStatus.Published
+                || item.PublicationStatus == MockupPublicationStatus.UpdateNeeded;
+            SetText(library.detailStatus, DetailFeedbackMessage(item, publicationIsActive));
+            SetLibraryAction(library.favorite, item.IsFavorite ? "★ Saved" : "☆ Save", true,
+                () => ToggleFavorite(item.Id));
+            SetLibraryAction(library.delete, item.IsReadOnly ? "Remove download" : "Delete local",
+                !publicationIsActive, () => RequestDeleteList(item.Id));
+            SetLibraryAction(library.play, "Play", true, () => BeginLibraryMockPlay(item.Id));
+
+            bool hasPublishedBinding = item.Ownership == MockupOwnership.Owned
+                && !string.IsNullOrEmpty(item.RemoteItemId);
+            SetLibraryAction(library.edit,
+                item.IsReadOnly ? "Make an editable copy" : hasPublishedBinding ? "Edit details" : "Edit list",
+                true, () => EditOrCopy(item.Id));
+            SetLibraryAction(library.copyEditWords, "Copy & edit words", !item.IsReadOnly && hasPublishedBinding,
+                () => OpenEditDialog(item.Id, true));
+
+            bool needsUpdate = item.PublicationStatus == MockupPublicationStatus.UpdateNeeded;
+            bool isPublished = item.PublicationStatus == MockupPublicationStatus.Published;
+            bool isUnpublished = item.PublicationStatus == MockupPublicationStatus.Unpublished;
+            string publishLabel = needsUpdate ? "Update publication" : isPublished ? "Published"
+                : isUnpublished ? "Publish again" : "Publish list";
+            SetLibraryAction(library.publish, publishLabel, !item.IsReadOnly,
+                !item.IsReadOnly && !isPublished
+                    ? (UnityAction)(() => PublishOrUpdate(item.Id, item.PublicationStatus)) : null);
+            if (library.publish != null && library.publish.button != null)
+                library.publish.button.interactable = !isPublished || needsUpdate;
+            SetLibraryAction(library.unpublish, "Unpublish", !item.IsReadOnly && hasPublishedBinding
+                && (isPublished || needsUpdate), () => Unpublish(item.Id));
+        }
+
+        private static void SetLibraryAction(
+            WordListHubSceneBindings.ButtonBinding binding,
+            string label,
+            bool visible,
+            UnityAction action)
+        {
+            if (binding == null)
+                return;
+            SetButtonLabel(binding, label);
+            if (binding.button != null)
+                binding.button.gameObject.SetActive(visible);
+            BindButton(binding.button, visible ? action : null);
+        }
+
+        private static void SetButtonLabel(WordListHubSceneBindings.ButtonBinding binding, string label)
+        {
+            if (binding != null)
+                SetText(binding.label, label);
+        }
+
+        private static void SetText(TMP_Text text, string value)
+        {
+            if (text != null)
+                text.text = value ?? string.Empty;
+        }
+
+        private static void DestroyOwnedRuntimeChildren(Transform parent)
+        {
+            if (parent == null)
+                return;
+            foreach (WordListHubRuntimeInstance marker in parent.GetComponentsInChildren<WordListHubRuntimeInstance>(true))
+            {
+                if (marker == null || marker.transform.parent != parent)
+                    continue;
+                marker.gameObject.SetActive(false);
+                if (Application.isPlaying)
+                    Destroy(marker.gameObject);
+                else
+                    DestroyImmediate(marker.gameObject);
+            }
         }
 
         private void ScheduleLibraryScrollRestore(float savedScrollY, bool moveToTop, string revealListId)
@@ -1380,8 +1059,8 @@ namespace Words.UiMockups.WordListHub
             bool moveToTop,
             string revealListId)
         {
-            // ClearChildren uses deferred Destroy in Play Mode, so wait until those
-            // rows are gone before measuring the new layout and restoring the offset.
+            // Runtime row clones are destroyed at the end of the frame; wait until
+            // their marked instances are gone before restoring the authored scroll offset.
             yield return null;
             RestoreLibraryScroll(savedScrollY, moveToTop, revealListId);
             libraryScrollRoutine = null;
@@ -1418,7 +1097,13 @@ namespace Words.UiMockups.WordListHub
                 || libraryScrollRect.content == null || libraryScrollRect.viewport == null)
                 return;
 
-            Transform row = libraryListContent.Find("LibraryItem_" + listId);
+            Transform row = sceneBindings.library.authoredRows
+                .FirstOrDefault(binding => binding != null && binding.listId == listId)?.root?.transform;
+            if (row == null)
+            {
+                row = libraryListContent.GetComponentsInChildren<WordListHubLibraryRowView>(true)
+                    .FirstOrDefault(view => view != null && view.itemId == listId)?.transform;
+            }
             if (row == null)
                 return;
 
@@ -1512,23 +1197,291 @@ namespace Words.UiMockups.WordListHub
         {
             if (currentPage != Page.Community)
                 return;
-            if (communityListContent == null || communityDetailPane == null)
+            if (sceneBindings == null || communityListContent == null || communityDetailPane == null)
+                throw new InvalidOperationException("Community Scene bindings are missing.");
+
+            WordListHubSceneBindings.CommunityPageBinding community = sceneBindings.community;
+            Vector2 scrollPosition = community.listScroll != null && community.listScroll.content != null
+                ? community.listScroll.content.anchoredPosition
+                : Vector2.zero;
+            if (community.searchInput != null)
+                community.searchInput.SetTextWithoutNotify(communitySearchText);
+            if (community.connectionState != null)
             {
-                BuildView(true);
-                return;
+                SetDropdownOptions(community.connectionState,
+                    new[] { "Mock network: Online", "Mock network: Offline" }, store.IsOnline ? 0 : 1);
+                BindDropdown(community.connectionState, SetMockOnlineFromDropdown);
             }
-            ClearChildren(communityListContent);
-            RenderDiscoveryRows(communityListContent, true);
-            RenderDiscoveryDetail(communityDetailPane, true);
+
+            IEnumerable<MockupDiscoveryItem> queryResults = store.VisibleDiscoveryItems;
+            if (!string.IsNullOrWhiteSpace(communitySearchText))
+            {
+                string term = communitySearchText.Trim();
+                queryResults = queryResults.Where(item => Contains(item.Title, term)
+                    || Contains(item.Description, term));
+            }
+            List<MockupDiscoveryItem> items = queryResults.ToList();
+            if (string.IsNullOrEmpty(selectedDiscoveryId)
+                || !items.Any(item => item.RemoteItemId == selectedDiscoveryId))
+            {
+                selectedDiscoveryId = items.FirstOrDefault() != null
+                    ? items[0].RemoteItemId : null;
+            }
+
+            DestroyOwnedRuntimeChildren(community.listContent);
+            var authoredById = community.authoredRows
+                .Where(row => row != null && !string.IsNullOrEmpty(row.remoteItemId))
+                .ToDictionary(row => row.remoteItemId, StringComparer.Ordinal);
+            var dynamicById = new Dictionary<string, WordListHubDiscoveryRowView>(StringComparer.Ordinal);
+
+            foreach (WordListHubSceneBindings.DiscoveryRowBinding row in community.authoredRows)
+            {
+                if (row == null)
+                    continue;
+                MockupDiscoveryItem item = store.FindDiscoveryItem(row.remoteItemId);
+                if (item == null)
+                {
+                    if (row.root != null)
+                        row.root.SetActive(false);
+                    continue;
+                }
+                UpdateDiscoveryRow(row, item);
+                if (row.root != null)
+                    row.root.SetActive(false);
+            }
+
+            foreach (MockupDiscoveryItem item in items)
+            {
+                if (authoredById.ContainsKey(item.RemoteItemId))
+                    continue;
+                WordListHubDiscoveryRowView view = InstantiateDiscoveryRow(community, item.RemoteItemId);
+                if (view != null)
+                {
+                    dynamicById[item.RemoteItemId] = view;
+                    UpdateDiscoveryRow(view, item);
+                    view.gameObject.SetActive(false);
+                }
+            }
+
+            int siblingIndex = 0;
+            foreach (MockupDiscoveryItem item in items)
+            {
+                if (authoredById.TryGetValue(item.RemoteItemId,
+                    out WordListHubSceneBindings.DiscoveryRowBinding authored))
+                {
+                    if (authored.root != null)
+                    {
+                        authored.root.SetActive(true);
+                        authored.root.transform.SetSiblingIndex(siblingIndex++);
+                    }
+                }
+                else if (dynamicById.TryGetValue(item.RemoteItemId, out WordListHubDiscoveryRowView dynamicView))
+                {
+                    dynamicView.gameObject.SetActive(true);
+                    dynamicView.transform.SetSiblingIndex(siblingIndex++);
+                }
+            }
+
+            if (community.emptyNotice != null)
+            {
+                community.emptyNotice.text = "No shared lists match this search.";
+                community.emptyNotice.gameObject.SetActive(items.Count == 0);
+            }
+
+            UpdateCommunityDetail(items);
             UpdateFooter();
+            RestoreCommunityScrollAfterLayout(community.listScroll, scrollPosition);
         }
 
         private void RefreshCurrentPage()
         {
-            if (currentPage == Page.Library)
-                RefreshLibraryPage();
-            else if (currentPage == Page.Community)
-                RefreshCommunityPage();
+            SetPageActive(currentPage);
+            switch (currentPage)
+            {
+                case Page.Community:
+                    RefreshCommunityPage();
+                    break;
+                case Page.Achievements:
+                    RefreshAchievementsPage();
+                    break;
+                case Page.Challenges:
+                    RefreshChallengesPage();
+                    break;
+                default:
+                    RefreshLibraryPage();
+                    break;
+            }
+        }
+
+        private WordListHubDiscoveryRowView InstantiateDiscoveryRow(
+            WordListHubSceneBindings.CommunityPageBinding community,
+            string remoteItemId)
+        {
+            if (community.rowTemplate == null)
+            {
+                Debug.LogError("The Community row template is not assigned in WordListHubSceneBindings.", this);
+                return null;
+            }
+
+            WordListHubDiscoveryRowView view = Instantiate(community.rowTemplate, community.listContent, false);
+            view.name = "DiscoveryItem_" + remoteItemId;
+            if (view.GetComponent<WordListHubRuntimeInstance>() == null)
+                view.gameObject.AddComponent<WordListHubRuntimeInstance>();
+            return view;
+        }
+
+        private void UpdateDiscoveryRow(WordListHubSceneBindings.DiscoveryRowBinding row, MockupDiscoveryItem item)
+        {
+            SetText(row.title, item.Title);
+            SetText(row.metadata, LanguageLabel(item.Language) + "  ·  " + item.WordCount
+                + " words  ·  " + item.LikeCount + " likes");
+            SetText(row.summary, item.Description);
+            SetText(row.status, item.Status == MockupDiscoveryStatus.New ? "NEW" : "UPDATED");
+            BindButton(row.button, () => SelectDiscoveryItem(item.RemoteItemId));
+        }
+
+        private void UpdateDiscoveryRow(WordListHubDiscoveryRowView view, MockupDiscoveryItem item)
+        {
+            if (view == null)
+                return;
+            SetText(view.title, item.Title);
+            SetText(view.metadata, LanguageLabel(item.Language) + "  ·  " + item.WordCount
+                + " words  ·  " + item.LikeCount + " likes");
+            SetText(view.summary, item.Description);
+            SetText(view.status, item.Status == MockupDiscoveryStatus.New ? "NEW" : "UPDATED");
+            BindButton(view.button, () => SelectDiscoveryItem(item.RemoteItemId));
+        }
+
+        private void UpdateCommunityDetail(IReadOnlyList<MockupDiscoveryItem> visibleItems)
+        {
+            WordListHubSceneBindings.CommunityPageBinding community = sceneBindings.community;
+            MockupDiscoveryItem item = store.FindDiscoveryItem(selectedDiscoveryId);
+            if (item == null || !visibleItems.Any(candidate => candidate.RemoteItemId == selectedDiscoveryId))
+            {
+                SetText(community.detailTitle, "Choose a shared list to see its details.");
+                SetText(community.detailAuthor, string.Empty);
+                SetText(community.detailSummary, string.Empty);
+                SetText(community.detailDescription, string.Empty);
+                SetText(community.detailMetadata, string.Empty);
+                SetText(community.detailTrustNote, string.Empty);
+                SetCommunityAction(community.like, string.Empty, false, null);
+                SetCommunityAction(community.download, string.Empty, false, null);
+                SetCommunityAction(community.play, string.Empty, false, null);
+                SetCommunityAction(community.report, string.Empty, false, null);
+                return;
+            }
+
+            SetText(community.detailTitle, item.Title);
+            SetText(community.detailAuthor, "PUBLISHED BY  " + item.RemoteAuthor);
+            SetText(community.detailDescription, item.Description);
+            SetText(community.detailMetadata, "SAMPLE CONTENT  ·  " + LanguageLabel(item.Language)
+                + "  ·  " + item.WordCount + " words");
+            SetText(community.detailSummary, item.Words == null || item.Words.Count == 0
+                ? string.Empty : string.Join("    ", item.Words.Take(8)));
+            SetText(community.detailTrustNote,
+                "Download adds a read-only copy to your library. It does not favorite the list.");
+            SetCommunityAction(community.like,
+                (item.IsLiked ? "♥ Liked" : "♡ Like") + "  ·  " + item.LikeCount,
+                true, () => ToggleLike(item.RemoteItemId));
+            SetCommunityAction(community.download,
+                item.IsDownloaded ? "In Community Downloads" : "Download to Community Downloads",
+                true, () => DownloadDiscoveryItem(item.RemoteItemId));
+            if (community.download != null && community.download.button != null)
+                community.download.button.interactable = !item.IsDownloaded;
+            SetCommunityAction(community.play, "Play", true,
+                () => BeginMockPlay(item.RemoteItemId));
+            SetCommunityAction(community.report, "Report & hide for me", true,
+                () => ReportAndHideDiscoveryItem(item.RemoteItemId));
+        }
+
+        private static void SetCommunityAction(
+            WordListHubSceneBindings.ButtonBinding binding,
+            string label,
+            bool visible,
+            UnityAction action)
+        {
+            if (binding == null)
+                return;
+            SetButtonLabel(binding, label);
+            if (binding.button != null)
+                binding.button.gameObject.SetActive(visible);
+            BindButton(binding.button, visible ? action : null);
+        }
+
+        private void RefreshAchievementsPage()
+        {
+            WordListHubSceneBindings.AchievementsPageBinding achievements = sceneBindings.achievements;
+            if (achievements == null || achievements.cardContent == null || achievements.cardTemplate == null)
+                throw new InvalidOperationException("Achievement Scene template bindings are missing.");
+
+            SetDropdownOptions(achievements.filter,
+                new[] { "Show: All", "Show: Unlocked", "Show: In progress" }, (int)achievementFilter);
+            BindDropdown(achievements.filter, SetAchievementFilterFromDropdown);
+            DestroyOwnedRuntimeChildren(achievements.cardContent);
+
+            IEnumerable<MockupAchievement> filtered = store.Achievements;
+            if (achievementFilter == AchievementFilter.Unlocked)
+                filtered = filtered.Where(item => item.Status == MockupAchievementStatus.Unlocked);
+            else if (achievementFilter == AchievementFilter.InProgress)
+                filtered = filtered.Where(item => item.Status == MockupAchievementStatus.InProgress);
+
+            foreach (MockupAchievement achievement in filtered)
+            {
+                WordListHubAchievementCardView view = Instantiate(
+                    achievements.cardTemplate, achievements.cardContent, false);
+                view.name = "AchievementCard_" + achievement.Id;
+                if (view.GetComponent<WordListHubRuntimeInstance>() == null)
+                    view.gameObject.AddComponent<WordListHubRuntimeInstance>();
+                Sprite icon = AchievementIcon(achievement);
+                if (view.icon != null && icon != null)
+                    view.icon.sprite = icon;
+                SetText(view.state, achievement.Status.ToString().Replace("InProgress", "In Progress")
+                    .ToUpperInvariant());
+                SetText(view.title, achievement.Title);
+                SetText(view.description, achievement.Description);
+                SetText(view.progress, achievement.ProgressText);
+                view.gameObject.SetActive(true);
+            }
+            UpdateFooter();
+        }
+
+        private void RefreshChallengesPage()
+        {
+            SetText(sceneBindings.challenges.description,
+                "Challenge selection stays in the existing Levels screen.\n"
+                + "This isolated preview focuses on your word library, community lists and achievements.");
+            SetButtonLabel(sceneBindings.challenges.dailyChallenge, "Open Word List");
+            SetText(sceneBindings.challenges.status, string.Empty);
+            UpdateFooter();
+        }
+
+        private void RestoreCommunityScrollAfterLayout(ScrollRect scroll, Vector2 anchoredPosition)
+        {
+            if (scroll == null || scroll.content == null)
+                return;
+            if (communityScrollRoutine != null)
+                StopCoroutine(communityScrollRoutine);
+            if (Application.isPlaying)
+                communityScrollRoutine = StartCoroutine(RestoreCommunityScrollAfterLayoutRoutine(scroll, anchoredPosition));
+            else
+                RestoreCommunityScroll(scroll, anchoredPosition);
+        }
+
+        private IEnumerator RestoreCommunityScrollAfterLayoutRoutine(ScrollRect scroll, Vector2 anchoredPosition)
+        {
+            yield return null;
+            RestoreCommunityScroll(scroll, anchoredPosition);
+            communityScrollRoutine = null;
+        }
+
+        private static void RestoreCommunityScroll(ScrollRect scroll, Vector2 anchoredPosition)
+        {
+            if (scroll == null || scroll.content == null)
+                return;
+            Canvas.ForceUpdateCanvases();
+            LayoutRebuilder.ForceRebuildLayoutImmediate(scroll.content);
+            scroll.content.anchoredPosition = anchoredPosition;
+            scroll.velocity = Vector2.zero;
         }
 
         private void UpdateFooter()
@@ -1551,36 +1504,23 @@ namespace Words.UiMockups.WordListHub
 
         private void DrawNewListDialog()
         {
-            CreateText(dialogContentRoot, "NewListLabel", "List name", 15f, MutedInk,
-                TextAlignmentOptions.MidlineLeft, true, new Vector2(0f, 263f), new Vector2(600f, 24f));
-            newListTitleInput = CreateInputField(dialogContentRoot, "NewListTitleInput", "New word list",
-                600f, 42f, new Vector2(0f, 221f), null);
-            CreateText(dialogContentRoot, "NewListDescriptionLabel", "Description (optional)", 15f, MutedInk,
-                TextAlignmentOptions.MidlineLeft, true, new Vector2(0f, 183f), new Vector2(600f, 24f));
-            newListDescriptionInput = CreateInputField(dialogContentRoot, "NewListDescriptionInput",
-                "Add a short description…", 600f, 48f, new Vector2(0f, 140f), null, true);
-            CreateText(dialogContentRoot, "NewListTagsLabel", "Tags, comma-separated (optional)", 15f, MutedInk,
-                TextAlignmentOptions.MidlineLeft, true, new Vector2(0f, 98f), new Vector2(600f, 24f));
-            newListTagsInput = CreateInputField(dialogContentRoot, "NewListTagsInput", "travel, beginner, daily",
-                600f, 40f, new Vector2(0f, 62f), null);
-            CreateText(dialogContentRoot, "NewListLanguageLabel", "Language", 15f, MutedInk,
-                TextAlignmentOptions.MidlineLeft, true, new Vector2(-180f, 19f), new Vector2(240f, 22f));
-            CreateDropdown(dialogContentRoot, "NewListLanguage",
-                new[] { "English", "Chinese", "Mixed" }, (int)newListLanguage,
-                220f, 38f, new Vector2(190f, 19f), SetNewListLanguageFromDropdown);
-            CreateText(dialogContentRoot, "NewListWordsLabel", "Words (one per line; at least one required)",
-                15f, MutedInk, TextAlignmentOptions.MidlineLeft, true,
-                new Vector2(0f, -25f), new Vector2(600f, 24f));
-            newListWordsInput = CreateInputField(dialogContentRoot, "NewListWordsInput",
-                "Type or paste one word per line…", 600f, 180f,
-                new Vector2(0f, -134f), null, true);
-            dialogValidationText = CreateText(dialogContentRoot, "NewListValidation", string.Empty, 14f,
-                AccentDark, TextAlignmentOptions.MidlineLeft, false,
-                new Vector2(0f, -246f), new Vector2(600f, 24f));
-            CreateButton(dialogContentRoot, "NewListCancel", "Cancel", 140f, 42f, PaperAlt,
-                CloseDialog, 15f, false, new Vector2(-105f, -306f));
-            CreateButton(dialogContentRoot, "NewListCreate", "Create list", 170f, 42f, AccentDark,
-                CreateNewList, 15f, true, new Vector2(105f, -306f));
+            WordListHubSceneBindings.FormBinding form = sceneBindings.modal.newList;
+            if (form == null || form.root == null)
+                throw new InvalidOperationException("The New List form is missing from the scene bindings.");
+
+            form.root.SetActive(true);
+            if (newListTitleInput != null)
+                newListTitleInput.SetTextWithoutNotify(string.Empty);
+            if (newListDescriptionInput != null)
+                newListDescriptionInput.SetTextWithoutNotify(string.Empty);
+            if (newListTagsInput != null)
+                newListTagsInput.SetTextWithoutNotify(string.Empty);
+            if (newListWordsInput != null)
+                newListWordsInput.SetTextWithoutNotify(string.Empty);
+            SetText(form.validationText, string.Empty);
+            if (form.languageDropdown != null)
+                SetDropdownOptions(form.languageDropdown,
+                    new[] { "English", "Chinese", "Mixed" }, (int)newListLanguage);
         }
 
         private void SetNewListLanguageFromDropdown(int value)
@@ -1615,6 +1555,7 @@ namespace Words.UiMockups.WordListHub
             lastActionMessage = "Created “" + item.Title + "” with " + item.Words.Count + " words in My Lists.";
             CloseDialog();
             currentPage = Page.Library;
+            SetPageActive(currentPage);
             RefreshLibraryPage(false, true);
         }
 
@@ -1640,73 +1581,50 @@ namespace Words.UiMockups.WordListHub
         {
             if (editDraft == null)
                 return;
-            editSaveButton = null;
-            editSaveHintText = null;
+
+            WordListHubSceneBindings.FormBinding form = sceneBindings.modal.editList;
+            if (form == null || form.root == null)
+                throw new InvalidOperationException("The Edit List form is missing from the scene bindings.");
+
             MockupWordList item = store.FindById(editingListId);
             string title = copyEditingMode
                 ? "Create a new version from your published list"
                 : item != null && !string.IsNullOrEmpty(item.RemoteItemId)
                     ? "Edit published list details"
                     : "Edit your word list";
-            OpenDialog(title, 760f, 700f);
-            CreateText(dialogContentRoot, "EditTitleLabel", "List name", 15f, MutedInk,
-                TextAlignmentOptions.MidlineLeft, true, new Vector2(0f, 263f), new Vector2(640f, 24f));
-            editTitleInput = CreateInputField(dialogContentRoot, "EditTitleInput", editDraft.Title,
-                640f, 42f, new Vector2(0f, 221f), null);
-            editTitleInput.text = editDraft.Title;
+            OpenDialog(title, 0f, 0f);
+            form.root.SetActive(true);
+            editTitleInput = form.titleInput;
+            editDescriptionInput = form.descriptionInput;
+            editTagsInput = form.tagsInput;
+            editWordsInput = form.wordsInput;
+            editSaveButton = form.saveButton;
+            editSaveHintText = form.saveHintText;
+            dialogValidationText = form.validationText;
 
-            CreateText(dialogContentRoot, "EditDescriptionLabel", "Description", 15f, MutedInk,
-                TextAlignmentOptions.MidlineLeft, true, new Vector2(0f, 183f), new Vector2(640f, 24f));
-            editDescriptionInput = CreateInputField(dialogContentRoot, "EditDescriptionInput", "Add a short description…",
-                640f, 48f, new Vector2(0f, 140f), null, true);
-            editDescriptionInput.text = editDraft.Description;
-
-            CreateText(dialogContentRoot, "EditTagsLabel", "Tags, comma-separated (optional)", 15f, MutedInk,
-                TextAlignmentOptions.MidlineLeft, true, new Vector2(0f, 98f), new Vector2(640f, 24f));
-            editTagsInput = CreateInputField(dialogContentRoot, "EditTagsInput", "travel, beginner, daily",
-                640f, 40f, new Vector2(0f, 62f), null);
-            editTagsInput.text = editDraft.Tags ?? string.Empty;
-
-            CreateText(dialogContentRoot, "EditLanguageLabel", "Language", 15f, MutedInk,
-                TextAlignmentOptions.MidlineLeft, true, new Vector2(-190f, 19f), new Vector2(230f, 22f));
-            TMP_Dropdown languageDropdown = CreateDropdown(dialogContentRoot, "EditLanguage",
-                new[] { "English", "Chinese", "Mixed" }, (int)editLanguage,
-                220f, 38f, new Vector2(190f, 19f), SetEditLanguageFromDropdown);
-            languageDropdown.interactable = !editWordsReadOnly;
-
-            CreateText(dialogContentRoot, "EditWordsLabel",
-                editWordsReadOnly ? "Words (published content is fixed)" : "Words (one per line)",
-                15f, MutedInk, TextAlignmentOptions.MidlineLeft, true,
-                new Vector2(0f, -25f), new Vector2(640f, 24f));
-            editWordsInput = CreateInputField(dialogContentRoot, "EditWordsInput",
-                "One word per line…", 640f, 180f, new Vector2(0f, -134f), HandleEditWordsChanged, true);
-            editWordsInput.text = WordsAsText(editDraft.Words);
-            editWordsInput.interactable = !editWordsReadOnly;
-            if (editWordsReadOnly)
+            if (editTitleInput != null)
+                editTitleInput.SetTextWithoutNotify(editDraft.Title ?? string.Empty);
+            if (editDescriptionInput != null)
+                editDescriptionInput.SetTextWithoutNotify(editDraft.Description ?? string.Empty);
+            if (editTagsInput != null)
+                editTagsInput.SetTextWithoutNotify(editDraft.Tags ?? string.Empty);
+            if (editWordsInput != null)
             {
-                CreateText(dialogContentRoot, "PublishedWordsHint",
-                    "Use “Copy & edit words” to make a separate My List version. The published original stays unchanged.",
-                    13f, MutedInk, TextAlignmentOptions.Center, false,
-                    new Vector2(0f, -237f), new Vector2(640f, 18f));
+                editWordsInput.SetTextWithoutNotify(WordsAsText(editDraft.Words));
+                editWordsInput.interactable = !editWordsReadOnly;
             }
-            else if (copyEditingMode)
+            if (form.languageDropdown != null)
             {
-                editSaveHintText = CreateText(dialogContentRoot, "NewVersionHint",
-                    "Change at least one word or the language to enable creating a separate version.",
-                    12f, MutedInk, TextAlignmentOptions.MidlineLeft, false,
-                    new Vector2(0f, -237f), new Vector2(640f, 20f));
+                SetDropdownOptions(form.languageDropdown, new[] { "English", "Chinese", "Mixed" }, (int)editLanguage);
+                form.languageDropdown.interactable = !editWordsReadOnly;
             }
-            dialogValidationText = CreateText(dialogContentRoot, "EditValidation", string.Empty, 14f,
-                AccentDark, TextAlignmentOptions.MidlineLeft, false,
-                new Vector2(0f, -264f), new Vector2(640f, 20f));
-            CreateButton(dialogContentRoot, "EditCancel", "Cancel", 140f, 42f, PaperAlt,
-                CloseDialog, 15f, false, new Vector2(-105f, -306f));
-            editSaveButton = CreateButton(dialogContentRoot, "EditSave",
-                copyEditingMode ? "Create new version" : "Save changes",
-                190f, 42f, AccentDark, SaveEditClicked, 15f, true, new Vector2(105f, -306f));
+            SetText(form.wordsLabel, editWordsReadOnly
+                ? "Words (published content is fixed)" : "Words (one per line)");
+            SetText(form.validationText, string.Empty);
+            if (editSaveButton != null)
+                SetText(form.saveButtonLabel, copyEditingMode ? "Create new version" : "Save changes");
             UpdateEditSaveButton();
         }
-
         private void SetEditLanguageFromDropdown(int value)
         {
             CaptureEditInputs();
@@ -1796,19 +1714,13 @@ namespace Words.UiMockups.WordListHub
             }
             if (contentChanged || copyEditingMode)
             {
-                OpenDialog(copyEditingMode ? "Create a separate list version?" : "Confirm content change",
-                    660f, 350f);
-                CreateText(dialogContentRoot, "ContentChangeWarning",
+                ShowConfirmation(
+                    copyEditingMode ? "Create a separate list version?" : "Confirm content change",
                     copyEditingMode
                         ? "A new My List will be created with an independent ID. The published original and its scores stay unchanged."
                         : "This changes the list's playable words. Current stars and best time will be cleared for this version; the previous record stays in its history.",
-                    18f, Ink, TextAlignmentOptions.Center, false,
-                    new Vector2(0f, 40f), new Vector2(540f, 130f));
-                CreateButton(dialogContentRoot, "ContentChangeCancel", "Keep editing", 170f, 42f,
-                    PaperAlt, RenderEditDialog, 15f, false, new Vector2(-100f, -96f));
-                CreateButton(dialogContentRoot, "ContentChangeConfirm",
-                    copyEditingMode ? "Create new list" : "Save changed words", 205f, 42f,
-                    AccentDark, ApplyEdit, 15f, true, new Vector2(115f, -96f));
+                    copyEditingMode ? "Create new list" : "Save changed words",
+                    "Keep editing", sceneBindings.modal.contentChange);
                 return;
             }
 
@@ -1835,33 +1747,54 @@ namespace Words.UiMockups.WordListHub
             CloseDialog();
             currentPage = Page.Library;
             ClearFiltersThatHide(result.Item);
+            SetPageActive(currentPage);
             RefreshLibraryPage(false, true);
         }
 
         private void OpenDialog(string title, float width, float height)
         {
-            Transform existing = card != null ? card.Find("ModalLayer") : null;
-            if (existing != null)
-            {
-                existing.gameObject.SetActive(false);
-                if (Application.isPlaying)
-                    Destroy(existing.gameObject);
-                else
-                    DestroyImmediate(existing.gameObject);
-            }
+            WordListHubSceneBindings.ModalBinding modal = sceneBindings.modal;
+            if (modal == null || modal.root == null)
+                throw new InvalidOperationException("The authored modal layer is missing from the scene bindings.");
 
-            GameObject layer = CreatePanel("ModalLayer", card, new Color(0.10f, 0.10f, 0.08f, 0.56f));
-            SetStretch(layer.GetComponent<RectTransform>(), 0f, 0f, 0f, 0f);
-            layer.GetComponent<Image>().raycastTarget = true;
-            GameObject modal = CreatePanel("ModalCard", layer.transform, Paper);
-            SetRect(modal.GetComponent<RectTransform>(), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f),
-                new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(width, height));
-            dialogContentRoot = modal.transform;
-            CreateText(dialogContentRoot, "ModalTitle", title, 23f, Ink,
-                TextAlignmentOptions.MidlineLeft, true, new Vector2(0f, height * 0.5f - 42f),
-                new Vector2(width - 56f, 42f));
+            dialogContentRoot = modal.root.transform;
+            modal.root.SetActive(true);
+            SetText(modal.title, title);
+            SetModalSection(null);
         }
 
+        private void SetModalSection(GameObject section)
+        {
+            WordListHubSceneBindings.ModalBinding modal = sceneBindings.modal;
+            if (modal.newList != null) modal.newList.root?.SetActive(false);
+            if (modal.editList != null) modal.editList.root?.SetActive(false);
+            if (modal.contentChange != null) modal.contentChange.root?.SetActive(false);
+            if (modal.deleteList != null) modal.deleteList.root?.SetActive(false);
+            if (modal.playResult != null) modal.playResult.root?.SetActive(false);
+            if (section != null)
+                section.SetActive(true);
+        }
+
+        private void ShowConfirmation(
+            string title,
+            string message,
+            string confirmLabel,
+            string cancelLabel,
+            WordListHubSceneBindings.ConfirmationBinding confirmation)
+        {
+            if (confirmation == null || confirmation.root == null)
+                throw new InvalidOperationException("The requested confirmation panel is missing from the scene bindings.");
+
+            OpenDialog(title, 0f, 0f);
+            confirmation.root.SetActive(true);
+            SetText(confirmation.message, message);
+            SetText(confirmation.confirmLabel, confirmLabel);
+            SetText(confirmation.cancelLabel, cancelLabel);
+            if (confirmation.confirmButton != null)
+                confirmation.confirmButton.gameObject.SetActive(true);
+            if (confirmation.cancelButton != null)
+                confirmation.cancelButton.gameObject.SetActive(!string.IsNullOrEmpty(cancelLabel));
+        }
         private void SetDialogValidation(string message)
         {
             if (dialogValidationText != null)
@@ -1892,25 +1825,19 @@ namespace Words.UiMockups.WordListHub
 
         private void CloseDialog()
         {
-            if (card == null)
-                return;
-            Transform layer = card.Find("ModalLayer");
-            if (layer != null)
+            if (sceneBindings != null && sceneBindings.modal != null && sceneBindings.modal.root != null)
             {
-                layer.gameObject.SetActive(false);
-                if (Application.isPlaying)
-                    Destroy(layer.gameObject);
-                else
-                    DestroyImmediate(layer.gameObject);
+                sceneBindings.modal.root.SetActive(false);
+                SetModalSection(null);
             }
             dialogContentRoot = null;
             editDraft = null;
         }
-
         private void RefreshLibraryAfterDialog()
         {
             CloseDialog();
-            BuildView(true);
+            SetPageActive(Page.Library);
+            RefreshLibraryPage();
         }
 
         private static string LanguageLabel(MockupLanguage language)
@@ -2008,456 +1935,15 @@ namespace Words.UiMockups.WordListHub
             return string.Join("  ·  ", messages);
         }
 
-        private TMP_Dropdown CreateDropdown(
-            Transform parent,
-            string name,
-            IReadOnlyList<string> options,
-            int selectedIndex,
-            float width,
-            float height,
-            Vector2 position,
-            Action<int> onValueChanged)
-        {
-            if (options == null || options.Count == 0)
-                throw new ArgumentException("A mockup dropdown needs at least one option.", nameof(options));
-            int safeSelectedIndex = Mathf.Clamp(selectedIndex, 0, options.Count - 1);
 
-            GameObject root = new GameObject(name, typeof(RectTransform), typeof(CanvasRenderer));
-            root.SetActive(false);
-            root.transform.SetParent(parent, false);
-            SetRect(root.GetComponent<RectTransform>(), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f),
-                new Vector2(0.5f, 0.5f), position, new Vector2(width, height));
 
-            Image background = root.AddComponent<Image>();
-            background.sprite = uiResources.standard;
-            background.type = Image.Type.Sliced;
-            background.color = PaperAlt;
-            background.raycastTarget = true;
 
-            TMP_Dropdown dropdown = Application.isPlaying
-                ? (TMP_Dropdown)root.AddComponent<MockupSlicedDropdown>()
-                : root.AddComponent<TMP_Dropdown>();
-            dropdown.targetGraphic = background;
-            dropdown.navigation = new Navigation { mode = Navigation.Mode.None };
-            dropdown.transition = Selectable.Transition.ColorTint;
-            ColorBlock colors = dropdown.colors;
-            colors.normalColor = PaperAlt;
-            colors.highlightedColor = Color.Lerp(PaperAlt, Accent, 0.12f);
-            colors.pressedColor = Color.Lerp(PaperAlt, AccentDark, 0.2f);
-            colors.selectedColor = PaperAlt;
-            colors.disabledColor = new Color(PaperAlt.r, PaperAlt.g, PaperAlt.b, 0.6f);
-            colors.colorMultiplier = 1f;
-            dropdown.colors = colors;
 
-            TextMeshProUGUI caption = CreateText(root.transform, "Caption", options[safeSelectedIndex],
-                18f, Ink, TextAlignmentOptions.MidlineLeft, false);
-            SetStretch(caption.rectTransform, 12f, 30f, 2f, 2f);
-            dropdown.captionText = caption;
 
-            TextMeshProUGUI arrow = CreateText(root.transform, "Arrow", "▾", 18f, AccentDark,
-                TextAlignmentOptions.Center, true);
-            SetRect(arrow.rectTransform, new Vector2(1f, 0.5f), new Vector2(1f, 0.5f),
-                new Vector2(1f, 0.5f), new Vector2(-8f, 0f), new Vector2(22f, 24f));
 
-            GameObject template = DefaultControls.CreatePanel(uiResources);
-            template.name = "Template";
-            template.transform.SetParent(root.transform, false);
-            RectTransform templateRect = template.GetComponent<RectTransform>();
-            SetRect(templateRect, new Vector2(0f, 0f), new Vector2(1f, 0f),
-                new Vector2(0.5f, 1f), new Vector2(0f, 2f),
-                new Vector2(0f, Mathf.Min(
-                    DropdownMenuMaxHeight,
-                    (options.Count * DropdownLegacyItemHeight + 4f) * DropdownMenuHeightScale)));
-            Image templateImage = template.GetComponent<Image>();
-            templateImage.sprite = uiResources.background;
-            templateImage.type = Image.Type.Sliced;
-            templateImage.color = White;
-            templateImage.raycastTarget = false;
 
-            ScrollRect scroll = template.AddComponent<ScrollRect>();
-            scroll.horizontal = false;
-            scroll.vertical = true;
-            scroll.inertia = false;
-            scroll.movementType = ScrollRect.MovementType.Clamped;
-            scroll.scrollSensitivity = 24f;
 
-            GameObject viewportObject = new GameObject("Viewport",
-                typeof(RectTransform), typeof(CanvasRenderer), typeof(Image), typeof(Mask));
-            viewportObject.transform.SetParent(template.transform, false);
-            SetStretch(viewportObject.GetComponent<RectTransform>(), 2f, 2f, 2f, 2f);
-            Image viewportImage = viewportObject.GetComponent<Image>();
-            viewportImage.sprite = uiResources.mask;
-            viewportImage.type = Image.Type.Sliced;
-            viewportImage.color = Color.white;
-            viewportImage.raycastTarget = true;
-            viewportObject.GetComponent<Mask>().showMaskGraphic = false;
 
-            GameObject contentObject = new GameObject("Content", typeof(RectTransform));
-            contentObject.transform.SetParent(viewportObject.transform, false);
-            RectTransform contentRect = contentObject.GetComponent<RectTransform>();
-            contentRect.anchorMin = new Vector2(0f, 1f);
-            contentRect.anchorMax = new Vector2(1f, 1f);
-            contentRect.pivot = new Vector2(0.5f, 1f);
-            contentRect.anchoredPosition = Vector2.zero;
-            contentRect.sizeDelta = Vector2.zero;
-
-            VerticalLayoutGroup contentLayout = contentObject.AddComponent<VerticalLayoutGroup>();
-            contentLayout.padding = new RectOffset(2, 2, 2, 2);
-            contentLayout.spacing = 0f;
-            contentLayout.childAlignment = TextAnchor.UpperCenter;
-            contentLayout.childControlWidth = true;
-            contentLayout.childControlHeight = false;
-            contentLayout.childForceExpandWidth = true;
-            contentLayout.childForceExpandHeight = false;
-            ContentSizeFitter contentFitter = contentObject.AddComponent<ContentSizeFitter>();
-            contentFitter.horizontalFit = ContentSizeFitter.FitMode.Unconstrained;
-            contentFitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
-            scroll.viewport = viewportObject.GetComponent<RectTransform>();
-            scroll.content = contentRect;
-
-            GameObject item = new GameObject("Item",
-                typeof(RectTransform), typeof(CanvasRenderer), typeof(Image), typeof(Toggle), typeof(LayoutElement));
-            item.transform.SetParent(contentObject.transform, false);
-            RectTransform itemRect = item.GetComponent<RectTransform>();
-            itemRect.anchorMin = new Vector2(0f, 1f);
-            itemRect.anchorMax = new Vector2(1f, 1f);
-            itemRect.pivot = new Vector2(0.5f, 1f);
-            itemRect.sizeDelta = new Vector2(0f, DropdownItemHeight);
-            Image itemBackground = item.GetComponent<Image>();
-            itemBackground.sprite = uiResources.standard;
-            itemBackground.type = Image.Type.Sliced;
-            itemBackground.color = White;
-            itemBackground.raycastTarget = true;
-
-            GameObject checkmarkObject = new GameObject("Item Checkmark",
-                typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
-            checkmarkObject.transform.SetParent(item.transform, false);
-            SetRect(checkmarkObject.GetComponent<RectTransform>(), new Vector2(0f, 0.5f),
-                new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(10f, 0f),
-                new Vector2(24f, 24f));
-            Image checkmark = checkmarkObject.GetComponent<Image>();
-            checkmark.sprite = uiResources.checkmark;
-            checkmark.type = Image.Type.Sliced;
-            checkmark.color = AccentDark;
-            checkmark.raycastTarget = false;
-
-            TextMeshProUGUI optionLabel = CreateText(item.transform, "Item Label", string.Empty,
-                18f, Ink, TextAlignmentOptions.MidlineLeft, false);
-            SetStretch(optionLabel.rectTransform, 38f, 4f, 3f, 3f);
-            optionLabel.enableAutoSizing = true;
-            optionLabel.fontSizeMin = 16f;
-            optionLabel.fontSizeMax = 18f;
-            optionLabel.textWrappingMode = TextWrappingModes.NoWrap;
-            optionLabel.overflowMode = TextOverflowModes.Overflow;
-
-            Toggle toggle = item.GetComponent<Toggle>();
-            toggle.targetGraphic = itemBackground;
-            toggle.graphic = checkmark;
-            toggle.navigation = new Navigation { mode = Navigation.Mode.None };
-            toggle.transition = Selectable.Transition.ColorTint;
-            ColorBlock toggleColors = toggle.colors;
-            toggleColors.normalColor = White;
-            toggleColors.highlightedColor = Color.Lerp(White, Accent, 0.12f);
-            toggleColors.pressedColor = Color.Lerp(White, AccentDark, 0.16f);
-            toggleColors.selectedColor = White;
-            toggle.colors = toggleColors;
-
-            LayoutElement itemLayout = item.GetComponent<LayoutElement>();
-            itemLayout.preferredHeight = DropdownItemHeight;
-            itemLayout.minHeight = DropdownItemHeight;
-
-            template.SetActive(false);
-            dropdown.template = templateRect;
-            dropdown.itemText = optionLabel;
-            dropdown.ClearOptions();
-            dropdown.AddOptions(options.ToList());
-            dropdown.value = safeSelectedIndex;
-            if (onValueChanged != null && Application.isPlaying)
-                dropdown.onValueChanged.AddListener(onValueChanged.Invoke);
-
-            root.SetActive(true);
-            return dropdown;
-        }
-
-        private Image CreateImage(Transform parent, string name, Sprite sprite, Vector2 position, Vector2 size)
-        {
-            GameObject root = new GameObject(name, typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
-            root.transform.SetParent(parent, false);
-            SetRect(root.GetComponent<RectTransform>(), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f),
-                new Vector2(0.5f, 0.5f), position, size);
-            Image image = root.GetComponent<Image>();
-            image.sprite = sprite != null ? sprite : uiResources.standard;
-            image.type = Image.Type.Sliced;
-            image.preserveAspect = true;
-            image.raycastTarget = false;
-            return image;
-        }
-
-        private TMP_InputField CreateInputField(
-            Transform parent,
-            string name,
-            string placeholder,
-            float width,
-            float height,
-            Vector2 position,
-            Action<string> onChanged,
-            bool multiline = false)
-        {
-            // Do not start with DefaultControls.CreateInputField here: that factory
-            // adds the legacy InputField (a Selectable), and TMP_InputField is also
-            // a Selectable. Unity's DisallowMultipleComponent on Selectable rejects
-            // the second component when both are placed on this GameObject.
-            GameObject field = new GameObject(name, typeof(RectTransform));
-            field.SetActive(false);
-            field.transform.SetParent(parent, false);
-            field.AddComponent<CanvasRenderer>();
-            Image background = field.AddComponent<Image>();
-            TMP_InputField input = field.AddComponent<TMP_InputField>();
-            SetRect(field.GetComponent<RectTransform>(), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f),
-                new Vector2(0.5f, 0.5f), position, new Vector2(width, height));
-
-            background.sprite = uiResources.inputField;
-            background.color = White;
-            background.type = Image.Type.Sliced;
-            background.raycastTarget = true;
-
-            GameObject textArea = new GameObject("Text Area", typeof(RectTransform), typeof(RectMask2D));
-            textArea.transform.SetParent(field.transform, false);
-            RectTransform viewport = textArea.GetComponent<RectTransform>();
-            SetStretch(viewport, 10f, 10f, 6f, 6f);
-
-            TextMeshProUGUI value = CreateText(textArea.transform, "Text", string.Empty, 18f, Ink,
-                TextAlignmentOptions.MidlineLeft, false);
-            SetStretch(value.rectTransform, 0f, 0f, 0f, 0f);
-            value.textWrappingMode = multiline ? TextWrappingModes.Normal : TextWrappingModes.NoWrap;
-            value.overflowMode = TextOverflowModes.Overflow;
-
-            TextMeshProUGUI placeholderText = CreateText(textArea.transform, "Placeholder", placeholder,
-                16f, MutedInk, TextAlignmentOptions.MidlineLeft, false);
-            SetStretch(placeholderText.rectTransform, 0f, 0f, 0f, 0f);
-            placeholderText.fontStyle = FontStyles.Italic;
-            placeholderText.textWrappingMode = multiline ? TextWrappingModes.Normal : TextWrappingModes.NoWrap;
-            placeholderText.overflowMode = TextOverflowModes.Overflow;
-
-            input.textViewport = viewport;
-            input.textComponent = value;
-            input.placeholder = placeholderText;
-            input.targetGraphic = background;
-            input.lineType = multiline ? TMP_InputField.LineType.MultiLineNewline : TMP_InputField.LineType.SingleLine;
-            input.caretColor = AccentDark;
-            input.selectionColor = new Color(0.72f, 0.47f, 0.35f, 0.25f);
-            input.navigation = new Navigation { mode = Navigation.Mode.None };
-            if (onChanged != null)
-                input.onValueChanged.AddListener(onChanged.Invoke);
-            // Activate only after TMP_InputField has all of its required references.
-            field.SetActive(true);
-            return input;
-        }
-
-        private Button CreateButton(
-            Transform parent,
-            string name,
-            string label,
-            float width,
-            float height,
-            Color background,
-            Action onClick,
-            float fontSize,
-            bool bold,
-            Vector2? position = null)
-        {
-            GameObject root = new GameObject(name, typeof(RectTransform), typeof(CanvasRenderer),
-                typeof(Image), typeof(Button), typeof(LayoutElement));
-            root.transform.SetParent(parent, false);
-            if (position.HasValue)
-                SetRect(root.GetComponent<RectTransform>(), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f),
-                    new Vector2(0.5f, 0.5f), position.Value, new Vector2(width, height));
-            else
-                root.GetComponent<RectTransform>().sizeDelta = new Vector2(width, height);
-
-            Image image = root.GetComponent<Image>();
-            image.sprite = uiResources.standard;
-            image.type = Image.Type.Sliced;
-            image.color = background;
-            image.raycastTarget = true;
-
-            Button button = root.GetComponent<Button>();
-            button.targetGraphic = image;
-            if (button.targetGraphic is Image targetImage)
-                targetImage.type = Image.Type.Sliced;
-            button.navigation = new Navigation { mode = Navigation.Mode.None };
-            button.transition = Selectable.Transition.ColorTint;
-            ColorBlock colors = button.colors;
-            colors.normalColor = background;
-            colors.highlightedColor = Color.Lerp(background, Accent, 0.12f);
-            colors.pressedColor = Color.Lerp(background, AccentDark, 0.2f);
-            colors.selectedColor = background;
-            colors.disabledColor = new Color(background.r, background.g, background.b, 0.6f);
-            colors.colorMultiplier = 1f;
-            button.colors = colors;
-
-            TextMeshProUGUI labelText = CreateText(root.transform, "Label", label, fontSize,
-                IsLightText(background) ? White : Ink, TextAlignmentOptions.Center, bold);
-            labelText.rectTransform.anchorMin = Vector2.zero;
-            labelText.rectTransform.anchorMax = Vector2.one;
-            labelText.rectTransform.offsetMin = new Vector2(9f, 2f);
-            labelText.rectTransform.offsetMax = new Vector2(-9f, -2f);
-
-            LayoutElement layout = root.GetComponent<LayoutElement>();
-            layout.preferredWidth = width;
-            layout.preferredHeight = height;
-            layout.minWidth = width;
-            layout.minHeight = height;
-            if (onClick != null && Application.isPlaying)
-            {
-                button.onClick.RemoveAllListeners();
-                button.onClick.AddListener(onClick.Invoke);
-            }
-            return button;
-        }
-
-        private GameObject CreatePanel(string name, Transform parent, Color color)
-        {
-            GameObject panel = DefaultControls.CreatePanel(uiResources);
-            panel.name = name;
-            panel.transform.SetParent(parent, false);
-            Image image = panel.GetComponent<Image>();
-            image.sprite = uiResources.background;
-            image.type = Image.Type.Sliced;
-            image.color = color;
-            image.raycastTarget = false;
-            return panel;
-        }
-
-        private TextMeshProUGUI CreateText(
-            Transform parent,
-            string name,
-            string value,
-            float size,
-            Color color,
-            TextAlignmentOptions alignment,
-            bool bold,
-            Vector2? position = null,
-            Vector2? sizeDelta = null,
-            bool useCjk = false)
-        {
-            GameObject root = new GameObject(name, typeof(RectTransform), typeof(CanvasRenderer),
-                typeof(TextMeshProUGUI));
-            root.transform.SetParent(parent, false);
-            TextMeshProUGUI text = root.GetComponent<TextMeshProUGUI>();
-            text.text = value;
-            text.font = primaryFont != null ? primaryFont : TMP_Settings.defaultFontAsset;
-            text.fontSize = size;
-            text.fontStyle = bold ? FontStyles.Bold : FontStyles.Normal;
-            text.color = color;
-            text.margin = Vector4.zero;
-            text.overflowMode = TextOverflowModes.Ellipsis;
-            text.raycastTarget = false;
-            text.alignment = alignment;
-            text.textWrappingMode = TextWrappingModes.Normal;
-            if (position.HasValue && sizeDelta.HasValue)
-                SetRect(text.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f),
-                    new Vector2(0.5f, 0.5f), position.Value, sizeDelta.Value);
-            if (useCjk && cjkFont != null)
-                text.font = cjkFont;
-            return text;
-        }
-
-        private static ScrollRect GetScrollRectForContent(Transform content)
-        {
-            if (content == null || content.parent == null || content.parent.parent == null)
-                return null;
-            return content.parent.parent.GetComponent<ScrollRect>();
-        }
-
-        private Transform CreateScrollContent(Transform parent, string name, float width, float height, Vector2 position)
-        {
-            GameObject scrollView = DefaultControls.CreateScrollView(uiResources);
-            scrollView.name = name;
-            scrollView.transform.SetParent(parent, false);
-            SetRect(scrollView.GetComponent<RectTransform>(), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f),
-                new Vector2(0.5f, 0.5f), position, new Vector2(width, height));
-
-            Image rootImage = scrollView.GetComponent<Image>();
-            rootImage.color = new Color(1f, 1f, 1f, 0f);
-            rootImage.raycastTarget = false;
-            ScrollRect scroll = scrollView.GetComponent<ScrollRect>();
-            scroll.horizontal = false;
-            scroll.vertical = true;
-            scroll.movementType = ScrollRect.MovementType.Clamped;
-            scroll.scrollSensitivity = 30f;
-            scroll.horizontalScrollbar = null;
-            scroll.horizontalScrollbarVisibility = ScrollRect.ScrollbarVisibility.Permanent;
-
-            Transform viewport = scrollView.transform.Find("Viewport");
-            Transform content = viewport != null ? viewport.Find("Content") : null;
-            if (viewport == null || content == null)
-                throw new InvalidOperationException("Default Scroll View is missing its Viewport/Content hierarchy.");
-
-            Image viewportImage = viewport.GetComponent<Image>();
-            viewportImage.sprite = maskSprite != null ? maskSprite : standardSprite;
-            viewportImage.type = Image.Type.Sliced;
-            // Mask's stencil writer enables UI alpha clipping; keep this Image opaque
-            // so it writes the stencil. showMaskGraphic=false keeps the viewport invisible.
-            viewportImage.color = Color.white;
-            viewportImage.raycastTarget = true;
-            Mask mask = viewport.GetComponent<Mask>();
-            mask.showMaskGraphic = false;
-
-            RectTransform contentRect = content.GetComponent<RectTransform>();
-            contentRect.anchorMin = new Vector2(0f, 1f);
-            contentRect.anchorMax = new Vector2(1f, 1f);
-            contentRect.pivot = new Vector2(0.5f, 1f);
-            contentRect.anchoredPosition = Vector2.zero;
-            contentRect.sizeDelta = new Vector2(0f, 0f);
-
-            VerticalLayoutGroup layout = content.GetComponent<VerticalLayoutGroup>();
-            if (layout == null)
-                layout = content.gameObject.AddComponent<VerticalLayoutGroup>();
-            layout.padding = new RectOffset(6, 6, 6, 6);
-            layout.spacing = 8f;
-            layout.childAlignment = TextAnchor.UpperCenter;
-            layout.childControlWidth = true;
-            layout.childControlHeight = false;
-            layout.childForceExpandWidth = true;
-            layout.childForceExpandHeight = false;
-
-            ContentSizeFitter fitter = content.GetComponent<ContentSizeFitter>();
-            if (fitter == null)
-                fitter = content.gameObject.AddComponent<ContentSizeFitter>();
-            fitter.horizontalFit = ContentSizeFitter.FitMode.Unconstrained;
-            fitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
-            scroll.content = contentRect;
-            scroll.viewport = viewport.GetComponent<RectTransform>();
-
-            Transform horizontalBar = scrollView.transform.Find("Scrollbar Horizontal");
-            if (horizontalBar != null)
-            {
-                if (Application.isPlaying)
-                    Destroy(horizontalBar.gameObject);
-                else
-                    DestroyImmediate(horizontalBar.gameObject);
-            }
-            Transform verticalBar = scrollView.transform.Find("Scrollbar Vertical");
-            if (verticalBar != null)
-            {
-                RectTransform barRect = verticalBar.GetComponent<RectTransform>();
-                barRect.sizeDelta = new Vector2(10f, 0f);
-                scroll.verticalScrollbar = verticalBar.GetComponent<Scrollbar>();
-                scroll.verticalScrollbarVisibility = ScrollRect.ScrollbarVisibility.AutoHide;
-            }
-            return content;
-        }
-
-        private void OpenNewListDialogInternal()
-        {
-            OpenNewListDialog();
-        }
-
-        private static bool IsLightText(Color background)
-        {
-            return background.r < 0.80f && background.g < 0.66f && background.b < 0.62f;
-        }
 
         private static bool Contains(string value, string term)
         {
@@ -2465,56 +1951,9 @@ namespace Words.UiMockups.WordListHub
                 && value.IndexOf(term, StringComparison.OrdinalIgnoreCase) >= 0;
         }
 
-        private void ApplySlicedImages(Transform root)
-        {
-            if (root == null)
-                return;
 
-            Sprite fallbackSprite = backgroundSprite != null ? backgroundSprite : standardSprite;
-            foreach (Image image in root.GetComponentsInChildren<Image>(true))
-            {
-                if (image.sprite == null && fallbackSprite != null)
-                    image.sprite = fallbackSprite;
-                image.type = Image.Type.Sliced;
-            }
-        }
 
-        private static void SetRect(
-            RectTransform rect,
-            Vector2 anchorMin,
-            Vector2 anchorMax,
-            Vector2 pivot,
-            Vector2 position,
-            Vector2 size)
-        {
-            rect.anchorMin = anchorMin;
-            rect.anchorMax = anchorMax;
-            rect.pivot = pivot;
-            rect.anchoredPosition = position;
-            rect.sizeDelta = size;
-        }
 
-        private static void SetStretch(RectTransform rect, float left, float right, float bottom, float top)
-        {
-            rect.anchorMin = Vector2.zero;
-            rect.anchorMax = Vector2.one;
-            rect.pivot = new Vector2(0.5f, 0.5f);
-            rect.offsetMin = new Vector2(left, bottom);
-            rect.offsetMax = new Vector2(-right, -top);
-        }
 
-        private void ClearChildren(Transform parent)
-        {
-            if (parent == null)
-                return;
-            for (int i = parent.childCount - 1; i >= 0; i--)
-            {
-                GameObject child = parent.GetChild(i).gameObject;
-                if (Application.isPlaying)
-                    Destroy(child);
-                else
-                    DestroyImmediate(child);
-            }
-        }
     }
 }

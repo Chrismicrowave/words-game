@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using NUnit.Framework;
+using TMPro;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
@@ -23,203 +24,7 @@ namespace Words.UiMockups.WordListHub.Tests
         }
 
         [Test]
-        public void WordListHubMockupScene_usesSlicedImagesEverywhere()
-        {
-            Scene scene = SceneManager.GetSceneByPath(MockupScenePath);
-            bool openedForTest = !scene.IsValid() || !scene.isLoaded;
-            if (openedForTest)
-                scene = EditorSceneManager.OpenScene(MockupScenePath, OpenSceneMode.Additive);
-
-            try
-            {
-                Image[] images = scene.GetRootGameObjects()
-                    .SelectMany(root => root.GetComponentsInChildren<Image>(true))
-                    .ToArray();
-
-                Assert.That(images, Is.Not.Empty);
-                Assert.That(images.All(image => image.type == Image.Type.Sliced), Is.True,
-                    "Every mockup Image must remain sliced, including inactive and generated UI.");
-            }
-            finally
-            {
-                if (openedForTest)
-                    EditorSceneManager.CloseScene(scene, true);
-            }
-        }
-
-        [Test]
-        public void WordListHubMockupScene_detailUsesHeaderRecordAndWordColumns()
-        {
-            Scene scene = SceneManager.GetSceneByPath(MockupScenePath);
-            bool openedForTest = !scene.IsValid() || !scene.isLoaded;
-            if (openedForTest)
-                scene = EditorSceneManager.OpenScene(MockupScenePath, OpenSceneMode.Additive);
-
-            try
-            {
-                Transform detail = scene.GetRootGameObjects()
-                    .SelectMany(root => root.GetComponentsInChildren<Transform>(true))
-                    .FirstOrDefault(transform => transform.name == "LibraryDetailPane");
-                Assert.That(detail, Is.Not.Null, "The library detail pane must exist in the saved mockup scene.");
-
-                RectTransform header = RequireRect(detail, "DetailHeaderPanel");
-                RectTransform record = RequireRect(detail, "DetailRecordPanel");
-                RectTransform words = RequireRect(detail, "DetailWordsPanel");
-                RectTransform feedback = RequireRect(detail, "DetailFeedbackPanel");
-
-                AssertRect(header, new Vector2(0f, 160f), new Vector2(680f, 124f));
-                AssertRect(record, new Vector2(-170f, -38f), new Vector2(320f, 220f));
-                AssertRect(words, new Vector2(170f, -38f), new Vector2(320f, 220f));
-                AssertRect(feedback, new Vector2(185f, -162f), new Vector2(350f, 28f));
-
-                Rect headerRect = GetAnchoredRect(header);
-                Rect recordRect = GetAnchoredRect(record);
-                Rect wordsRect = GetAnchoredRect(words);
-                Rect feedbackRect = GetAnchoredRect(feedback);
-                Assert.That(headerRect.Overlaps(recordRect), Is.False);
-                Assert.That(headerRect.Overlaps(wordsRect), Is.False);
-                Assert.That(recordRect.Overlaps(wordsRect), Is.False);
-                Assert.That(feedbackRect.Overlaps(recordRect), Is.False);
-                Assert.That(feedbackRect.Overlaps(wordsRect), Is.False);
-
-                foreach (string path in new[]
-                {
-                    "DetailHeaderPanel/DetailTitle",
-                    "DetailHeaderPanel/DetailDescription",
-                    "DetailHeaderPanel/DetailMetadata",
-                    "DetailRecordPanel/RecordStars",
-                    "DetailRecordPanel/RecordTime",
-                    "DetailWordsPanel/DetailWordsScroll/Viewport/Content/DetailWords",
-                    "DetailFeedbackPanel/DetailStatus"
-                })
-                {
-                    Transform textTransform = detail.Find(path);
-                    Assert.That(textTransform, Is.Not.Null, path + " must exist.");
-                    TMPro.TextMeshProUGUI text = textTransform.GetComponent<TMPro.TextMeshProUGUI>();
-                    Assert.That(text, Is.Not.Null, path + " must contain TMP text.");
-                    Assert.That(text.text, Is.Not.Empty, path + " must contain preview text.");
-                }
-
-                string feedbackText = detail.Find("DetailFeedbackPanel/DetailStatus")
-                    .GetComponent<TMPro.TextMeshProUGUI>().text;
-                Assert.That(feedbackText, Does.Contain("Update needed"));
-                Assert.That(feedbackText, Does.Contain("Best saved for this version."));
-                Assert.That(feedbackText, Does.Contain("Unpublish before deleting."));
-            }
-            finally
-            {
-                if (openedForTest)
-                    EditorSceneManager.CloseScene(scene, true);
-            }
-        }
-
-        [Test]
-        public void WordListHubMockupScene_usesRequestedControlHeightsAndDropdownScroll()
-        {
-            Scene scene = SceneManager.GetSceneByPath(MockupScenePath);
-            bool openedForTest = !scene.IsValid() || !scene.isLoaded;
-            if (openedForTest)
-                scene = EditorSceneManager.OpenScene(MockupScenePath, OpenSceneMode.Additive);
-
-            try
-            {
-                Transform navigation = RequireNamedTransform(scene, "GlobalNavigation");
-                Assert.That(navigation.GetComponent<RectTransform>().sizeDelta.y, Is.EqualTo(75f));
-                foreach (string name in new[]
-                {
-                    "Nav_Challenges",
-                    "Nav_WordLibrary",
-                    "Nav_Community",
-                    "Nav_Achievements",
-                    "ResetMockData"
-                })
-                {
-                    Assert.That(RequireRect(navigation, name).sizeDelta.y, Is.EqualTo(63f), name);
-                }
-
-                Transform page = RequireNamedTransform(scene, "PageContent");
-                string[] orderedControls =
-                {
-                    "CreateList",
-                    "View_All",
-                    "View_Favorites",
-                    "LibrarySearch",
-                    "Filter_Language",
-                    "Filter_Played",
-                    "Filter_Sort",
-                    "Filter_Direction"
-                };
-                float previousX = float.NegativeInfinity;
-                foreach (string name in orderedControls)
-                {
-                    float currentX = RequireRect(page, name).anchoredPosition.x;
-                    Assert.That(currentX, Is.GreaterThan(previousX), name + " must preserve its left-to-right control order.");
-                    previousX = currentX;
-                }
-                Assert.That(RequireRect(page, "CreateList").anchoredPosition.x, Is.EqualTo(-645f));
-                Assert.That(RequireRect(page, "Filter_Language").sizeDelta.x, Is.EqualTo(200f));
-                Assert.That(RequireRect(page, "Filter_Played").sizeDelta.x, Is.EqualTo(150f));
-                Assert.That(RequireRect(page, "Filter_Sort").sizeDelta.x, Is.EqualTo(230f));
-                Assert.That(RequireRect(page, "Filter_Direction").sizeDelta.x, Is.EqualTo(160f));
-
-                foreach (string name in new[]
-                {
-                    "Filter_Language",
-                    "Filter_Played",
-                    "Filter_Sort",
-                    "Filter_Direction"
-                })
-                {
-                    Transform filter = page.Find(name);
-                    TMPro.TMP_Dropdown dropdown = filter.GetComponent<TMPro.TMP_Dropdown>();
-                    Assert.That(dropdown, Is.Not.Null, name);
-                    Assert.That(dropdown.captionText.fontSize, Is.EqualTo(18f), name + " caption size");
-                    Assert.That(filter.Find("Arrow").GetComponent<TMPro.TextMeshProUGUI>().fontSize,
-                        Is.EqualTo(18f), name + " arrow size");
-
-                    Transform template = filter.Find("Template");
-                    RectTransform templateRect = template.GetComponent<RectTransform>();
-                    float expectedHeight = Mathf.Min(
-                        720f,
-                        (dropdown.options.Count * 20f + 4f) * 3f);
-                    Assert.That(templateRect.sizeDelta.y, Is.EqualTo(expectedHeight), name + " popup height");
-
-                    ScrollRect scroll = template.GetComponent<ScrollRect>();
-                    Assert.That(scroll, Is.Not.Null, name + " must scroll");
-                    Assert.That(scroll.vertical, Is.True, name);
-                    Assert.That(scroll.horizontal, Is.False, name);
-
-                    Transform item = template.Find("Viewport/Content/Item");
-                    Assert.That(item.GetComponent<RectTransform>().sizeDelta.y, Is.EqualTo(40f));
-                    LayoutElement itemLayout = item.GetComponent<LayoutElement>();
-                    Assert.That(itemLayout.minHeight, Is.EqualTo(40f));
-                    Assert.That(itemLayout.preferredHeight, Is.EqualTo(40f));
-
-                    RectTransform checkmark = RequireRect(item, "Item Checkmark");
-                    AssertRect(checkmark, new Vector2(10f, 0f), new Vector2(24f, 24f));
-                    Assert.That(checkmark.anchorMin, Is.EqualTo(new Vector2(0f, 0.5f)));
-                    Assert.That(checkmark.anchorMax, Is.EqualTo(new Vector2(0f, 0.5f)));
-                    Assert.That(checkmark.pivot, Is.EqualTo(new Vector2(0f, 0.5f)));
-
-                    RectTransform label = RequireRect(item, "Item Label");
-                    AssertRect(label, new Vector2(17f, 0f), new Vector2(-42f, -6f));
-                    Assert.That(label.anchorMin, Is.EqualTo(Vector2.zero));
-                    Assert.That(label.anchorMax, Is.EqualTo(Vector2.one));
-                    TMPro.TextMeshProUGUI labelText = label.GetComponent<TMPro.TextMeshProUGUI>();
-                    Assert.That(labelText.fontSize, Is.EqualTo(18f));
-                    Assert.That(labelText.fontSizeMin, Is.EqualTo(16f));
-                    Assert.That(labelText.fontSizeMax, Is.EqualTo(18f));
-                }
-            }
-            finally
-            {
-                if (openedForTest)
-                    EditorSceneManager.CloseScene(scene, true);
-            }
-        }
-
-        [Test]
-        public void WordListHubMockupScene_serializesAuthoredLayoutOverrides()
+        public void WordListHubMockupScene_hasSerializedBindingsAndInactiveSceneTemplates()
         {
             Scene scene = SceneManager.GetSceneByPath(MockupScenePath);
             bool openedForTest = !scene.IsValid() || !scene.isLoaded;
@@ -231,13 +36,68 @@ namespace Words.UiMockups.WordListHub.Tests
                 WordListHubMockupController controller = scene.GetRootGameObjects()
                     .SelectMany(root => root.GetComponentsInChildren<WordListHubMockupController>(true))
                     .Single();
-                SerializedObject serialized = new SerializedObject(controller);
-                SerializedProperty overrides = serialized.FindProperty("authoredLayoutOverrides");
+                WordListHubSceneBindings bindings = controller.GetComponent<WordListHubSceneBindings>();
 
-                Assert.That(overrides, Is.Not.Null);
-                Assert.That(overrides.isArray, Is.True);
-                Assert.That(overrides.arraySize, Is.GreaterThan(0),
-                    "Saving the mockup scene must capture its authored RectTransform layout.");
+                Assert.That(bindings, Is.Not.Null);
+                Assert.That(bindings.card, Is.Not.Null);
+                Assert.That(bindings.hubRoot, Is.Not.Null);
+                Assert.That(bindings.navigationRoot, Is.Not.Null);
+                Assert.That(bindings.footer, Is.Not.Null);
+                Assert.That(bindings.pages, Has.Count.EqualTo(4));
+                Assert.That(bindings.pages.Select(page => page.page).Distinct().Count(), Is.EqualTo(4));
+                Assert.That(bindings.pages.Select(page => page.root).Distinct().Count(), Is.EqualTo(4));
+                Assert.That(bindings.pages.All(page => page.root != null), Is.True);
+
+                Assert.That(bindings.library.root, Is.Not.Null);
+                Assert.That(bindings.library.listContent, Is.Not.Null);
+                Assert.That(bindings.library.detailPane, Is.Not.Null);
+                Assert.That(bindings.library.listScroll, Is.Not.Null);
+                Assert.That(bindings.library.listScroll.content, Is.SameAs(bindings.library.listContent));
+                Assert.That(bindings.library.groups, Has.Count.EqualTo(3));
+                Assert.That(bindings.library.authoredRows, Is.Not.Empty);
+                Assert.That(bindings.library.rowTemplate, Is.Not.Null);
+                Assert.That(bindings.library.rowTemplate.gameObject.activeSelf, Is.False,
+                    "The authored Library template must stay inactive in the saved scene.");
+                Assert.That(bindings.library.rowTemplate.GetComponent<WordListHubRuntimeInstance>(), Is.Null,
+                    "The template must not carry the runtime instance marker.");
+
+                Assert.That(bindings.community.root, Is.Not.Null);
+                Assert.That(bindings.community.listContent, Is.Not.Null);
+                Assert.That(bindings.community.detailPane, Is.Not.Null);
+                Assert.That(bindings.community.listScroll, Is.Not.Null);
+                Assert.That(bindings.community.listScroll.content, Is.SameAs(bindings.community.listContent));
+                Assert.That(bindings.community.rowTemplate, Is.Not.Null);
+                Assert.That(bindings.community.rowTemplate.gameObject.activeSelf, Is.False);
+                Assert.That(bindings.community.rowTemplate.GetComponent<WordListHubRuntimeInstance>(), Is.Null);
+
+                Assert.That(bindings.achievements.root, Is.Not.Null);
+                Assert.That(bindings.achievements.cardContent, Is.Not.Null);
+                Assert.That(bindings.achievements.cardTemplate, Is.Not.Null);
+                Assert.That(bindings.achievements.cardTemplate.gameObject.activeSelf, Is.False);
+                Assert.That(bindings.achievements.cardTemplate.GetComponent<WordListHubRuntimeInstance>(), Is.Null);
+                Assert.That(bindings.modal.root, Is.Not.Null);
+                Assert.That(bindings.modal.root.activeSelf, Is.False);
+
+                SerializedObject serialized = new SerializedObject(controller);
+                Assert.That(serialized.FindProperty("authoredLayoutOverrides"), Is.Null,
+                    "Scene layout must live in the Scene instead of serialized runtime overrides.");
+
+                foreach (Button button in GetBoundButtons(bindings).Where(button => button != null).Distinct())
+                {
+                    Assert.That(button.onClick.GetPersistentEventCount(), Is.Zero,
+                        button.name + " must not have persistent Inspector callbacks competing with runtime binding.");
+                }
+                foreach (TMP_Dropdown dropdown in GetBoundDropdowns(bindings)
+                    .Where(dropdown => dropdown != null).Distinct())
+                {
+                    Assert.That(dropdown.onValueChanged.GetPersistentEventCount(), Is.Zero,
+                        dropdown.name + " must not have persistent Inspector callbacks competing with runtime binding.");
+                }
+                foreach (TMP_InputField input in GetBoundInputs(bindings).Where(input => input != null).Distinct())
+                {
+                    Assert.That(input.onValueChanged.GetPersistentEventCount(), Is.Zero,
+                        input.name + " must not have persistent Inspector callbacks competing with runtime binding.");
+                }
             }
             finally
             {
@@ -245,7 +105,6 @@ namespace Words.UiMockups.WordListHub.Tests
                     EditorSceneManager.CloseScene(scene, true);
             }
         }
-
         [Test]
         public void LibraryGroups_areMutuallyExclusive_andCoverEveryFixtureOnce()
         {
@@ -942,44 +801,78 @@ namespace Words.UiMockups.WordListHub.Tests
             Assert.That(item.PublicationStatus, Is.EqualTo(MockupPublicationStatus.NotPublished));
         }
 
-        private static RectTransform RequireRect(Transform root, string path)
-        {
-            Transform child = root.Find(path);
-            Assert.That(child, Is.Not.Null, path + " must exist.");
-            RectTransform rect = child.GetComponent<RectTransform>();
-            Assert.That(rect, Is.Not.Null, path + " must have a RectTransform.");
-            return rect;
-        }
-
-        private static Transform RequireNamedTransform(Scene scene, string name)
-        {
-            Transform transform = scene.GetRootGameObjects()
-                .SelectMany(root => root.GetComponentsInChildren<Transform>(true))
-                .FirstOrDefault(candidate => candidate.name == name);
-            Assert.That(transform, Is.Not.Null, name + " must exist.");
-            return transform;
-        }
-
-        private static void AssertRect(RectTransform rect, Vector2 position, Vector2 size)
-        {
-            Assert.That(rect.anchoredPosition, Is.EqualTo(position));
-            Assert.That(rect.sizeDelta, Is.EqualTo(size));
-        }
-
-        private static Rect GetAnchoredRect(RectTransform rect)
-        {
-            return new Rect(
-                rect.anchoredPosition.x - rect.sizeDelta.x * rect.pivot.x,
-                rect.anchoredPosition.y - rect.sizeDelta.y * rect.pivot.y,
-                rect.sizeDelta.x,
-                rect.sizeDelta.y);
-        }
-
         private void AssertViewContainsOnly(MockupLibraryView view, MockupLibraryGroup expectedGroup)
         {
             IReadOnlyList<MockupWordList> items = store.QueryLibrary(new MockupLibraryQuery { View = view });
             Assert.That(items.All(item => item.Group == expectedGroup), Is.True);
             Assert.That(items, Has.Count.EqualTo(store.GetGroupCount(expectedGroup)));
+        }
+
+        private static IEnumerable<Button> GetBoundButtons(WordListHubSceneBindings bindings)
+        {
+            yield return bindings.navChallenges.button;
+            yield return bindings.navLibrary.button;
+            yield return bindings.navCommunity.button;
+            yield return bindings.navAchievements.button;
+            yield return bindings.resetMockData.button;
+            yield return bindings.library.allLists.button;
+            yield return bindings.library.favorites.button;
+            yield return bindings.library.createList.button;
+            foreach (WordListHubSceneBindings.GroupBinding group in bindings.library.groups)
+                yield return group.button;
+            foreach (WordListHubSceneBindings.LibraryRowBinding row in bindings.library.authoredRows)
+                yield return row.button;
+            yield return bindings.library.favorite.button;
+            yield return bindings.library.delete.button;
+            yield return bindings.library.play.button;
+            yield return bindings.library.edit.button;
+            yield return bindings.library.copyEditWords.button;
+            yield return bindings.library.publish.button;
+            yield return bindings.library.unpublish.button;
+            foreach (WordListHubSceneBindings.DiscoveryRowBinding row in bindings.community.authoredRows)
+                yield return row.button;
+            yield return bindings.community.like.button;
+            yield return bindings.community.download.button;
+            yield return bindings.community.play.button;
+            yield return bindings.community.report.button;
+            yield return bindings.challenges.dailyChallenge.button;
+            yield return bindings.challenges.weeklyChallenge.button;
+            yield return bindings.modal.newList.saveButton;
+            yield return bindings.modal.newList.cancelButton;
+            yield return bindings.modal.editList.saveButton;
+            yield return bindings.modal.editList.cancelButton;
+            yield return bindings.modal.contentChange.confirmButton;
+            yield return bindings.modal.contentChange.cancelButton;
+            yield return bindings.modal.deleteList.confirmButton;
+            yield return bindings.modal.deleteList.cancelButton;
+            yield return bindings.modal.playResult.confirmButton;
+            yield return bindings.modal.playResult.cancelButton;
+        }
+
+        private static IEnumerable<TMP_Dropdown> GetBoundDropdowns(WordListHubSceneBindings bindings)
+        {
+            yield return bindings.library.languageFilter;
+            yield return bindings.library.playedFilter;
+            yield return bindings.library.sortFilter;
+            yield return bindings.library.directionFilter;
+            yield return bindings.community.connectionState;
+            yield return bindings.achievements.filter;
+            yield return bindings.modal.newList.languageDropdown;
+            yield return bindings.modal.editList.languageDropdown;
+        }
+
+        private static IEnumerable<TMP_InputField> GetBoundInputs(WordListHubSceneBindings bindings)
+        {
+            yield return bindings.library.searchInput;
+            yield return bindings.community.searchInput;
+            yield return bindings.modal.newList.titleInput;
+            yield return bindings.modal.newList.descriptionInput;
+            yield return bindings.modal.newList.tagsInput;
+            yield return bindings.modal.newList.wordsInput;
+            yield return bindings.modal.editList.titleInput;
+            yield return bindings.modal.editList.descriptionInput;
+            yield return bindings.modal.editList.tagsInput;
+            yield return bindings.modal.editList.wordsInput;
         }
     }
 }
