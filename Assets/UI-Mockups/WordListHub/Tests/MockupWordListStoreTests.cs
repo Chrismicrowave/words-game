@@ -571,7 +571,7 @@ namespace Words.UiMockups.WordListHub.Tests
         }
 
         [Test]
-        public void DeletePublishedList_requiresExplicitUnpublishAndNeverDeletesRemoteItem()
+        public void DeletePublishedList_requiresUnpublishAndDeletesOnlyTheLocalList()
         {
             MockupWordList item = store.FindById("mock-list-punctuation");
             string remoteId = item.RemoteItemId;
@@ -589,7 +589,7 @@ namespace Words.UiMockups.WordListHub.Tests
             Assert.That(removed.Succeeded, Is.True);
             Assert.That(store.FindById(item.Id), Is.Null);
             Assert.That(item.IsPubliclyVisible, Is.False);
-            Assert.That(item.RemoteItemId, Is.EqualTo(remoteId));
+            Assert.That(item.RemoteItemId, Is.Null);
         }
 
         [Test]
@@ -644,9 +644,9 @@ namespace Words.UiMockups.WordListHub.Tests
         }
 
         [Test]
-        public void MetadataOnlyEdit_doesNotWarnOrChangePersonalRecords()
+        public void UnpublishedMetadataOnlyEdit_doesNotWarnOrChangePersonalRecords()
         {
-            MockupWordList item = store.FindById("mock-list-punctuation");
+            MockupWordList item = store.FindById("mock-list-everyday-english");
             List<string> oldWords = new List<string>(item.Words);
             int? oldStars = item.PersonalStars;
             float? oldBestTime = item.BestTimeSeconds;
@@ -655,14 +655,14 @@ namespace Words.UiMockups.WordListHub.Tests
             System.DateTime oldModifiedAt = item.ModifiedAt;
 
             MockupWordListEdit draft = store.CreateEditDraft(item.Id);
-            draft.Title = "Punctuation Practice Plus";
+            draft.Title = "Everyday English Plus";
             draft.Description = "Updated explanatory text.";
             draft.Tags = "punctuation,english,practice";
             MockupEditResult result = store.SaveEdit(item.Id, draft);
 
             Assert.That(result.ContentChanged, Is.False);
             Assert.That(result.ShowRecordWarning, Is.False);
-            Assert.That(item.Title, Is.EqualTo("Punctuation Practice Plus"));
+            Assert.That(item.Title, Is.EqualTo("Everyday English Plus"));
             Assert.That(item.Tags, Is.EqualTo("punctuation,english,practice"));
             Assert.That(item.Words, Is.EqualTo(oldWords));
             Assert.That(item.WordCount, Is.EqualTo(item.Words.Count));
@@ -671,9 +671,88 @@ namespace Words.UiMockups.WordListHub.Tests
             Assert.That(item.ContentRevision, Is.EqualTo(oldRevision));
             Assert.That(item.ContentModifiedAt, Is.EqualTo(oldContentModifiedAt));
             Assert.That(item.ModifiedAt, Is.Not.EqualTo(oldModifiedAt));
-            Assert.That(item.PublicationStatus, Is.EqualTo(MockupPublicationStatus.UpdateNeeded));
-            Assert.That(item.Group, Is.EqualTo(MockupLibraryGroup.MyPublished));
+            Assert.That(item.PublicationStatus, Is.EqualTo(MockupPublicationStatus.NotPublished));
+            Assert.That(item.Group, Is.EqualTo(MockupLibraryGroup.MyLists));
             Assert.That(item.PreviousContentRecords, Is.Empty);
+        }
+
+        [Test]
+        public void UnpublishingClearsPublishedIdentityAndRestoresLocalEditing()
+        {
+            MockupWordList item = store.FindById("mock-list-punctuation");
+            string oldRemoteId = item.RemoteItemId;
+            string oldTitle = item.Title;
+            string oldDescription = item.Description;
+            string oldTags = item.Tags;
+            MockupLanguage oldLanguage = item.Language;
+            List<string> oldWords = new List<string>(item.Words);
+            System.DateTime oldModifiedAt = item.ModifiedAt;
+            System.DateTime oldContentModifiedAt = item.ContentModifiedAt;
+            int oldRevision = item.ContentRevision;
+            int? oldStars = item.PersonalStars;
+            float? oldBestTime = item.BestTimeSeconds;
+
+            AssertPublishedEditsRejected(item);
+            MockupEditResult publishedNoOp = store.SaveEdit(item.Id, store.CreateEditDraft(item.Id));
+            Assert.That(publishedNoOp.Item, Is.SameAs(item));
+            Assert.That(publishedNoOp.ContentChanged, Is.False);
+            Assert.That(item.PublicationStatus, Is.EqualTo(MockupPublicationStatus.Published));
+
+            store.Unpublish(item.Id);
+            Assert.That(item.RemoteItemId, Is.Null);
+            Assert.That(item.PublicationStatus, Is.EqualTo(MockupPublicationStatus.NotPublished));
+            Assert.That(item.IsPubliclyVisible, Is.False);
+            Assert.That(item.Group, Is.EqualTo(MockupLibraryGroup.MyLists));
+
+            Assert.That(item.Title, Is.EqualTo(oldTitle));
+            Assert.That(item.Description, Is.EqualTo(oldDescription));
+            Assert.That(item.Tags, Is.EqualTo(oldTags));
+            Assert.That(item.Language, Is.EqualTo(oldLanguage));
+            Assert.That(item.Words, Is.EqualTo(oldWords));
+            Assert.That(item.ModifiedAt, Is.EqualTo(oldModifiedAt));
+            Assert.That(item.ContentModifiedAt, Is.EqualTo(oldContentModifiedAt));
+            Assert.That(item.ContentRevision, Is.EqualTo(oldRevision));
+            Assert.That(item.PersonalStars, Is.EqualTo(oldStars));
+            Assert.That(item.BestTimeSeconds, Is.EqualTo(oldBestTime));
+            Assert.That(item.PreviousContentRecords, Is.Empty);
+
+            MockupWordListEdit metadataDraft = store.CreateEditDraft(item.Id);
+            metadataDraft.Title = "Punctuation After Unpublish";
+            metadataDraft.Description = "An editable local list.";
+            metadataDraft.Tags = "punctuation,local";
+            MockupEditResult metadataResult = store.SaveEdit(item.Id, metadataDraft);
+            Assert.That(metadataResult.ContentChanged, Is.False);
+            Assert.That(metadataResult.ShowRecordWarning, Is.False);
+            Assert.That(item.Title, Is.EqualTo(metadataDraft.Title));
+            Assert.That(item.Description, Is.EqualTo(metadataDraft.Description));
+            Assert.That(item.Tags, Is.EqualTo(metadataDraft.Tags));
+            Assert.That(item.Words, Is.EqualTo(oldWords));
+            Assert.That(item.PersonalStars, Is.EqualTo(oldStars));
+            Assert.That(item.BestTimeSeconds, Is.EqualTo(oldBestTime));
+
+            MockupWordListEdit contentDraft = store.CreateEditDraft(item.Id);
+            contentDraft.Language = MockupLanguage.Chinese;
+            contentDraft.Words[0] = "改";
+            MockupEditResult contentResult = store.SaveEdit(item.Id, contentDraft);
+            Assert.That(contentResult.ContentChanged, Is.True);
+            Assert.That(contentResult.ShowRecordWarning, Is.True);
+            Assert.That(item.Language, Is.EqualTo(MockupLanguage.Chinese));
+            Assert.That(item.Words[0], Is.EqualTo("改"));
+            Assert.That(item.ContentRevision, Is.EqualTo(oldRevision + 1));
+            Assert.That(item.PersonalStars, Is.Null);
+            Assert.That(item.BestTimeSeconds, Is.Null);
+            Assert.That(item.PreviousContentRecords, Has.Count.EqualTo(1));
+            Assert.That(item.PreviousContentRecords[0].ContentRevision, Is.EqualTo(oldRevision));
+            Assert.That(item.PreviousContentRecords[0].PersonalStars, Is.EqualTo(oldStars));
+            Assert.That(item.PreviousContentRecords[0].BestTimeSeconds, Is.EqualTo(oldBestTime));
+
+            MockupWordList republished = store.Publish(item.Id);
+            Assert.That(republished, Is.SameAs(item));
+            Assert.That(item.RemoteItemId, Is.Not.Null.And.Not.Empty);
+            Assert.That(item.RemoteItemId, Is.Not.EqualTo(oldRemoteId));
+            Assert.That(item.PublicationStatus, Is.EqualTo(MockupPublicationStatus.Published));
+            Assert.That(item.Group, Is.EqualTo(MockupLibraryGroup.MyPublished));
+            Assert.That(item.PreviousContentRecords, Has.Count.EqualTo(1));
         }
 
         [Test]
@@ -686,6 +765,9 @@ namespace Words.UiMockups.WordListHub.Tests
             float? oldTime = source.BestTimeSeconds;
 
             MockupWordListEdit draft = store.CreateEditDraft(source.Id);
+            draft.Title = "Punctuation Practice New Version";
+            draft.Description = "A separately authored content version.";
+            draft.Tags = "punctuation,new-version";
             draft.Words.Add("new punctuation word");
             MockupEditResult result = store.SavePublishedContentAsNewList(source.Id, draft);
 
@@ -695,6 +777,9 @@ namespace Words.UiMockups.WordListHub.Tests
             Assert.That(result.Item.Id, Is.Not.EqualTo(source.Id));
             Assert.That(result.Item.RemoteItemId, Is.Null);
             Assert.That(result.Item.PublicationStatus, Is.EqualTo(MockupPublicationStatus.NotPublished));
+            Assert.That(result.Item.Title, Is.EqualTo(draft.Title));
+            Assert.That(result.Item.Description, Is.EqualTo(draft.Description));
+            Assert.That(result.Item.Tags, Is.EqualTo(draft.Tags));
             Assert.That(result.Item.ContentRevision, Is.EqualTo(1));
             Assert.That(result.Item.Words, Is.EqualTo(draft.Words));
             Assert.That(result.Item.WordCount, Is.EqualTo(result.Item.Words.Count));
@@ -712,6 +797,58 @@ namespace Words.UiMockups.WordListHub.Tests
             Assert.That(source.IsPubliclyVisible, Is.True);
             Assert.That(source.PersonalStars, Is.EqualTo(oldStars));
             Assert.That(source.BestTimeSeconds, Is.EqualTo(oldTime));
+        }
+
+        [Test]
+        public void PublishedCopy_allowsUnchangedOrMetadataOnlyCopiesAndKeepsSourceIntact()
+        {
+            MockupWordList source = store.FindById("mock-list-punctuation");
+            string oldRemoteId = source.RemoteItemId;
+            string oldTitle = source.Title;
+            string oldDescription = source.Description;
+            string oldTags = source.Tags;
+            MockupLanguage oldLanguage = source.Language;
+            List<string> oldWords = new List<string>(source.Words);
+            int? oldStars = source.PersonalStars;
+            float? oldTime = source.BestTimeSeconds;
+
+            MockupWordListEdit unchangedDraft = store.CreateEditDraft(source.Id);
+            MockupEditResult unchangedCopyResult = store.SavePublishedContentAsNewList(source.Id, unchangedDraft);
+            Assert.That(unchangedCopyResult.ContentChanged, Is.False);
+            Assert.That(unchangedCopyResult.CreatedNewList, Is.True);
+            Assert.That(unchangedCopyResult.ShowRecordWarning, Is.False);
+            Assert.That(unchangedCopyResult.Item.Id, Is.Not.EqualTo(source.Id));
+            Assert.That(unchangedCopyResult.Item.RemoteItemId, Is.Null);
+            Assert.That(unchangedCopyResult.Item.Words, Is.EqualTo(oldWords));
+            Assert.That(unchangedCopyResult.Item.Language, Is.EqualTo(oldLanguage));
+
+            MockupWordListEdit metadataDraft = store.CreateEditDraft(source.Id);
+            metadataDraft.Title = "Punctuation Practice Copy";
+            metadataDraft.Description = "A local copy with updated notes.";
+            metadataDraft.Tags = "punctuation,local-copy";
+            MockupEditResult metadataCopyResult = store.SavePublishedContentAsNewList(source.Id, metadataDraft);
+            Assert.That(metadataCopyResult.ContentChanged, Is.False);
+            Assert.That(metadataCopyResult.CreatedNewList, Is.True);
+            Assert.That(metadataCopyResult.Item.Id, Is.Not.EqualTo(source.Id));
+            Assert.That(metadataCopyResult.Item.RemoteItemId, Is.Null);
+            Assert.That(metadataCopyResult.Item.PublicationStatus, Is.EqualTo(MockupPublicationStatus.NotPublished));
+            Assert.That(metadataCopyResult.Item.Group, Is.EqualTo(MockupLibraryGroup.MyLists));
+            Assert.That(metadataCopyResult.Item.Title, Is.EqualTo(metadataDraft.Title));
+            Assert.That(metadataCopyResult.Item.Description, Is.EqualTo(metadataDraft.Description));
+            Assert.That(metadataCopyResult.Item.Tags, Is.EqualTo(metadataDraft.Tags));
+            Assert.That(metadataCopyResult.Item.Words, Is.EqualTo(oldWords));
+            Assert.That(metadataCopyResult.Item.Language, Is.EqualTo(oldLanguage));
+
+            Assert.That(source.RemoteItemId, Is.EqualTo(oldRemoteId));
+            Assert.That(source.Title, Is.EqualTo(oldTitle));
+            Assert.That(source.Description, Is.EqualTo(oldDescription));
+            Assert.That(source.Tags, Is.EqualTo(oldTags));
+            Assert.That(source.Language, Is.EqualTo(oldLanguage));
+            Assert.That(source.Words, Is.EqualTo(oldWords));
+            Assert.That(source.PersonalStars, Is.EqualTo(oldStars));
+            Assert.That(source.BestTimeSeconds, Is.EqualTo(oldTime));
+            Assert.That(source.PublicationStatus, Is.EqualTo(MockupPublicationStatus.Published));
+            Assert.That(source.IsPubliclyVisible, Is.True);
         }
 
         [Test]
@@ -745,34 +882,49 @@ namespace Words.UiMockups.WordListHub.Tests
         }
 
         [Test]
-        public void Unpublish_requiresOnline_andKeepsTheOldPublishedEntry()
+        public void Unpublish_requiresOnline_andRepublishCreatesANewCommunityIdentity()
         {
             MockupWordList item = store.FindById("mock-list-travel-copy");
             MockupWordList published = store.Publish(item.Id);
             string remoteId = published.RemoteItemId;
+            int? stars = item.PersonalStars;
+            float? bestTime = item.BestTimeSeconds;
+            int historyCount = item.PreviousContentRecords.Count;
+            List<string> words = new List<string>(item.Words);
             store.SetOnline(false);
 
             MockupActionResult offline = store.TryUnpublish(item.Id);
             Assert.That(offline.Succeeded, Is.False);
+            Assert.That(offline.List, Is.SameAs(item));
             Assert.That(item.IsPubliclyVisible, Is.True);
-
-            store.SetOnline(true);
-            MockupWordList unpublished = store.Unpublish(item.Id);
-            Assert.That(unpublished, Is.SameAs(item));
-            Assert.That(item.IsPubliclyVisible, Is.False);
-            Assert.That(item.PublicationStatus, Is.EqualTo(MockupPublicationStatus.Unpublished));
+            Assert.That(item.PublicationStatus, Is.EqualTo(MockupPublicationStatus.Published));
             Assert.That(item.RemoteItemId, Is.EqualTo(remoteId));
             Assert.That(item.Group, Is.EqualTo(MockupLibraryGroup.MyPublished));
 
-            List<string> wordsBeforeRepublish = new List<string>(item.Words);
+            store.SetOnline(true);
+            MockupActionResult unpublished = store.TryUnpublish(item.Id);
+            Assert.That(unpublished.Succeeded, Is.True);
+            Assert.That(unpublished.List, Is.SameAs(item));
+            Assert.That(item.IsPubliclyVisible, Is.False);
+            Assert.That(item.PublicationStatus, Is.EqualTo(MockupPublicationStatus.NotPublished));
+            Assert.That(item.RemoteItemId, Is.Null);
+            Assert.That(item.Group, Is.EqualTo(MockupLibraryGroup.MyLists));
+            Assert.That(item.PersonalStars, Is.EqualTo(stars));
+            Assert.That(item.BestTimeSeconds, Is.EqualTo(bestTime));
+            Assert.That(item.PreviousContentRecords, Has.Count.EqualTo(historyCount));
+            Assert.That(item.Words, Is.EqualTo(words));
+
             MockupActionResult republished = store.TryPublish(item.Id);
             Assert.That(republished.Succeeded, Is.True);
             Assert.That(republished.List, Is.SameAs(item));
-            Assert.That(item.RemoteItemId, Is.EqualTo(remoteId));
-            Assert.That(item.Words, Is.EqualTo(wordsBeforeRepublish));
+            Assert.That(item.RemoteItemId, Is.Not.Null.And.Not.Empty);
+            Assert.That(item.RemoteItemId, Is.Not.EqualTo(remoteId));
+            Assert.That(item.Id, Is.EqualTo("mock-list-travel-copy"));
+            Assert.That(item.Words, Is.EqualTo(words));
             Assert.That(item.WordCount, Is.EqualTo(item.Words.Count));
             Assert.That(item.IsPubliclyVisible, Is.True);
             Assert.That(item.PublicationStatus, Is.EqualTo(MockupPublicationStatus.Published));
+            Assert.That(item.Group, Is.EqualTo(MockupLibraryGroup.MyPublished));
         }
 
         [Test]
@@ -799,6 +951,29 @@ namespace Words.UiMockups.WordListHub.Tests
             Assert.That(item.PreviousContentRecords[0].PersonalStars, Is.EqualTo(oldStars));
             Assert.That(item.PreviousContentRecords[0].BestTimeSeconds, Is.EqualTo(oldBestTime));
             Assert.That(item.PublicationStatus, Is.EqualTo(MockupPublicationStatus.NotPublished));
+        }
+
+        private void AssertPublishedEditsRejected(MockupWordList item)
+        {
+            MockupWordListEdit titleDraft = store.CreateEditDraft(item.Id);
+            titleDraft.Title += " changed";
+            Assert.Throws<System.InvalidOperationException>(() => store.SaveEdit(item.Id, titleDraft));
+
+            MockupWordListEdit descriptionDraft = store.CreateEditDraft(item.Id);
+            descriptionDraft.Description += " changed";
+            Assert.Throws<System.InvalidOperationException>(() => store.SaveEdit(item.Id, descriptionDraft));
+
+            MockupWordListEdit tagsDraft = store.CreateEditDraft(item.Id);
+            tagsDraft.Tags += ",changed";
+            Assert.Throws<System.InvalidOperationException>(() => store.SaveEdit(item.Id, tagsDraft));
+
+            MockupWordListEdit wordsDraft = store.CreateEditDraft(item.Id);
+            wordsDraft.Words[0] += " changed";
+            Assert.Throws<System.InvalidOperationException>(() => store.SaveEdit(item.Id, wordsDraft));
+
+            MockupWordListEdit languageDraft = store.CreateEditDraft(item.Id);
+            languageDraft.Language = MockupLanguage.Chinese;
+            Assert.Throws<System.InvalidOperationException>(() => store.SaveEdit(item.Id, languageDraft));
         }
 
         private void AssertViewContainsOnly(MockupLibraryView view, MockupLibraryGroup expectedGroup)

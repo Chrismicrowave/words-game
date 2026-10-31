@@ -1,6 +1,6 @@
 # Community V1 与排行榜讨论总结
 
-**状态：** 2026-10-31 决策汇总；本轮新增 UI 决策已取代上一版部分分组与内容更新假设。当前 corrected source 已通过 EditMode 33/33，并已刷新、保存派生 mockup scene（clean）；部分运行交互仍待验收。本文把当前讨论收敛为 Community V1 的主索引；与较早 WIP 冲突时，以本文最新结论为准。具体字段和迁移风险仍参考
+**状态：** 2026-11-01 已实施并验证“发布期间条目不可变”和 Copy & Edit：有 `RemoteItemId` 的已发布条目所有 metadata/content 锁定，Edit Details 与 Update Publication UI 状态和处理方法已移除。此前 39 项 EditMode 测试通过，编译为 0 errors / 0 warnings；两次 Play 验证 metadata-only Copy & Edit。新 Unpublish 生命周期另由 `MockupWordListStoreTests` 35/35、编译 0 errors / 0 warnings 和实际 Play 验收：从已发布 row 执行 Unpublish，编辑 metadata 后再 Publish，原 local ID 与成绩保留，条目回到 My Lists 并保持选中，remote ID 从 `mock-published-punctuation` 更新为 `mock-published-01`。此结果只验证 mock owned-list 流程，不表示已删除真实 Community/Steam 发布。**真实来源联动仍待接入：** 已下载旧 remote ID 的本地副本继续离线可玩；来源检测确认旧发布下架后应标记下架且不自动迁移或关联新发布，目前尚未接通或验证此检测。除未来下架标记外，下载侧既有可用性、缓存、`UpdateAvailable` 和远端 metadata sync 语义不变。其余 2026-10-31 Community V1 决策为既有基线；本文把当前讨论收敛为 Community V1 主索引，与较早 WIP 冲突时以本文最新结论为准。具体字段和迁移风险仍参考
 [`community-wordlists-wip.md`](community-wordlists-wip.md)、
 [`wordlist-data-model-wip.md`](wordlist-data-model-wip.md) 和
 [`community-architecture-overview-wip.md`](community-architecture-overview-wip.md)。UI mockup 当前文件、隔离边界和验收清单见
@@ -46,16 +46,18 @@ Word List 当前采用三个独立主分组；社区下载不混入 My Lists：
 
 Community 的产品排序目标可以包含 Popular now、Most played、Most liked、Newest；这些排序项的数据来源和技术可行性仍需后续验证，不能据此认为 Steam Workshop 已提供全部所需信号，或动态 Top 100 已能直接实现。单个词表详情中才显示该词表的成绩榜。词表详情中的完整 Words 预览使用独立滚动区域，长词表不挤压或裁掉详情操作区。
 
-### 1.4 发布后的可玩内容不可变
+### 1.4 已发布作者条目整体不可变
 
 V1 采用以下规则：
 
-- 通过 Publish 发布时，条目应公开可见；首次发布后，词语、阶段、语言、拼音和游戏规则内容不可原地修改。
-- 标题、简介、标签等不影响玩法身份的元数据可以更新。
-- 任何可玩内容变化都产生新的 `contentHash`，并要求 **Publish as New List**。
-- 新内容使用新 `localListId`、新 Workshop Item 和独立成绩 scope。
-- 旧内容、旧点赞和旧成绩保持在其原条目上，不迁移到新内容。
-- 作者可以把旧条目设为私密来停止公开，并发布新的内容版本；已经按规则提供的本地缓存不能被远端操作静默删除。
+- 发布期间（`RemoteItemId` 非空）的作者条目整体不可变：标题、简介、标签、Words、Language、拼音及其他 metadata/content 都不能原地修改。成功 Unpublish 会移除旧 Community 发布、清空该 ID 与发布状态；原 local ID 和本地成绩保留，列表恢复为所有字段可编辑的普通本地列表。玩法内容编辑仍走现有成绩归档确认。
+- 若要修改任意字段，作者用 Copy & Edit 生成新 `localListId`、无远端绑定的 My Lists 副本，再按新条目发布；移除 Edit Details 与 Update Publication UI 状态和处理方法。
+- Copy & Edit 可原样保存，也可只改标题、简介、标签等 metadata；无需改 Words 或 Language 才能保存。副本使用新 ID 且无远端绑定，原 source 与成绩保持不变。
+- 原列表的内容身份、点赞与成绩继续留在原条目，不迁移到 Copy & Edit 副本。
+- Unpublish 后再次 Publish 必须创建新的 remote ID，不得复用或恢复旧 ID。Play、Favorite 及删除约束沿用现有规则，删除仍需按既有流程先 Unpublish。
+- 已下载的旧 remote ID 副本继续离线可玩；来源检测确认旧发布已下架时标记为已下架，不自动迁移或关联到新发布。除该标记外，下载副本可用性、缓存、`UpdateAvailable` 和未来远端 metadata sync 决策不变。
+- 39 项 EditMode 与两次 Copy & Edit Play 是此前验证；本轮 `MockupWordListStoreTests` 35/35、编译 0 errors / 0 warnings 和实际 Play 验证了 mock owned-list Unpublish、metadata 编辑后重新 Publish、新 remote ID、原 local ID/成绩保留及返回 My Lists 并选中。此前 Unpublish→Republish 沿用旧 ID 的结果已被取代。
+- Mock 限制：作者 Publish 只为 owned list 记录 `mock-published-*` 绑定，不创建 `MockupDiscoveryItem`；Community 的 `mock-ugc-*` 样例是独立 fixture，尚未联通。因此上述测试不代表删除或发布了真实 Steam 条目。旧下载 ID 的来源检测与下架标记仍待真实来源接通后验证，目前没有验证联动。
 
 这样避免订阅者、已下载玩家、成绩榜和 Top 100 快照在同一个 Workshop Item 下发生内容语义变化。
 
@@ -150,11 +152,11 @@ localStatus  = cached | missing | corrupt
 ### 3.5 My Published
 
 - 显示 Workshop 状态、审核状态、Like、游玩数和当前内容版本。
-- 发布后公开可见；标题、简介和标签等元数据可更新，可玩内容变化只能发布新列表。
-- 旧条目可以停止公开，作者可将其设为私密；旧内容身份和成绩不迁移。
-- 支持打开 Steam 页面、检查发布结果和停止公开。
+- 发布期间公开可见且带 `RemoteItemId` 的条目全部字段锁定。成功 Unpublish 会移除旧 Community 发布并清除 ID/发布状态，保留原 local ID 与本地成绩；该条目恢复为普通本地列表，可编辑全部字段，玩法内容修改仍使用现有成绩归档确认。
+- 修改任何字段都从 Copy & Edit 开始，生成新 local ID 和无远端绑定的本地副本；原列表及其成绩保持不变。移除 Edit Details 与 Update Publication UI/路径。
+- 支持打开 Steam 页面、检查发布结果和停止公开；Unpublish 后再次 Publish 必须创建新的 remote ID。Play、Favorite 与删除仍按既有规则执行，删除前先 Unpublish。
 - 不把删除远端条目和删除本地自有列表混成一个动作。
-- 发布词语固定；Edit/CreateVersion 仅在玩法内容实际改变时可提交。Words 和 Language 未改变时按钮禁用并显示就地原因；改标题等 metadata 不足以构成新内容版本。确认后创建新的独立本地 ID，不带 remote identity，也不修改原 published 条目。
+- 发布期间作者修改不走 Edit Details 或 Update Publication。Copy & Edit 可原样保存或只改 metadata，无需变更 Words/Language；它创建新 local ID、无 remote identity 的副本，原发布条目及成绩不变。Unpublish 后原列表变回普通本地列表；再次发布创建新 remote ID。Mock owned-list 生命周期已通过 `MockupWordListStoreTests` 35/35、干净编译和实际 Play 验证；真实 Community/Steam 删除及旧下载 ID 下架检测仍未接通或验证。
 
 ## 4. 审核与 LLM 建议
 
@@ -221,13 +223,13 @@ AI 可输出结构化风险建议，例如：
 - 空数据、加载、刷新和失败状态。
 - 下载中、下架、封禁和损坏缓存；不再使用 `UpdateAvailable` 内容替换 fixture。
 - Like/Favorite 操作失败与回滚。
-- 编辑后另存、新发布和旧成绩归档。
+- Copy & Edit 后另发新条目，原发布条目与成绩保持不变；可原样复制或只改 metadata，无需改 Words/Language。已由 39 项 EditMode 测试、干净编译和两次 Play 验收。
 - 普通 Download 与 Play 自动下载进入独立可折叠 Community Downloads 组；下载后展开、选择并滚动到新项；下载缓存支持离线。
 - 删除本地原创或已下载词表有确认；删除下载项不下架远端且允许重新下载；删除已发布列表前先下架。
 - 详情完整 Words 预览放入独立滚动区；Dropdown Item 行高为 20 px。
-- CreateVersion 在 Words/Language 没有实际变化时禁用并显示原因；仅在内容变化后启用。确认后生成无 remote identity 的独立本地 ID，不修改原 published 条目。
+- 曾有的 CreateVersion 内容变化门控不再描述作者编辑已发布词表；已验证 Copy & Edit 可原样保存或仅改 metadata，创建新 ID 且无 remote binding，原 source/records 不变。
 - 相同 remoteId 的内容不自动覆盖本地缓存；metadata sync 后续另议。
-- 标题/简介/标签可修改，已发布词语不可原地修改；改词发布新条目，旧条目可设为私密。
+- 作者发布操作验收：发布中所有字段锁定；Copy & Edit 可原样保存或仅改 metadata，生成新 ID/无远端绑定的副本并保留原 source/records。Mock owned-list Unpublish 后清除旧 remote ID、保留 local ID/成绩并恢复普通列表编辑；之后 Publish 创建新 mock remote ID，35/35 Store tests、干净编译及实际 Play 已验证。该 mock 不执行真实 Steam 删除/发布；真实下载来源下架检测待接入。
 - 举报后仅举报者立即隐藏；开发者复核队列可操作；AI 建议不触发自动隐藏或下架。
 - 筛选使用真正的下拉控件；全局入口文案使用 Word List；Achievements 独立页面包含成就图片。
 - 保存场景、inactive 节点和运行时生成的 UI 中每个 `Image` 均为 `Sliced`。
@@ -252,17 +254,17 @@ Steam Workshop 官方支持私有测试：
 1. 完成独立 functional mock，覆盖主要页面、状态和本地交互。
 2. 进行用户 UX 验收，定稿导航、文案、分组、表单与错误提示。
 3. 定义正式数据结构、旧存档兼容和导入导出路径，并确定成绩与可玩内容版本的绑定规则。当前 mockup 的 Words 字段不代表最终生产 schema。
-4. 用 Steam Workshop 双账号完成发布、浏览、下载、点赞、举报、作者 metadata 更新和新内容另发闭环；此阶段暂不建设自有服务器，并验证相同 remoteId 的新内容不自动覆盖本地缓存。
+4. 用 Steam Workshop 双账号完成发布、浏览、下载、点赞、举报、Copy & Edit 后另发新条目及可见性切换闭环；此阶段暂不建设自有服务器，并验证相同 remoteId 的新内容不自动覆盖本地缓存。
 5. 后续再做 leaderboard 与审核自动化；人工审核边界保持明确，AI 不自动隐藏或下架。
 
 ## 6. Roadmap
 
 | 阶段 | 交付重点 | 当前状态 / 退出条件 |
 |---|---|---|
-| **1. 独立 functional mock** | 在隔离场景整合旧 UI 和新社区操作；使用 mock-only Words 与本地状态 | 本轮 corrected source 的 EditMode 为 33 passed / 0 failed；fresh DLL 已刷新并保存派生 scene。已观察到 My Lists/Community Downloads/My Published 分别 6/3/3 项、下载组折叠只隐藏自身 rows，以及 `Café` Remove Download 对话框取消后条目与 selection 保留。确认删除后重下、scroll/selection 导航、Words 独立滚动和 CreateVersion 新行为仍在验收；此前 31 项测试和截图仅属上一轮。 |
+| **1. 独立 functional mock** | 在隔离场景整合旧 UI 和新社区操作；使用 mock-only Words 与本地状态 | `MockupWordListStoreTests` 35/35、编译 0 errors / 0 warnings；实际 Play 验证 mock owned-list Unpublish/编辑/重新 Publish、新 mock remote ID 及 local ID、成绩、selection 保持。旧下载 ID 的真实来源下架检测及真实 Steam 删除/发布尚未接入。此前 39/39 测试结果针对上一生命周期版本；31 项测试和截图更早。 |
 | **2. 用户 UX 验收** | 在 Unity 中逐页体验，定稿导航、文案、分组、表单、离线提示与错误状态 | 完成用户验收并记录修改后再进入正式数据设计。 |
 | **3. 正式数据结构与兼容** | 定义生产 schema、旧存档迁移/导入导出兼容，以及成绩按可玩内容版本绑定 | 需经正式模型与保存路径评审；原型 `Words` 属性不是最终生产结构。 |
-| **4. Steam Workshop 双账号闭环** | 两个测试账号验证发布、浏览、下载、点赞、举报、作者 metadata 更新及新内容另发；验证缓存行为 | 暂不建设自有服务器；闭环需在 Steam 私有测试环境实测通过。相同 remoteId 的内容不自动覆盖缓存，metadata sync 另行定策。 |
+| **4. Steam Workshop 双账号闭环** | 两个测试账号验证发布、浏览、下载、点赞、举报、Copy & Edit 后另发新条目及可见性切换；验证缓存行为 | 暂不建设自有服务器；闭环需在 Steam 私有测试环境实测通过。相同 remoteId 的内容不自动覆盖缓存，下载侧 metadata sync 另行定策。 |
 | **5. 后续 leaderboard 与审核自动化** | 再评估公开排行榜、人工审核工具与 AI 辅助自动化 | 排行榜和审核服务独立立项；AI 建议不自动改变全局公开状态。 |
 
 ## 7. 下一轮讨论顺序

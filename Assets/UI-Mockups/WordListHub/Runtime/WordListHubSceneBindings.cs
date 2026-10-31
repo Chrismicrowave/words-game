@@ -31,6 +31,7 @@ namespace Words.UiMockups.WordListHub
         {
             public string listId;
             public GameObject root;
+            public GameObject selectedVisual;
             public Button button;
             public TMP_Text favoriteMark;
             public TMP_Text title;
@@ -52,6 +53,7 @@ namespace Words.UiMockups.WordListHub
         {
             public string remoteItemId;
             public GameObject root;
+            public GameObject selectedVisual;
             public Button button;
             public TMP_Text title;
             public TMP_Text metadata;

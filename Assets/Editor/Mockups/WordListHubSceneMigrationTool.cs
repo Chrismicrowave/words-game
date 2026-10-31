@@ -20,8 +20,8 @@ using Words.UiMockups.WordListHub;
 namespace Words.UiMockups.Editor
 {
     /// <summary>
-    /// Adds the missing authored pages, templates and dialogs to the existing
-    /// Word List Hub scene. The Library hierarchy is treated as read-only input.
+    /// Adds missing authored pages, templates, dialogs and selection visuals to
+    /// the existing Word List Hub scene while preserving its existing Library UI.
     /// </summary>
     public static class WordListHubSceneMigrationTool
     {
@@ -30,6 +30,7 @@ namespace Words.UiMockups.Editor
         private const string LibraryPageName = "PageContent";
         private const string TemplateRootName = "SceneTemplates";
         private const string LibraryDeleteButtonName = "Action_Delete";
+        private const string SelectionVisualName = "SelectedState";
         private static readonly Vector2 LibraryDeleteButtonPosition = new Vector2(-93f, -233f);
 
         private static readonly Color Ink = new Color(0.17f, 0.17f, 0.15f, 1f);
@@ -39,6 +40,7 @@ namespace Words.UiMockups.Editor
         private static readonly Color Paper = new Color(0.963f, 0.953f, 0.889f, 1f);
         private static readonly Color PaperAlt = new Color(0.925f, 0.925f, 0.846f, 1f);
         private static readonly Color White = new Color(1f, 0.995f, 0.96f, 1f);
+        private static readonly Color DefaultSelectionTint = new Color(0.722f, 0.467f, 0.353f, 0.24f);
 
         private sealed class Context
         {
@@ -111,14 +113,12 @@ namespace Words.UiMockups.Editor
 
                 Context context = ReadContext(scene);
                 string originalLibrarySignature = CaptureLibrarySignature(context.libraryRoot);
+                var allowedLibraryAdditions = new List<Transform>();
+                var addedBranchSignatures = new Dictionary<Transform, string>();
                 Transform existingDeleteBranch = context.libraryDetailPane.Find(LibraryDeleteButtonName);
                 context.libraryDeleteButton = EnsureLibraryDeleteButton(context);
-                Transform addedDeleteBranch = existingDeleteBranch == null
-                    ? context.libraryDeleteButton.transform
-                    : null;
-                string addedDeleteSignature = addedDeleteBranch != null
-                    ? CaptureLibrarySignature(addedDeleteBranch)
-                    : null;
+                if (existingDeleteBranch == null)
+                    RegisterAddedBranch(context, context.libraryDeleteButton.transform, allowedLibraryAdditions, addedBranchSignatures);
 
                 context.templateRoot = EnsureTemplateRoot(context.hubRoot);
                 context.communityRoot = EnsurePageRoot(context, "CommunityPage");
@@ -131,16 +131,19 @@ namespace Words.UiMockups.Editor
                 BuildChallengesPage(context);
                 BuildModal(context);
                 BuildTemplates(context);
+                EnsureSelectionVisuals(context, allowedLibraryAdditions, addedBranchSignatures);
                 BindScene(context);
                 ClearBoundPersistentCallbacks(context.bindings, context.controller);
                 ValidateScene(context);
 
-                string migratedLibrarySignature = CaptureLibrarySignature(context.libraryRoot, addedDeleteBranch);
+                string migratedLibrarySignature = CaptureLibrarySignature(context.libraryRoot, allowedLibraryAdditions);
                 if (!string.Equals(originalLibrarySignature, migratedLibrarySignature, StringComparison.Ordinal))
                     throw new InvalidOperationException("Migration changed the authored Library hierarchy or its layout; refusing to save.");
-                if (addedDeleteBranch != null
-                    && !string.Equals(addedDeleteSignature, CaptureLibrarySignature(addedDeleteBranch), StringComparison.Ordinal))
-                    throw new InvalidOperationException("Migration changed the newly added Library delete button after creation; refusing to save.");
+                foreach (KeyValuePair<Transform, string> addedBranch in addedBranchSignatures)
+                {
+                    if (!string.Equals(addedBranch.Value, CaptureLibrarySignature(addedBranch.Key), StringComparison.Ordinal))
+                        throw new InvalidOperationException("Migration changed a newly added authored branch after creation; refusing to save.");
+                }
                 if (!string.Equals(initialSceneHash, HashFile(sceneFilePath), StringComparison.Ordinal))
                     throw new IOException("The saved scene changed outside this migration while it was running; refusing to overwrite it.");
                 if (!DiskFilesMatchInitialState(
@@ -573,7 +576,7 @@ namespace Words.UiMockups.Editor
             BuildForm(context, panel, "NewListForm", true);
             BuildForm(context, panel, "EditListForm", false);
             BuildConfirmation(context, panel, "ContentChangeConfirmation",
-                "Changing words or language starts a new content revision.", "Save changes", "Keep editing");
+                "Confirm changes to this list.", "Save changes", "Keep editing");
             BuildConfirmation(context, panel, "DeleteListConfirmation",
                 "Delete this local list? This cannot be undone.", "Delete local list", "Cancel");
             BuildConfirmation(context, panel, "PlayResultConfirmation",
@@ -646,6 +649,139 @@ namespace Words.UiMockups.Editor
             EnsureAchievementTemplate(context);
         }
 
+        private static void EnsureSelectionVisuals(
+            Context context,
+            List<Transform> allowedLibraryAdditions,
+            Dictionary<Transform, string> addedBranchSignatures)
+        {
+            WordListHubSceneBindings bindings = GetOrAddBindings(context);
+            Sprite backgroundSprite = ReadControllerSprite(context.controller, "backgroundSprite");
+            if (backgroundSprite == null)
+                backgroundSprite = ReadControllerSprite(context.controller, "standardSprite");
+
+            foreach (Transform row in context.libraryContent)
+            {
+                if (!row.name.StartsWith("LibraryItem_", StringComparison.Ordinal))
+                    continue;
+
+                GameObject selectedVisual = EnsureSelectionVisual(row, backgroundSprite, out bool wasAdded);
+                if (wasAdded)
+                    RegisterAddedBranch(context, selectedVisual.transform, allowedLibraryAdditions, addedBranchSignatures);
+            }
+
+            WordListHubLibraryRowView libraryTemplate = bindings.library.rowTemplate;
+            if (libraryTemplate == null)
+                throw new InvalidOperationException("The Library row template was not created before selection visuals were bound.");
+            GameObject librarySelection = EnsureSelectionVisual(
+                libraryTemplate.transform, backgroundSprite, out bool librarySelectionAdded);
+            libraryTemplate.selectedVisual = Assign(
+                libraryTemplate.selectedVisual, librarySelection, "library.rowTemplate.selectedVisual");
+            if (librarySelectionAdded)
+                RegisterAddedBranch(context, librarySelection.transform, allowedLibraryAdditions, addedBranchSignatures);
+
+            WordListHubDiscoveryRowView communityTemplate = bindings.community.rowTemplate;
+            if (communityTemplate == null)
+                throw new InvalidOperationException("The Community row template was not created before selection visuals were bound.");
+            GameObject communitySelection = EnsureSelectionVisual(
+                communityTemplate.transform, backgroundSprite, out bool communitySelectionAdded);
+            communityTemplate.selectedVisual = Assign(
+                communityTemplate.selectedVisual, communitySelection, "community.rowTemplate.selectedVisual");
+            if (communitySelectionAdded)
+                RegisterAddedBranch(context, communitySelection.transform, allowedLibraryAdditions, addedBranchSignatures);
+        }
+
+        private static GameObject EnsureSelectionVisual(Transform rowRoot, Sprite backgroundSprite, out bool wasAdded)
+        {
+            Transform existing = rowRoot.Find(SelectionVisualName);
+            if (existing != null)
+            {
+                RequireComponent<RectTransform>(existing.gameObject);
+                RequireComponent<Image>(existing.gameObject);
+                RequireComponent<LayoutElement>(existing.gameObject);
+                wasAdded = false;
+                return existing.gameObject;
+            }
+
+            GameObject selectedState = new GameObject(
+                SelectionVisualName,
+                typeof(RectTransform),
+                typeof(CanvasRenderer),
+                typeof(Image),
+                typeof(LayoutElement));
+            selectedState.layer = rowRoot.gameObject.layer;
+            Transform visual = selectedState.transform;
+            visual.SetParent(rowRoot, false);
+            visual.SetAsFirstSibling();
+
+            RectTransform rect = (RectTransform)visual;
+            rect.anchorMin = Vector2.zero;
+            rect.anchorMax = Vector2.one;
+            rect.pivot = new Vector2(0.5f, 0.5f);
+            rect.offsetMin = Vector2.zero;
+            rect.offsetMax = Vector2.zero;
+            rect.localScale = Vector3.one;
+            rect.localRotation = Quaternion.identity;
+
+            Image image = selectedState.GetComponent<Image>();
+            if (backgroundSprite == null)
+            {
+                Image rowBackground = rowRoot.GetComponent<Image>();
+                backgroundSprite = rowBackground != null ? rowBackground.sprite : null;
+            }
+            if (backgroundSprite == null)
+            {
+                UnityEngine.Object.DestroyImmediate(selectedState);
+                throw new InvalidOperationException("No authored background sprite is available for a row selection visual.");
+            }
+            image.sprite = backgroundSprite;
+            image.type = Image.Type.Sliced;
+            image.color = DefaultSelectionTint;
+            image.raycastTarget = false;
+
+            LayoutElement layout = selectedState.GetComponent<LayoutElement>();
+            layout.ignoreLayout = true;
+            selectedState.SetActive(false);
+            wasAdded = true;
+            return selectedState;
+        }
+
+        private static void RegisterAddedBranch(
+            Context context,
+            Transform branch,
+            List<Transform> allowedLibraryAdditions,
+            Dictionary<Transform, string> addedBranchSignatures)
+        {
+            if (branch == null || addedBranchSignatures.ContainsKey(branch))
+                throw new InvalidOperationException("A newly added authored branch was missing or registered more than once.");
+
+            if (IsWithin(branch, context.libraryRoot))
+            {
+                if (!IsAuthorizedLibraryAddition(context.libraryRoot, branch))
+                    throw new InvalidOperationException("The Library snapshot exception only permits Action_Delete and SelectedState additions.");
+                allowedLibraryAdditions.Add(branch);
+            }
+
+            addedBranchSignatures.Add(branch, CaptureLibrarySignature(branch));
+        }
+
+        private static bool IsAuthorizedLibraryAddition(Transform libraryRoot, Transform branch)
+        {
+            if (branch == null || branch.parent == null)
+                return false;
+            if (branch.name == LibraryDeleteButtonName)
+                return branch.parent == libraryRoot.Find("LibraryDetailPane");
+            if (branch.name != SelectionVisualName)
+                return false;
+
+            Transform listPane = libraryRoot.Find("LibraryListPane");
+            Transform scrollRoot = listPane != null ? listPane.Find("LibraryScroll") : null;
+            ScrollRect scroll = scrollRoot != null ? scrollRoot.GetComponent<ScrollRect>() : null;
+            Transform content = scroll != null ? scroll.content : null;
+            return content != null
+                && branch.parent.parent == content
+                && branch.parent.name.StartsWith("LibraryItem_", StringComparison.Ordinal);
+        }
+
         private static void EnsureLibraryTemplate(Context context)
         {
             WordListHubSceneBindings bindings = GetOrAddBindings(context);
@@ -682,7 +818,7 @@ namespace Words.UiMockups.Editor
             view.badge = badge != null ? badge.GetComponent<TMP_Text>() : null;
             view.itemId = string.Empty;
             ClearButtonListeners(view.button, context.controller);
-            SetSliced(clone.transform);
+            SetSliced(clone.transform, clone.transform.Find(SelectionVisualName));
             bindings.library.rowTemplate = view;
         }
 
@@ -755,7 +891,7 @@ namespace Words.UiMockups.Editor
             view.summary = summary;
             view.status = favorite;
             ClearButtonListeners(view.button, context.controller);
-            SetSliced(clone.transform);
+            SetSliced(clone.transform, clone.transform.Find(SelectionVisualName));
             bindings.community.rowTemplate = view;
         }
 
@@ -933,6 +1069,7 @@ namespace Words.UiMockups.Editor
                 {
                     listId = listId,
                     root = child.gameObject,
+                    selectedVisual = RequireChild(child, SelectionVisualName).gameObject,
                     button = button,
                     favoriteMark = FindText(child, "FavoriteMark"),
                     title = FindText(child, "ListTitle"),
@@ -1148,6 +1285,10 @@ namespace Words.UiMockups.Editor
             if (bindings.library.rowTemplate == null || bindings.community.rowTemplate == null
                 || bindings.achievements.cardTemplate == null)
                 throw new InvalidOperationException("A Scene-authored dynamic row or card template is missing.");
+            if (bindings.library.rowTemplate.selectedVisual == null
+                || bindings.community.rowTemplate.selectedVisual == null
+                || bindings.library.authoredRows.Any(row => row == null || row.selectedVisual == null))
+                throw new InvalidOperationException("A Library or Community selection visual is not bound.");
             ValidateTemplate(bindings.library.rowTemplate.transform, "Library row template");
             ValidateTemplate(bindings.community.rowTemplate.transform, "Community row template");
             ValidateTemplate(bindings.achievements.cardTemplate.transform, "Achievement card template");
@@ -1397,6 +1538,8 @@ namespace Words.UiMockups.Editor
             }
             if (existing.root != row.root || existing.button != row.button)
                 throw new InvalidOperationException("Existing authored Library row binding no longer matches " + row.listId + ".");
+            if (existing.selectedVisual == null) existing.selectedVisual = row.selectedVisual;
+            else if (existing.selectedVisual != row.selectedVisual) throw new InvalidOperationException("Existing authored Library row selection reference changed: " + row.listId);
             if (existing.favoriteMark == null) existing.favoriteMark = row.favoriteMark;
             if (existing.title == null) existing.title = row.title;
             if (existing.metadata == null) existing.metadata = row.metadata;
@@ -1761,6 +1904,17 @@ namespace Words.UiMockups.Editor
                 image.type = Image.Type.Sliced;
         }
 
+        private static void SetSliced(Transform root, Transform excludedSubtree)
+        {
+            foreach (Image image in root.GetComponentsInChildren<Image>(true))
+            {
+                if (excludedSubtree != null
+                    && (image.transform == excludedSubtree || image.transform.IsChildOf(excludedSubtree)))
+                    continue;
+                image.type = Image.Type.Sliced;
+            }
+        }
+
         private static Sprite ReadControllerSprite(WordListHubMockupController controller, string fieldName)
         {
             SerializedObject serialized = new SerializedObject(controller);
@@ -1773,27 +1927,35 @@ namespace Words.UiMockups.Editor
             return CaptureLibrarySignature(libraryRoot, null);
         }
 
-        private static string CaptureLibrarySignature(Transform libraryRoot, Transform ignoredAddedDeleteBranch)
+        private static string CaptureLibrarySignature(
+            Transform libraryRoot,
+            ICollection<Transform> ignoredAddedBranches)
         {
-            if (ignoredAddedDeleteBranch != null
-                && (ignoredAddedDeleteBranch.name != LibraryDeleteButtonName
-                    || ignoredAddedDeleteBranch.parent == null
-                    || ignoredAddedDeleteBranch.parent != libraryRoot.Find("LibraryDetailPane")
-                    || !ignoredAddedDeleteBranch.IsChildOf(libraryRoot)))
+            if (ignoredAddedBranches != null)
             {
-                throw new InvalidOperationException(
-                    "The Library snapshot exception is limited to a direct Action_Delete child of LibraryDetailPane.");
+                var uniqueBranches = new HashSet<Transform>();
+                foreach (Transform branch in ignoredAddedBranches)
+                {
+                    if (branch == null
+                        || !uniqueBranches.Add(branch)
+                        || !IsWithin(branch, libraryRoot)
+                        || !IsAuthorizedLibraryAddition(libraryRoot, branch))
+                    {
+                        throw new InvalidOperationException(
+                            "The Library snapshot exception only permits unique, newly added Action_Delete or static-row SelectedState branches.");
+                    }
+                }
             }
 
             var signature = new StringBuilder();
-            AppendLibraryNodeSignature(libraryRoot, signature, ignoredAddedDeleteBranch);
+            AppendLibraryNodeSignature(libraryRoot, signature, ignoredAddedBranches);
             return HashText(signature.ToString());
         }
 
         private static void AppendLibraryNodeSignature(
             Transform node,
             StringBuilder signature,
-            Transform ignoredAddedDeleteBranch)
+            ICollection<Transform> ignoredAddedBranches)
         {
             AppendToken(signature, node.name);
             AppendToken(signature, node.gameObject.activeSelf.ToString());
@@ -1846,14 +2008,20 @@ namespace Words.UiMockups.Editor
             }
 
             int includedChildCount = node.childCount;
-            if (ignoredAddedDeleteBranch != null && ignoredAddedDeleteBranch.parent == node)
-                includedChildCount--;
+            if (ignoredAddedBranches != null)
+            {
+                foreach (Transform branch in ignoredAddedBranches)
+                {
+                    if (branch.parent == node)
+                        includedChildCount--;
+                }
+            }
             AppendToken(signature, includedChildCount.ToString(CultureInfo.InvariantCulture));
             for (int index = 0; index < node.childCount; index++)
             {
                 Transform child = node.GetChild(index);
-                if (child != ignoredAddedDeleteBranch)
-                    AppendLibraryNodeSignature(child, signature, ignoredAddedDeleteBranch);
+                if (ignoredAddedBranches == null || !ignoredAddedBranches.Contains(child))
+                    AppendLibraryNodeSignature(child, signature, ignoredAddedBranches);
             }
         }
 

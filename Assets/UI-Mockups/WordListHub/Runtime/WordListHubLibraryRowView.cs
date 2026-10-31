@@ -8,6 +8,7 @@ namespace Words.UiMockups.WordListHub
     public sealed class WordListHubLibraryRowView : MonoBehaviour
     {
         public string itemId;
+        public GameObject selectedVisual;
         public Button button;
         public TMP_Text favoriteMark;
         public TMP_Text title;

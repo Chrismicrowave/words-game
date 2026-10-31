@@ -102,15 +102,18 @@ namespace Words.UiMockups.WordListHub.Tests
             Assert.That(discoveryRow, Is.Not.Null, "The Community page should show at least one row.");
             Press(discoveryRow.button);
             Assert.That(bindings.community.detailTitle.text, Is.EqualTo(discoveryRow.title));
+            AssertExactlyOneSelectedCommunityRow(bindings.community, discoveryRow.title);
 
             string likeLabelBefore = bindings.community.like.label.text;
             Press(bindings.community.like.button);
             Assert.That(bindings.community.like.label.text, Is.Not.EqualTo(likeLabelBefore),
                 "One click should toggle the selected community item's like state once.");
+            AssertExactlyOneSelectedCommunityRow(bindings.community, discoveryRow.title);
 
             SetInputValue(bindings.community.searchInput, "no-matching-word-list");
             Assert.That(bindings.community.emptyNotice.gameObject.activeSelf, Is.True);
             Assert.That(CountRuntimeChildren(bindings.community.listContent), Is.EqualTo(0));
+            AssertNoSelectedCommunityRows(bindings.community);
             SetInputValue(bindings.community.searchInput, "no-matching-word-list");
             Assert.That(CountRuntimeChildren(bindings.community.listContent), Is.EqualTo(0),
                 "Repeated filtering must not leave stale runtime rows behind.");
@@ -118,6 +121,8 @@ namespace Words.UiMockups.WordListHub.Tests
             int restoredCommunityRows = CountRuntimeChildren(bindings.community.listContent);
             SetInputValue(bindings.community.searchInput, string.Empty);
             Assert.That(CountRuntimeChildren(bindings.community.listContent), Is.EqualTo(restoredCommunityRows));
+            AssertExactlyOneSelectedCommunityRow(bindings.community,
+                bindings.community.detailTitle.text);
             AssertRuntimeCommunityClonesMatchTemplate(bindings.community);
 
             Press(bindings.navAchievements.button);
@@ -137,6 +142,10 @@ namespace Words.UiMockups.WordListHub.Tests
 
             Press(bindings.navChallenges.button);
             AssertPageActive(bindings, WordListHubPage.Challenges);
+            Press(bindings.navCommunity.button);
+            AssertPageActive(bindings, WordListHubPage.Community);
+            AssertExactlyOneSelectedCommunityRow(bindings.community,
+                bindings.community.detailTitle.text);
             Press(bindings.navLibrary.button);
             AssertPageActive(bindings, WordListHubPage.Library);
             Assert.That(bindings.library.rowTemplate.gameObject.activeInHierarchy, Is.False,
@@ -147,11 +156,13 @@ namespace Words.UiMockups.WordListHub.Tests
             Press(libraryRow.button);
             Assert.That(bindings.library.detailTitle.text, Is.EqualTo(libraryRow.title),
                 "Selecting a row should refresh the authored detail title.");
+            AssertExactlyOneSelectedLibraryRow(bindings.library, libraryRow.title);
 
             string favoriteLabelBefore = bindings.library.favorite.label.text;
             Press(bindings.library.favorite.button);
             Assert.That(bindings.library.favorite.label.text, Is.Not.EqualTo(favoriteLabelBefore),
                 "A single click must toggle Favorite once; duplicate listeners would toggle it back.");
+            AssertExactlyOneSelectedLibraryRow(bindings.library, libraryRow.title);
 
             SetDropdownValue(bindings.library.languageFilter, 1);
             MockupLibraryQuery englishQuery = new MockupLibraryQuery
@@ -163,7 +174,12 @@ namespace Words.UiMockups.WordListHub.Tests
             SetDropdownValue(bindings.library.languageFilter, 1);
             Assert.That(CountRuntimeChildren(bindings.library.listContent), Is.EqualTo(filteredLibraryRows),
                 "Repeated filtering must replace owned clones without accumulating duplicates.");
+            AssertExactlyOneSelectedLibraryRow(bindings.library, bindings.library.detailTitle.text);
             AssertRuntimeLibraryClonesMatchTemplate(bindings.library);
+
+            Press(bindings.navCommunity.button);
+            Press(bindings.navLibrary.button);
+            AssertExactlyOneSelectedLibraryRow(bindings.library, bindings.library.detailTitle.text);
 
             snapshot.AssertUnchanged("navigation, row selection, filtering, and favorite click");
             snapshot.AssertOriginalObjectsStillExist("navigation, row selection, filtering, and favorite click");
@@ -192,6 +208,7 @@ namespace Words.UiMockups.WordListHub.Tests
             Assert.That(CountLibraryRowsByTitle(bindings.library, uniqueTitle), Is.EqualTo(1),
                 "One Save click must create exactly one list row.");
             Assert.That(bindings.library.detailTitle.text, Is.EqualTo(uniqueTitle));
+            Assert.That(bindings.library.delete.label.text, Is.EqualTo("Delete"));
 
             Press(bindings.library.edit.button);
             Assert.That(bindings.modal.editList.root.activeInHierarchy, Is.True,
@@ -237,6 +254,27 @@ namespace Words.UiMockups.WordListHub.Tests
             Assert.That(bindings.library.detailTitle.text, Is.EqualTo(candidate.Title),
                 "After download the new local copy should be selected in the Library.");
             Assert.That(CountLibraryRowsByTitle(bindings.library, candidate.Title), Is.EqualTo(1));
+            Assert.That(bindings.library.copyEditWords.button.gameObject.activeInHierarchy, Is.True);
+            Assert.That(bindings.library.copyEditWords.label.text, Is.EqualTo("Copy & edit words"));
+            Assert.That(bindings.library.edit.button.gameObject.activeInHierarchy, Is.False,
+                "A community download should use the shared copy action, not a separate edit entry.");
+            Assert.That(bindings.library.delete.label.text, Is.EqualTo("Delete"));
+            AssertExactlyOneSelectedLibraryRow(bindings.library, candidate.Title);
+
+            Button sharedCopyAction = bindings.library.copyEditWords.button;
+            MockupWordList published = GetStore(controller).QueryLibrary(new MockupLibraryQuery
+                { View = MockupLibraryView.All })
+                .First(item => item.Ownership == MockupOwnership.Owned
+                    && !string.IsNullOrEmpty(item.RemoteItemId));
+            Button publishedRow = FindLibraryButton(bindings.library, published.Id);
+            Press(publishedRow);
+            Assert.That(bindings.library.copyEditWords.button, Is.SameAs(sharedCopyAction),
+                "All copy entry states must reuse the same authored Scene button.");
+            Assert.That(sharedCopyAction.gameObject.activeInHierarchy, Is.True);
+            Assert.That(bindings.library.copyEditWords.label.text, Is.EqualTo("Copy & edit words"));
+            Assert.That(bindings.library.edit.button.gameObject.activeInHierarchy, Is.False,
+                "The published original is immutable; use the shared Copy & edit words action.");
+            AssertExactlyOneSelectedLibraryRow(bindings.library, published.Title);
             snapshot.AssertUnchanged("Community download");
             snapshot.AssertOriginalObjectsStillExist("Community download");
         }
@@ -251,6 +289,55 @@ namespace Words.UiMockups.WordListHub.Tests
             HashSet<string> actual = GetVisibleLibraryRowIds(library);
             CollectionAssert.AreEquivalent(expected, actual,
                 "The visible authored and cloned rows should match the store query.");
+        }
+
+        private static void AssertExactlyOneSelectedLibraryRow(
+            WordListHubSceneBindings.LibraryPageBinding library,
+            string expectedTitle)
+        {
+            CollectionAssert.AreEqual(new[] { expectedTitle }, GetSelectedLibraryRowTitles(library),
+                "Exactly the selected Library row should show its Scene-authored visual.");
+        }
+
+        private static IEnumerable<string> GetSelectedLibraryRowTitles(
+            WordListHubSceneBindings.LibraryPageBinding library)
+        {
+            return library.authoredRows
+                .Where(row => row != null && row.root != null && row.root.activeInHierarchy
+                    && row.selectedVisual != null && row.selectedVisual.activeSelf)
+                .Select(row => row.title != null ? row.title.text : string.Empty)
+                .Concat(library.listContent.GetComponentsInChildren<WordListHubLibraryRowView>(true)
+                    .Where(row => row.gameObject.activeInHierarchy
+                        && row.selectedVisual != null && row.selectedVisual.activeSelf)
+                    .Select(row => row.title != null ? row.title.text : string.Empty));
+        }
+
+        private static void AssertExactlyOneSelectedCommunityRow(
+            WordListHubSceneBindings.CommunityPageBinding community,
+            string expectedTitle)
+        {
+            CollectionAssert.AreEqual(new[] { expectedTitle }, GetSelectedCommunityRowTitles(community),
+                "Exactly the selected Community row should show its Scene-authored visual.");
+        }
+
+        private static IEnumerable<string> GetSelectedCommunityRowTitles(
+            WordListHubSceneBindings.CommunityPageBinding community)
+        {
+            return community.authoredRows
+                .Where(row => row != null && row.root != null && row.root.activeInHierarchy
+                    && row.selectedVisual != null && row.selectedVisual.activeSelf)
+                .Select(row => row.title != null ? row.title.text : string.Empty)
+                .Concat(community.listContent.GetComponentsInChildren<WordListHubDiscoveryRowView>(true)
+                    .Where(row => row.gameObject.activeInHierarchy
+                        && row.selectedVisual != null && row.selectedVisual.activeSelf)
+                    .Select(row => row.title != null ? row.title.text : string.Empty));
+        }
+
+        private static void AssertNoSelectedCommunityRows(
+            WordListHubSceneBindings.CommunityPageBinding community)
+        {
+            Assert.That(GetSelectedCommunityRowTitles(community).Count(), Is.Zero,
+                "Filtering out every Community item must hide all selected visuals.");
         }
 
         private static HashSet<string> GetVisibleLibraryRowIds(
@@ -269,6 +356,29 @@ namespace Words.UiMockups.WordListHub.Tests
                     ids.Add(row.itemId);
             }
             return ids;
+        }
+
+        private static Button FindLibraryButton(
+            WordListHubSceneBindings.LibraryPageBinding library,
+            string listId)
+        {
+            WordListHubSceneBindings.LibraryRowBinding authored = library.authoredRows.FirstOrDefault(row =>
+                row != null && row.listId == listId && row.root != null && row.root.activeInHierarchy);
+            if (authored != null)
+                return authored.button;
+
+            WordListHubLibraryRowView dynamic = library.listContent
+                .GetComponentsInChildren<WordListHubLibraryRowView>(true)
+                .FirstOrDefault(row => row.itemId == listId && row.gameObject.activeInHierarchy);
+            return dynamic != null ? dynamic.button : null;
+        }
+
+        private static MockupWordListStore GetStore(WordListHubMockupController controller)
+        {
+            FieldInfo storeField = typeof(WordListHubMockupController).GetField(
+                "store", BindingFlags.Instance | BindingFlags.NonPublic);
+            Assert.That(storeField, Is.Not.Null, "The runtime store is required for the Scene binding test.");
+            return (MockupWordListStore)storeField.GetValue(controller);
         }
 
         private static RowAction FindFirstLibraryRow(WordListHubSceneBindings.LibraryPageBinding library)
@@ -349,6 +459,8 @@ namespace Words.UiMockups.WordListHub.Tests
                 if (row == null)
                     continue;
                 Assert.That(row.root, Is.Not.Null);
+                AssertSelectedVisual(row.selectedVisual, row.root.transform,
+                    "Authored Library row " + row.listId);
                 Assert.That(row.button, Is.Not.Null);
                 Assert.That(row.favoriteMark, Is.Not.Null);
                 Assert.That(row.title, Is.Not.Null);
@@ -364,6 +476,8 @@ namespace Words.UiMockups.WordListHub.Tests
                 if (row == null)
                     continue;
                 Assert.That(row.root, Is.Not.Null);
+                AssertSelectedVisual(row.selectedVisual, row.root.transform,
+                    "Authored Community row " + row.remoteItemId);
                 Assert.That(row.button, Is.Not.Null);
                 Assert.That(row.title, Is.Not.Null);
                 Assert.That(row.metadata, Is.Not.Null);
@@ -379,9 +493,26 @@ namespace Words.UiMockups.WordListHub.Tests
                 description + " must use the LayoutGroup configured in the Scene.");
         }
 
+        private static void AssertSelectedVisual(GameObject selectedVisual, Transform rowRoot, string description)
+        {
+            Assert.That(selectedVisual, Is.Not.Null, description + " needs an authored SelectedState object.");
+            Assert.That(selectedVisual.transform.parent, Is.EqualTo(rowRoot),
+                description + " SelectedState must remain under its Scene-authored row.");
+            Assert.That(selectedVisual.activeSelf, Is.False,
+                description + " SelectedState must be hidden in the saved scene.");
+            Image image = selectedVisual.GetComponent<Image>();
+            Assert.That(image, Is.Not.Null, description + " SelectedState needs an Image.");
+            Assert.That(image.type, Is.EqualTo(Image.Type.Sliced), description + " SelectedState Image type");
+            Assert.That(image.raycastTarget, Is.False, description + " SelectedState must not block row clicks.");
+            LayoutElement layout = selectedVisual.GetComponent<LayoutElement>();
+            Assert.That(layout, Is.Not.Null, description + " SelectedState needs a LayoutElement.");
+            Assert.That(layout.ignoreLayout, Is.True, description + " SelectedState must not affect row layout.");
+        }
+
         private static void AssertLibraryTemplate(WordListHubLibraryRowView template)
         {
             Assert.That(template, Is.Not.Null, "A Scene-authored Library row template is required.");
+            AssertSelectedVisual(template.selectedVisual, template.transform, "Library row template");
             Assert.That(template.button, Is.Not.Null);
             Assert.That(template.favoriteMark, Is.Not.Null);
             Assert.That(template.title, Is.Not.Null);
@@ -397,6 +528,7 @@ namespace Words.UiMockups.WordListHub.Tests
         private static void AssertCommunityTemplate(WordListHubDiscoveryRowView template)
         {
             Assert.That(template, Is.Not.Null, "A Scene-authored Community row template is required.");
+            AssertSelectedVisual(template.selectedVisual, template.transform, "Community row template");
             Assert.That(template.button, Is.Not.Null);
             Assert.That(template.title, Is.Not.Null);
             Assert.That(template.metadata, Is.Not.Null);

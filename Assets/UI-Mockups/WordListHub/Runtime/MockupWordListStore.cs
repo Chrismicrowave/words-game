@@ -395,8 +395,7 @@ namespace Words.UiMockups.WordListHub
             if (item == null)
                 return new MockupActionResult(false, "This local list no longer exists.");
             bool publicationIsActive = item.IsPubliclyVisible
-                || item.PublicationStatus == MockupPublicationStatus.Published
-                || item.PublicationStatus == MockupPublicationStatus.UpdateNeeded;
+                || item.PublicationStatus == MockupPublicationStatus.Published;
             if (item.Ownership == MockupOwnership.Owned && publicationIsActive)
                 return new MockupActionResult(false,
                     "Make this published list private before deleting its local copy.", item);
@@ -543,9 +542,14 @@ namespace Words.UiMockups.WordListHub
                 || nextDescription != item.Description
                 || nextTags != item.Tags;
 
-            if (contentChanged && !string.IsNullOrEmpty(item.RemoteItemId))
-                throw new InvalidOperationException(
-                    "Published gameplay content is fixed. Create a new content version instead of editing this item.");
+            if (!string.IsNullOrEmpty(item.RemoteItemId))
+            {
+                if (metadataChanged || contentChanged)
+                    throw new InvalidOperationException(
+                        "A list with a published identity is immutable. Create a copy to make changes.");
+
+                return new MockupEditResult(item, false);
+            }
 
             item.Title = nextTitle;
             item.Description = nextDescription;
@@ -565,10 +569,6 @@ namespace Words.UiMockups.WordListHub
                 item.BestTimeSeconds = null;
             }
 
-            // Metadata updates can require a publication refresh but never affect records.
-            if ((metadataChanged || contentChanged) && !string.IsNullOrEmpty(item.RemoteItemId))
-                item.PublicationStatus = MockupPublicationStatus.UpdateNeeded;
-
             return new MockupEditResult(item, contentChanged);
         }
 
@@ -579,13 +579,11 @@ namespace Words.UiMockups.WordListHub
 
             MockupWordList source = RequireList(mockId);
             if (source.Ownership != MockupOwnership.Owned || string.IsNullOrEmpty(source.RemoteItemId))
-                throw new InvalidOperationException("Only a previously published owned list can start a new content version.");
+                throw new InvalidOperationException("Only a previously published owned list can be copied.");
 
             List<string> nextWords = ResolveEditedWords(source, edit);
             bool contentChanged = source.Language != edit.Language
                 || !WordsEqual(source.Words, nextWords);
-            if (!contentChanged)
-                throw new InvalidOperationException("A new published version needs a gameplay-content change.");
             RequireAtLeastOneWord(nextWords);
 
             DateTime now = DateTime.UtcNow;
@@ -609,7 +607,7 @@ namespace Words.UiMockups.WordListHub
             };
 
             libraryEntries.Add(version);
-            return new MockupEditResult(version, true, true);
+            return new MockupEditResult(version, contentChanged, true);
         }
 
         /// <summary>Moves the same owned item into My Published; it never duplicates it.</summary>
@@ -636,30 +634,6 @@ namespace Words.UiMockups.WordListHub
             return new MockupActionResult(true, "List published publicly in the mock store.", Publish(mockId));
         }
 
-        /// <summary>Updates the publication binding on the same item and keeps it in My Published.</summary>
-        public MockupWordList UpdatePublication(string mockId)
-        {
-            RequireOnline("Update a published list");
-            MockupWordList item = RequireList(mockId);
-            if (item.Ownership != MockupOwnership.Owned
-                || item.PublicationStatus == MockupPublicationStatus.NotPublished)
-                throw new InvalidOperationException("Only an already published owned list can be updated.");
-
-            item.PublicationStatus = item.IsPubliclyVisible
-                ? MockupPublicationStatus.Published
-                : MockupPublicationStatus.Unpublished;
-            return item;
-        }
-
-        public MockupActionResult TryUpdatePublication(string mockId)
-        {
-            MockupWordList item = RequireList(mockId);
-            if (!isOnline)
-                return new MockupActionResult(false, "You need to be online to update a published list.", item);
-            return new MockupActionResult(true, "Published metadata update completed in the mock store.",
-                UpdatePublication(mockId));
-        }
-
         public MockupWordList Unpublish(string mockId)
         {
             RequireOnline("Make a published list private");
@@ -668,7 +642,8 @@ namespace Words.UiMockups.WordListHub
                 throw new InvalidOperationException("Only a previously published owned list can be made private.");
 
             item.IsPubliclyVisible = false;
-            item.PublicationStatus = MockupPublicationStatus.Unpublished;
+            item.PublicationStatus = MockupPublicationStatus.NotPublished;
+            item.RemoteItemId = null;
             return item;
         }
 
@@ -734,7 +709,7 @@ namespace Words.UiMockups.WordListHub
                 "mock-list-kitchen-mix", "Kitchen Mix", "Kitchen vocabulary in two languages.",
                 MockupLanguage.Mixed, 18, MockupOwnership.Owned, "2026-10-25", "2026-10-31",
                 "2026-10-31", 3, 65f, true, "mock-published-kitchen", null,
-                MockupDownloadStatus.None, MockupPublicationStatus.UpdateNeeded));
+                MockupDownloadStatus.None, MockupPublicationStatus.Published));
             libraryEntries.Add(CreateFixture(
                 "mock-list-mini-hsk", "Mini HSK", "A compact Chinese practice list.",
                 MockupLanguage.Chinese, 8, MockupOwnership.Owned, "2026-10-30", "2026-10-30",
@@ -821,8 +796,7 @@ namespace Words.UiMockups.WordListHub
                 IsFavorite = favorite,
                 DownloadStatus = downloadStatus,
                 PublicationStatus = publicationStatus,
-                IsPubliclyVisible = publicationStatus == MockupPublicationStatus.Published
-                    || publicationStatus == MockupPublicationStatus.UpdateNeeded,
+                IsPubliclyVisible = publicationStatus == MockupPublicationStatus.Published,
                 PlayCount = lastPlayedDate == null ? 0 : 1,
                 ContentRevision = 1
             };

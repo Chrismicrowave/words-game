@@ -72,9 +72,7 @@ namespace Words.UiMockups.WordListHub
     public enum MockupPublicationStatus
     {
         NotPublished,
-        Published,
-        UpdateNeeded,
-        Unpublished
+        Published
     }
 
     public enum MockupDiscoveryStatus

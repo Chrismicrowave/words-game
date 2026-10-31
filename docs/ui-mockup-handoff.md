@@ -1,6 +1,9 @@
 # Word List UI mockup handoff
 
-**当前状态：** 2026-11-01。Scene-authored layout 迁移已保存并通过关闭/重载核验，Missing Script 为 0。独立对比确认原 Library 的 939 个对象 ID 与布局/样式 baseline 保持，迁移新增的 61 个 Image 均为 Sliced，`Action_Delete` binding 已持久化。37 项 EditMode 测试全部通过（37 passed / 0 failed）。Play smoke 已验证四页导航、筛选、下载并选中、创建/编辑/删除及成就筛选；操作后退出 Play，场景保持 clean，Console 无错误。当前仍是使用 fixture/store 的 UI mock，没有连接真实后端或 Steam；Words 模型也不是最终生产 schema 或存档迁移方案。
+**当前状态：** 2026-11-01。Scene-authored layout 迁移已保存并通过关闭/重载核验，Missing Script 为 0。独立对比确认原 Library 的 939 个对象 ID 与布局/样式 baseline 保持，迁移新增的 61 个 Image 均为 Sliced，`Action_Delete` binding 已持久化。此前 39 项 EditMode 测试全部通过，Unity compile 为 0 errors / 0 warnings。Play smoke 已验证四页导航、筛选、下载并选中、创建/编辑/删除及成就筛选；另两次 Play 验证 metadata-only Copy & Edit。最新 `MockupWordListStoreTests` 35/35、compile 0 errors / 0 warnings 及实际 Play 验证：row→Unpublish→metadata 编辑→Publish 后，原 local ID 与成绩保留，条目回到 My Lists 且选中，remote ID 从 `mock-published-punctuation` 变为 `mock-published-01`。旧 Unpublish→Republish 同 ID 的测试属于已取代规则。此结果只验证 mock owned-list 生命周期，不表示删除或发布了真实 Community/Steam 条目。发布期间字段锁定、Copy & Edit 及成绩归档规则保持；旧下载 ID 的来源检测下架标记尚未接通或验证，除该标记外下载侧 `UpdateAvailable`/缓存语义不变。Edit Details 与 Update Publication UI 状态及处理方法已移除。操作后退出 Play，场景保持 clean，Console 无错误。当前仍是使用 fixture/store 的 UI mock，没有连接真实后端或 Steam；Words 模型也不是最终生产 schema 或存档迁移方案。
+**当前规则的 Mock 限制：** `MockupWordListStore` 作者 Publish 只给 owned list 记录 `mock-published-*` 绑定，不创建 `MockupDiscoveryItem`；Community 的 `mock-ugc-*` 样例相互独立、尚未联通。因此上述测试只覆盖 owned-list 状态转换，不会删除或发布真实 Steam 条目。旧下载 ID 的来源检测和下架标记仍待接通真实来源后验证；目前没有验证该联动。
+
+**Scene 测试安全：** 如果目标 Scene 在任何测试或 Play 开始前已 dirty，先停止；保全可恢复副本并核对保存状态/基线后再安排测试。结束时 Scene 显示 clean 本身不能证明原布局得到保留，必须与测试前副本或明确基线核对后再报告。
 
 本文与 [`community-v1-discussion-summary.md`](community-v1-discussion-summary.md) 配合使用；分组和阶段决策以该汇总文档为准。
 
@@ -53,7 +56,7 @@ controller 使用内存 store 和 fixture，不访问正式 gameplay、Steam、�
 - 新建和编辑表单有多行 Words 输入，按行拆分、Trim 并跳过空行，至少需要一个词。逗号不作为分隔符，以保留词语自身标点。Store 内的 `Words`/`WordCount` 用于 mock 行为和 UX 试验，尚未确定生产存档结构。
 - 上一轮 Community 页面有 Like、Download、Play、Report & hide；当时 Play 自动下载会将社区项加入 My Lists。本轮需改为加入 Community Downloads，下载后展开、选中并滚动到该项。旧行为不是本轮实现证据。
 - 举报后立即对当前 mock 用户隐藏发现项；本地 store 有复核状态转换 API，但 controller 中没有可操作的开发者审核队列。没有接真实 Steam 举报、AI 审核或全局下架服务。
-- 社区下载可另存为独立个人副本，已发布列表内容不原地改词。CreateVersion 在 Words/Language 未变或只改标题时禁用；实际内容变化后启用，确认会创建无 remote identity 的独立本地列表。本轮运行验收已通过，详见下方。
+- 历史 mock 曾限制 Copy & Edit 必须改变 Words/Language、只改标题不能创建副本；该门控已被 2026-11-01 作者规则取代。当前可原样 Copy & Edit 保存，或只改 metadata 后保存；不要求改变 Words/Language。新副本无 remote identity，原 source/records 不变。39 项 EditMode、干净编译和两次 Play 已验收。
 - `ApplySlicedImages` 会遍历 controller UI 子树（包括 inactive 后代），给无 Sprite 的 Image 配置回退图，并设为 `Image.Type.Sliced`。上一轮 31 项 EditMode 测试包含保存场景 Image 检查；本轮另有 33/33 EditMode 通过，但这不代表本轮每项 UI 交互均已验收。
 - 截图发现后，上一轮源码将 `SampleDataWatermark` 横向铺到 generatedRoot 底部，避开顶部导航；详情操作按钮也已重排到 detail pane 可见区域内。上一轮唯一截图确认 Library 与 footer 完整可见，footer mesh 有 33 个字符、64 个 vertices。该截图不代表本轮 revision。
 
@@ -72,7 +75,7 @@ controller 使用内存 store 和 fixture，不访问正式 gameplay、Steam、�
 
 上一轮社区操作 smoke：通过运行时触发 `Action_Download.onClick.Invoke`，`WeekendGarden` 当时被加入 My Lists 并缓存；断网 Play 和举报后再次 Play 分别记录 `playCount = 1`、`2`，均为 3 星、85 秒。本轮分组决策已取代“下载进 My Lists”，这些旧结果不能代表本轮目标。
 
-上一轮发布操作 smoke：原创词表通过 Button 事件执行 Publish、Unpublish、Publish again，状态为 `Published → Unpublished → Published`，沿用 mock remote ID `mock-published-01`；断网首次 Publish 被阻止并显示联网提示。这些均为旧 mock runtime 结果，不证明本轮 CreateVersion UX 已实现，也不表示 Steam Workshop 请求已完成。
+旧版发布操作 smoke：原创词表通过 Button 事件执行 Publish、Unpublish、Publish again，状态为 `Published → Unpublished → Published`，沿用 mock remote ID `mock-published-01`；断网首次 Publish 被阻止并显示联网提示。沿用旧 ID 的结果已被当前 Unpublish 清绑定、再次 Publish 创建新 mock ID 的规则取代；新 owned-list 生命周期验收见文首。这些记录不表示 Steam Workshop 请求已完成。
 
 上一轮 Footer 诊断记录：问题不是横向左侧裁切，也不是 `Mask`。在问题状态下调用 `ForceMeshUpdate` 后，TMP 报告 character count 为 0、mesh bounds 为 0；`cull=false` 且 alpha 为 1。单独把 y 从 -20 改到 2 没有解决。保持 y=-20，并组合 32 高度、`Overflow` 和 `NoWrap` 后，TMP 生成 33 个字符、64 个 vertices，截图实际显示文字。单项根因没有分离，证据只支持“组合配置有效”，不能归因于高度或某个单一属性。上一轮 controller 落盘了该组合和 `autoSize` 10..16；此证据不代表本轮有代码变更后的构建/截图状态。
 
@@ -88,7 +91,7 @@ controller 使用内存 store 和 fixture，不访问正式 gameplay、Steam、�
 - 随后确认删除 `Café` 下载缓存：运行结果为 `localgone`、`remoteexists`、`downloadedfalse`，列表总数为 11。删除本地缓存没有删除远端社区条目。
 - 重开 `words` 后进行后台、无 CUA 的 30 fps 临时 cap 验证：新下载 `Weekend` 进入独立 Community Downloads 组，该组自动展开，新条目被选中且 row 在 viewport 内。列表 content height 为 1234、viewport 为 445；scroll offset 设为 150 后触发真实 Favorite 按钮，等待 coroutine 完成后 offset 仍为 150，selection 未变。
 - Inline Words 预览使用 72 个词；TMP 生成 914 个字符，content height 为 1680.1，超过 100 的 viewport。滚动 offset 实测从 0 到 1580.1 再回到 0；运行时检查中预览与操作区没有重叠。未生成截图，因此没有截图视觉验收结论。
-- CreateVersion 实测中，内容不变时按钮 disabled，只改标题仍 disabled；实际修改 `TMP_InputField.text` 中的词后按钮启用。确认后只新增一条 My Lists 本地副本，具有新 local ID、无 remote identity；总数从 12 到 13。原 published 项的 ID、分组、remote ID 和全部 Words 均保持不变。
+- 历史 CreateVersion gate 实测中，内容不变或只改标题时按钮 disabled，改词后才允许创建无 remote identity 的副本；这是已被取代的旧 UI 行为。当前 Copy & Edit 可原样保存或只改 metadata，最新验收见文首。
 - 在同一个 Café 删除确认场景中，确认 Remove 后观察到 `localgone`、`remoteexists`、`IsDownloaded=false`；随后从 Community 实际重新下载，生成新 ID `created02`。该项出现在只读的 Community Downloads 中，保留相同 remote 来源；分组展开，新条目已选中且完整位于 viewport 内。
 - 最终运行后已 Stop Play，fps 恢复为 `-1`；`words` PID 61048 就绪且停止。mock scene 为 clean，未保存 runtime 交互状态；正式 `mainGame` scene 与 Build Settings hash 保持不变。
 
@@ -102,8 +105,8 @@ controller 使用内存 store 和 fixture，不访问正式 gameplay、Steam、�
 
 ### 迁移前验收结果
 
-- 33 项 EditMode tests、下载与 Play 导航、scroll/selection 保持、Dropdown 20 px 行高、Inline Words 滚动、CreateVersion 内容门控与复制，以及 Café 同项删除后重新下载均已验收通过。
-- Inline Words 的 72 词几何/mesh/scroll 检查及 preview/actions 不重叠的运行时检查已通过；CreateVersion 与列表操作有真实交互证据。未生成本轮最终像素截图，因此不能称截图视觉验收通过。
+- 33 项 EditMode tests、下载与 Play 导航、scroll/selection 保持、Dropdown 20 px 行高、Inline Words 滚动、旧版 CreateVersion 内容门控与复制，以及 Café 同项删除后重新下载均曾验收通过。旧 CreateVersion 门控已被作者已发布条目不可变规则取代；新规则另由文首 39 项测试、编译和两次 Play 验收。
+- Inline Words 的 72 词几何/mesh/scroll 检查及 preview/actions 不重叠的运行时检查已通过；旧版 CreateVersion 与列表操作有真实交互证据。未生成本轮最终像素截图，因此不能称截图视觉验收通过。
 - 最终 Play 已停止并恢复 fps `-1`；runtime 状态未保存到 mock scene。正式 `mainGame` 与 Build Settings hash 未变。
 
 | 项目 | 已确认目标 | 本轮状态 |
@@ -112,7 +115,7 @@ controller 使用内存 store 和 fixture，不访问正式 gameplay、Steam、�
 | 分组导航状态 | 普通列表变更保留当前 scroll/selection；普通 Download 和 Play 自动下载进入 Community Downloads，下载后展开该组、选中新条目并 scroll into view | `Weekend` 和 Café 同项重下均进入独立只读组、自动展开、选中新条目且 row 完整在 viewport 内；offset 150 时 Favorite coroutine 完成后 offset 与 selection 保持。scroll/navigation 交互已验收；无本轮最终像素截图 |
 | 删除 | 删除本地原创或下载项需确认；删除下载项仅删本地副本、不下架远端且可重下；删除已发布列表前先下架 | `Café` 取消确认保留本地条目和 selection；确认后 `localgone`、`remoteexists`、`IsDownloaded=false`，同项重下生成 `created02` 并回到 Community Downloads。此删除/重下闭环已验收 |
 | Words 预览与 Dropdown | 详情直接预览完整 Words，使用独立滚动区；Dropdown Item 行高 20 px，与正式原版一致 | 72 词预览 TMP 914 字符、content 1680.1、viewport 100，offset 从 0 到 1580.1 再回到 0；几何/mesh/交互检查及与操作区无重叠已验收。Item 高度 20 px 已验收；未生成最终像素截图 |
-| CreateVersion 编辑门控 | Words/Language 没有实际内容变化时禁用并显示就地原因；实际变化才启用；确认后建新 local ID、无 remote identity，不改原 published 项 | 已实测不改内容与只改标题时 disabled，实际改 `TMP_InputField.text` 中的词后启用；确认新增一条 My Lists 本地副本，数量 12→13，原 published 项的 ID、分组、remote ID 和 Words 不变 |
+| 旧 CreateVersion 编辑门控（历史） | 曾要求 Words/Language 有变化才创建副本；该要求已被新作者规则取代 | 旧行为是历史证据，不是当前产品规则。新规则已由 39 项 EditMode、0 errors / 0 warnings 编译及两次 Play 验收；Copy & Edit 可原样保存或仅改 metadata，原 source/records 不变 |
 | 固定内容与缓存 | 移除旧 `UpdateAvailable` 内容更新 fixture/path；相同 remoteId 内容不得自动覆盖缓存；未来 metadata sync 另议 | 当前 mockup Runtime/Tests 中未发现旧 `UpdateAvailable` 路径或 fixture；Café 删除后重下生成新 local ID，远端来源保持不变。metadata sync 另议 |
 | 迁移前验证 | 当时的 EditMode、fresh DLL 与派生 scene | 33 passed / 0 failed；fresh DLL 在当时 corrected source 之后生成；旧 `BuildPreviewInEditor` 曾刷新并保存派生 scene。该结果不验证当前 Scene-authored 迁移；旧 D3D12 崩溃原因仍未知 |
 | 历史验证 | 上轮 EditMode 31 passed / 0 failed，及旧截图、功能 smoke | 仅历史记录；不得当作本轮验证 |
@@ -136,7 +139,7 @@ D:/Files/Desktop/Unity/Projects/GDS4 Game-a-Week/02-words/_scene_backups/WordLis
 
 ## 后续阶段
 
-1. **完成 mockup 验收：** 当前 37 项 EditMode 测试和本轮 Play smoke 已通过。后续若继续迭代交互，需重新运行相关验证；视觉截图验收仍需单独留证。
+1. **完成 mockup 验收：** 当前 39 项 EditMode 测试、0 errors / 0 warnings 编译及作者不可变规则的 Play smoke 已通过。后续若继续迭代交互，需重新运行相关验证；视觉截图验收仍需单独留证。
 2. **正式数据结构与兼容：** 定义生产 schema、旧存档迁移和导入导出兼容；确定成绩按可玩内容版本绑定。当前 mock Words 不作为最终 schema。
-3. **Steam Workshop 双账号闭环：** 使用两个测试账号验证发布、浏览、下载、点赞、举报和作者更新；当前阶段不建设自有服务器。
+3. **Steam Workshop 双账号闭环：** 使用两个测试账号验证发布、浏览、下载、点赞、举报、Copy & Edit 后另发新条目及原条目可见性切换；当前阶段不建设自有服务器。
 4. **后续 leaderboard 与审核自动化：** 再评估公开排行榜、人工复核工具和 AI 辅助；AI 不自动隐藏或下架。
