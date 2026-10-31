@@ -12,6 +12,7 @@ using UnityEngine;
 public static class MasterResetPlayModeHook
 {
     private const string GameConfigAssetPath = "Assets/-Data/GameConfig.asset";
+    private const string MockupScenePathPrefix = "Assets/Scenes/UI-Mockups/";
     private const string SteamMaintenanceTypeName = "SteamAchievementMaintenance, SteamAchievementIntegration";
     private const string ArmedTokenPrefix = "Words.MasterReset.NextEditorPlay.Armed.";
     private const string ConsumedTokenPrefix = "Words.MasterReset.NextEditorPlay.Consumed.";
@@ -45,6 +46,9 @@ public static class MasterResetPlayModeHook
     private static void OnPlayModeStateChanged(PlayModeStateChange state)
     {
         if (state != PlayModeStateChange.ExitingEditMode)
+            return;
+
+        if (ShouldIgnoreScenePath(UnityEditor.SceneManagement.EditorSceneManager.GetActiveScene().path))
             return;
 
         GameConfig config = AssetDatabase.LoadAssetAtPath<GameConfig>(GameConfigAssetPath);
@@ -126,6 +130,12 @@ public static class MasterResetPlayModeHook
 
         ClearSessionTicket(armedKey, consumedKey);
         Debug.Log("[MasterReset] Full local reset completed before Editor Play. Recoverable backup: " + result.BackupDirectory);
+    }
+
+    public static bool ShouldIgnoreScenePath(string scenePath)
+    {
+        return !string.IsNullOrEmpty(scenePath)
+            && scenePath.StartsWith(MockupScenePathPrefix, StringComparison.Ordinal);
     }
 
     private static bool TryReadSteamMaintenanceBusy(out bool busy, out string error)
