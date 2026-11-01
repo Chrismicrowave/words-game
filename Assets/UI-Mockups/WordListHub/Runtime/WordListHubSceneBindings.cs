@@ -55,7 +55,9 @@ namespace Words.UiMockups.WordListHub
             Order,
             Language,
             Played,
-            Sort
+            Sort,
+            MockConnectionState,
+            AchievementStatus
         }
 
         [Serializable]
@@ -81,6 +83,7 @@ namespace Words.UiMockups.WordListHub
         {
             public Button toggleButton;
             public TMP_Text toggleLabel;
+            public string toggleBaseLabel = "Filters";
             public GameObject panel;
             public ScrollRect scrollRect;
             public Transform content;
@@ -178,6 +181,7 @@ namespace Words.UiMockups.WordListHub
         {
             public GameObject root;
             public TMP_Dropdown connectionState;
+            public FilterMenuBinding connectionMenu = new FilterMenuBinding();
             public TMP_InputField searchInput;
             public ScrollRect listScroll;
             public Transform listContent;
@@ -202,6 +206,7 @@ namespace Words.UiMockups.WordListHub
         {
             public GameObject root;
             public TMP_Dropdown filter;
+            public FilterMenuBinding filterMenu = new FilterMenuBinding();
             public Transform cardContent;
             public WordListHubAchievementCardView cardTemplate;
         }

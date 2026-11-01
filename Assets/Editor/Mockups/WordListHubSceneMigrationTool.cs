@@ -129,6 +129,12 @@ namespace Words.UiMockups.Editor
 
                 BuildCommunityPage(context);
                 BuildAchievementsPage(context);
+                Button filterButtonTemplate = RequireComponent<Button>(
+                    RequireChild(context.libraryRoot, "View_All").gameObject);
+                WordListHubFiltersMenuAuthoring.EnsureCommunityMenuForMigration(
+                    context.communityRoot, filterButtonTemplate);
+                WordListHubFiltersMenuAuthoring.EnsureAchievementsMenuForMigration(
+                    context.achievementsRoot, filterButtonTemplate);
                 BuildChallengesPage(context);
                 BuildModal(context);
                 BuildTemplates(context);
@@ -315,6 +321,79 @@ namespace Words.UiMockups.Editor
             }
         }
 
+        [MenuItem("Tools/Mockups/Author Compact Community and Achievement Menus")]
+        public static void AuthorCompactMenusAndCarouselSensitivity()
+        {
+            if (Application.isPlaying || EditorApplication.isPlayingOrWillChangePlaymode)
+                throw new InvalidOperationException("Stop Play mode before authoring the compact filter menus.");
+            if (EditorApplication.isCompiling)
+                throw new InvalidOperationException("Wait for script compilation before authoring the compact filter menus.");
+
+            string sceneFilePath = GetProjectPath(ScenePath);
+            if (!File.Exists(sceneFilePath))
+                throw new FileNotFoundException("The Word List Hub scene was not found.", ScenePath);
+
+            Scene previousActiveScene = SceneManager.GetActiveScene();
+            Scene scene = SceneManager.GetSceneByPath(ScenePath);
+            bool openedForAuthoring = !scene.IsValid() || !scene.isLoaded;
+            if (openedForAuthoring)
+                scene = EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Additive);
+            if (!scene.IsValid() || !scene.isLoaded)
+                throw new InvalidOperationException("Unity could not open the Word List Hub scene additively.");
+            if (scene.isDirty)
+                throw new InvalidOperationException("The Word List Hub scene has unsaved edits; preserving them and stopping authoring.");
+
+            try
+            {
+                if (!SceneManager.GetActiveScene().Equals(scene) && !SceneManager.SetActiveScene(scene))
+                    throw new InvalidOperationException("Could not make the Word List Hub scene active for authoring.");
+
+                WordListHubSceneBindings bindings = scene.GetRootGameObjects()
+                    .SelectMany(root => root.GetComponentsInChildren<WordListHubSceneBindings>(true))
+                    .SingleOrDefault();
+                if (bindings == null || bindings.library == null || bindings.library.allLists == null
+                    || bindings.library.allLists.button == null || bindings.community == null
+                    || bindings.community.root == null || bindings.achievements == null
+                    || bindings.achievements.root == null)
+                    throw new InvalidOperationException("The existing scene does not have the Library, Community and Achievement bindings needed for authoring.");
+
+                Button styleTemplate = bindings.library.allLists.button;
+                Transform communityRoot = bindings.community.root.transform;
+                Transform achievementsRoot = bindings.achievements.root.transform;
+                WordListHubFiltersMenuAuthoring.EnsureCommunityMenuForMigration(communityRoot, styleTemplate);
+                WordListHubFiltersMenuAuthoring.EnsureAchievementsMenuForMigration(achievementsRoot, styleTemplate);
+                WordListHubFiltersMenuAuthoring.BindExistingCommunityMenu(communityRoot, bindings.community);
+                WordListHubFiltersMenuAuthoring.BindExistingAchievementsMenu(achievementsRoot, bindings.achievements);
+
+                ScrollRect achievementScroll = achievementsRoot.GetComponentsInChildren<ScrollRect>(true)
+                    .SingleOrDefault(scroll => scroll.name == "AchievementsScroll");
+                if (achievementScroll == null)
+                    throw new InvalidOperationException("The existing AchievementsScroll was not found.");
+                achievementScroll.horizontal = true;
+                achievementScroll.vertical = false;
+                achievementScroll.movementType = ScrollRect.MovementType.Clamped;
+                achievementScroll.scrollSensitivity = 40f;
+
+                EditorUtility.SetDirty(bindings);
+                EditorUtility.SetDirty(achievementScroll);
+                EditorSceneManager.MarkSceneDirty(scene);
+                if (!EditorSceneManager.SaveScene(scene, ScenePath))
+                    throw new IOException("Unity could not save the compact menu authoring changes.");
+
+                Debug.Log("[WordListHubSceneMigrationTool] Authored compact Community/Achievement menus and set achievement carousel sensitivity to 40.");
+            }
+            finally
+            {
+                if (previousActiveScene.IsValid() && previousActiveScene.isLoaded
+                    && !SceneManager.GetActiveScene().Equals(previousActiveScene))
+                {
+                    SceneManager.SetActiveScene(previousActiveScene);
+                }
+                if (openedForAuthoring && scene.IsValid() && scene.isLoaded)
+                    EditorSceneManager.CloseScene(scene, true);
+            }
+        }
+
         private static Context ReadContext(Scene scene)
         {
             WordListHubMockupController[] controllers = scene.GetRootGameObjects()
@@ -430,14 +509,14 @@ namespace Words.UiMockups.Editor
             EnsureText(context, page, "CommunityHeading", "DISCOVER COMMUNITY LISTS", 18f, MutedInk,
                 TextAlignmentOptions.MidlineLeft, new Vector2(-540f, 267f), new Vector2(420f, 36f), true);
             EnsureDropdown(context, page, "MockConnectionState",
-                new[] { "Mock network: Online", "Mock network: Offline" }, 0,
-                new Vector2(0f, 267f), new Vector2(210f, 40f));
+                new[] { "Network: Online", "Network: Offline" }, 0,
+                new Vector2(0f, 267f), new Vector2(200f, 40f));
             EnsureInput(context, page, "CommunitySearch", "Search shared lists…",
-                new Vector2(480f, 267f), new Vector2(360f, 42f), TMP_InputField.LineType.SingleLine);
+                new Vector2(480f, 267f), new Vector2(300f, 42f), TMP_InputField.LineType.SingleLine);
 
             Transform listPane = EnsurePanel(context, page, "CommunityListPane", context.libraryListPane,
                 new Vector2(-460f, -30f), new Vector2(580f, 510f));
-            EnsureText(context, listPane, "CommunityListTitle", "POPULAR THIS WEEK", 17f, MutedInk,
+            EnsureText(context, listPane, "CommunityListTitle", "POPULAR THIS WEEK", 18f, MutedInk,
                 TextAlignmentOptions.MidlineLeft, new Vector2(0f, 226f), new Vector2(520f, 34f), true);
             ScrollRect scroll = EnsureScroll(context, listPane, "CommunityScroll",
                 new Vector2(0f, -22f), new Vector2(550f, 445f));
@@ -455,32 +534,32 @@ namespace Words.UiMockups.Editor
         {
             EnsureText(context, pane, "DiscoveryEyebrow", "COMMUNITY WORD LIST", 15f, MutedInk,
                 TextAlignmentOptions.MidlineLeft, new Vector2(0f, 222f), new Vector2(800f, 24f), true);
-            EnsureText(context, pane, "DiscoveryDetailTitle", "Community list title", 30f, Ink,
-                TextAlignmentOptions.MidlineLeft, new Vector2(0f, 162f), new Vector2(760f, 52f), true);
-            EnsureText(context, pane, "DiscoveryAuthor", "PUBLISHED BY  Community member", 15f, AccentDark,
-                TextAlignmentOptions.MidlineLeft, new Vector2(0f, 51f), new Vector2(760f, 24f), true);
-            EnsureText(context, pane, "DiscoveryDetailDesc", "A shared word list.", 18f, MutedInk,
-                TextAlignmentOptions.TopLeft, new Vector2(0f, 106f), new Vector2(760f, 62f), false);
+            EnsureText(context, pane, "DiscoveryDetailTitle", "Community list title", 26.2f, Ink,
+                TextAlignmentOptions.MidlineLeft, new Vector2(0f, 166f), new Vector2(760f, 52f), true);
+            EnsureText(context, pane, "DiscoveryAuthor", "BY  Community member", 13f, AccentDark,
+                TextAlignmentOptions.MidlineLeft, new Vector2(0f, 112f), new Vector2(760f, 24f), true);
+            EnsureText(context, pane, "DiscoveryDetailDesc", "A shared word list.", 16f, MutedInk,
+                TextAlignmentOptions.TopLeft, new Vector2(0f, 57f), new Vector2(760f, 58f), false);
 
             Transform sample = EnsurePanel(context, pane, "DiscoverySample", context.libraryDetailPane,
-                new Vector2(0f, -30f), new Vector2(760f, 138f));
+                new Vector2(0f, -32f), new Vector2(760f, 120f));
             EnsureText(context, sample, "SampleLabel", "SAMPLE CONTENT  ·  English  ·  0 words", 14f, MutedInk,
-                TextAlignmentOptions.MidlineLeft, new Vector2(0f, 42f), new Vector2(700f, 24f), true);
-            EnsureText(context, sample, "SampleWords", "sample  words", 22f, Ink,
-                TextAlignmentOptions.MidlineLeft, new Vector2(0f, 0f), new Vector2(700f, 48f), true);
+                TextAlignmentOptions.MidlineLeft, new Vector2(0f, 36f), new Vector2(700f, 22f), true);
+            EnsureText(context, sample, "SampleWords", "sample  words", 16f, Ink,
+                TextAlignmentOptions.MidlineLeft, new Vector2(0f, -4f), new Vector2(700f, 48f), true);
             EnsureText(context, pane, "CommunityTrustNote",
-                "Download adds a read-only copy to your library. It does not favorite the list.",
-                16f, MutedInk, TextAlignmentOptions.MidlineLeft,
-                new Vector2(0f, -122f), new Vector2(760f, 28f), false);
+                "Downloads are read-only and appear in Community Downloads. Likes are separate.",
+                13f, MutedInk, TextAlignmentOptions.MidlineLeft,
+                new Vector2(0f, -108f), new Vector2(760f, 24f), false);
 
-            EnsureButton(context, pane, "Action_Like", "♡ Like  ·  0", 172f, 44f, PaperAlt,
-                new Vector2(-252f, -172f), 15f, false);
-            EnsureButton(context, pane, "Action_Download", "Download to Community Downloads", 250f, 44f,
-                AccentDark, new Vector2(30f, -172f), 15f, true);
-            EnsureButton(context, pane, "Action_Play", "Play", 172f, 44f, AccentDark,
-                new Vector2(260f, -172f), 16f, true);
-            EnsureButton(context, pane, "Action_Report", "Report & hide for me", 190f, 40f,
-                PaperAlt, new Vector2(0f, -222f), 14f, false);
+            EnsureButton(context, pane, "Action_Like", "♡ Like  ·  0", 172f, 60f, PaperAlt,
+                new Vector2(-252f, -170f), 16f, false);
+            EnsureButton(context, pane, "Action_Download", "Download", 250f, 60f,
+                AccentDark, new Vector2(30f, -170f), 16f, true);
+            EnsureButton(context, pane, "Action_Play", "Play", 172f, 60f, AccentDark,
+                new Vector2(260f, -170f), 16f, true);
+            EnsureButton(context, pane, "Action_Report", "Report & hide for me", 190f, 50f,
+                PaperAlt, new Vector2(0f, -237f), 16f, false);
         }
 
         private static void BuildAchievementsPage(Context context)
@@ -500,7 +579,19 @@ namespace Words.UiMockups.Editor
         {
             Transform scrollRoot = page.Find("AchievementsScroll");
             if (scrollRoot != null)
+            {
+                ScrollRect existingScroll = RequireComponent<ScrollRect>(scrollRoot.gameObject);
+                existingScroll.horizontal = true;
+                existingScroll.vertical = false;
+                existingScroll.movementType = ScrollRect.MovementType.Clamped;
+                existingScroll.scrollSensitivity = 40f;
+                Transform existingContent = scrollRoot.Find("Viewport/Content");
+                HorizontalLayoutGroup existingLayout = existingContent != null
+                    ? existingContent.GetComponent<HorizontalLayoutGroup>() : null;
+                if (existingLayout != null)
+                    existingLayout.childAlignment = TextAnchor.UpperLeft;
                 return;
+            }
 
             GameObject scrollObject = new GameObject("AchievementsScroll",
                 typeof(RectTransform), typeof(ScrollRect));
@@ -511,6 +602,7 @@ namespace Words.UiMockups.Editor
             scroll.horizontal = true;
             scroll.vertical = false;
             scroll.movementType = ScrollRect.MovementType.Clamped;
+            scroll.scrollSensitivity = 40f;
 
             GameObject viewportObject = new GameObject("Viewport",
                 typeof(RectTransform), typeof(Image), typeof(Mask));
@@ -535,7 +627,7 @@ namespace Words.UiMockups.Editor
             contentRect.sizeDelta = Vector2.zero;
             HorizontalLayoutGroup layout = contentObject.GetComponent<HorizontalLayoutGroup>();
             layout.spacing = 18f;
-            layout.childAlignment = TextAnchor.MiddleLeft;
+            layout.childAlignment = TextAnchor.UpperLeft;
             layout.childControlWidth = false;
             layout.childControlHeight = false;
             layout.childForceExpandWidth = false;
@@ -856,12 +948,14 @@ namespace Words.UiMockups.Editor
             clone.name = "CommunityRowTemplate";
             clone.SetActive(false);
             RectTransform rect = RequireComponent<RectTransform>(clone);
-            SetCenteredRect(rect, Vector2.zero, new Vector2(520f, 92f));
+            SetCenteredRect(rect, Vector2.zero, new Vector2(520f, 76f));
             LayoutElement layout = clone.GetComponent<LayoutElement>();
             if (layout != null)
             {
-                layout.minHeight = 92f;
-                layout.preferredHeight = 92f;
+                layout.minWidth = 520f;
+                layout.preferredWidth = 520f;
+                layout.minHeight = 76f;
+                layout.preferredHeight = 76f;
             }
 
             TMP_Text favorite = FindText(clone.transform, "FavoriteMark");
@@ -871,28 +965,30 @@ namespace Words.UiMockups.Editor
             TMP_Text summary = badgeRoot != null ? badgeRoot.GetComponent<TMP_Text>() : null;
             if (summary == null)
                 summary = CreateText(context, clone.transform, "DiscoverySummary", string.Empty, 13f, MutedInk,
-                    TextAlignmentOptions.MidlineLeft, new Vector2(-35f, -35f), new Vector2(430f, 18f), false);
+                    TextAlignmentOptions.MidlineLeft, new Vector2(0f, -26f), new Vector2(480f, 16f), false);
             else
             {
                 summary.gameObject.name = "DiscoverySummary";
-                SetCenteredRect(summary.rectTransform, new Vector2(-35f, -35f), new Vector2(430f, 18f));
+                SetCenteredRect(summary.rectTransform, new Vector2(0f, -26f), new Vector2(480f, 16f));
                 summary.fontSize = 13f;
                 summary.alignment = TextAlignmentOptions.MidlineLeft;
             }
+            summary.textWrappingMode = TextWrappingModes.NoWrap;
+            summary.overflowMode = TextOverflowModes.Ellipsis;
             if (title != null)
             {
                 title.gameObject.name = "DiscoveryTitle";
-                SetCenteredRect(title.rectTransform, new Vector2(-35f, 22f), new Vector2(430f, 28f));
+                SetCenteredRect(title.rectTransform, new Vector2(-55f, 16f), new Vector2(340f, 24f));
             }
             if (metadata != null)
             {
                 metadata.gameObject.name = "DiscoveryMetadata";
-                SetCenteredRect(metadata.rectTransform, new Vector2(-35f, -8f), new Vector2(430f, 22f));
+                SetCenteredRect(metadata.rectTransform, new Vector2(-55f, -8f), new Vector2(340f, 20f));
             }
             if (favorite != null)
             {
                 favorite.gameObject.name = "DiscoveryStatus";
-                SetCenteredRect(favorite.rectTransform, new Vector2(204f, -34f), new Vector2(130f, 18f));
+                SetCenteredRect(favorite.rectTransform, new Vector2(185f, 17f), new Vector2(110f, 18f));
                 favorite.fontSize = 13f;
                 favorite.alignment = TextAlignmentOptions.MidlineRight;
             }
@@ -1061,6 +1157,7 @@ namespace Words.UiMockups.Editor
                 FindText(RequireChild(RequireChild(RequireChild(RequireChild(wordsPanel, "DetailWordsScroll"), "Viewport"), "Content"), "DetailWords")), "library.detailWords");
             library.detailStatus = Assign(library.detailStatus,
                 FindText(RequireChild(RequireChild(detail, "DetailFeedbackPanel"), "DetailStatus")), "library.detailStatus");
+            library.detailStatus.text = string.Empty;
             library.delete = BindButtonBinding(library.delete, context.libraryDeleteButton, "library.delete");
             library.play = BindOptionalButtonBinding(library.play, detail, "Action_PlayLibrary", "library.play");
             library.edit = BindOptionalButtonBinding(library.edit, detail, "Action_Edit", "library.edit");
@@ -1233,6 +1330,7 @@ namespace Words.UiMockups.Editor
             community.root = Assign(community.root, context.communityRoot.gameObject, "community.root");
             community.connectionState = Assign(community.connectionState, RequireComponent<TMP_Dropdown>(
                 RequireChild(context.communityRoot, "MockConnectionState").gameObject), "community.connectionState");
+            WordListHubFiltersMenuAuthoring.BindExistingCommunityMenu(context.communityRoot, community);
             community.searchInput = Assign(community.searchInput, RequireComponent<TMP_InputField>(
                 RequireChild(context.communityRoot, "CommunitySearch").gameObject), "community.searchInput");
             Transform listPane = RequireChild(context.communityRoot, "CommunityListPane");
@@ -1296,6 +1394,7 @@ namespace Words.UiMockups.Editor
             page.root = Assign(page.root, context.achievementsRoot.gameObject, "achievements.root");
             page.filter = Assign(page.filter, RequireComponent<TMP_Dropdown>(
                 RequireChild(context.achievementsRoot, "AchievementFilter").gameObject), "achievements.filter");
+            WordListHubFiltersMenuAuthoring.BindExistingAchievementsMenu(context.achievementsRoot, page);
             Transform content = RequireChild(RequireChild(RequireChild(context.achievementsRoot, "AchievementsScroll"), "Viewport"), "Content");
             page.cardContent = Assign(page.cardContent, content, "achievements.cardContent");
             page.cardTemplate = Assign(page.cardTemplate, GetOrAddBindings(context).achievements.cardTemplate, "achievements.cardTemplate");

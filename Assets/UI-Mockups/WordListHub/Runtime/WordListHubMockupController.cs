@@ -16,6 +16,9 @@ namespace Words.UiMockups.WordListHub
     /// </summary>
     public sealed class WordListHubMockupController : MonoBehaviour
     {
+        private const float SuccessfulActionFeedbackDuration = 3f;
+        private const float FailedActionFeedbackDuration = 4f;
+
         private enum Page
         {
             Challenges,
@@ -51,12 +54,20 @@ namespace Words.UiMockups.WordListHub
         private MockupWordListStore store;
         private MockupLibraryQuery query;
         private Page currentPage = Page.Library;
+        private ColorBlock activeNavigationColors;
+        private ColorBlock inactiveNavigationColors;
+        private Color activeNavigationBackground;
+        private Color inactiveNavigationBackground;
+        private Color activeNavigationLabel;
+        private Color inactiveNavigationLabel;
+        private bool navigationColorsInitialized;
         private AchievementFilter achievementFilter = AchievementFilter.All;
         private string selectedListId;
         private string selectedDiscoveryId;
         private string librarySearchText = string.Empty;
         private string communitySearchText = string.Empty;
         private string lastActionMessage = string.Empty;
+        private float actionFeedbackExpiresAt;
         private Transform card;
         private Transform generatedRoot;
         private Transform dialogContentRoot;
@@ -89,6 +100,7 @@ namespace Words.UiMockups.WordListHub
         private string pendingPlayListId;
         private Coroutine communityScrollRoutine;
         private bool filtersMenuOpen;
+        private WordListHubSceneBindings.FilterMenuBinding openFilterMenu;
 
         /// <summary>
         /// Retained for source compatibility with any stale Editor menu. Rebuilding
@@ -105,6 +117,7 @@ namespace Words.UiMockups.WordListHub
         {
             EnsureStore();
             BindAuthoredScene();
+            CacheNavigationColors();
             BindSceneEvents();
             SetFiltersMenuOpen(false);
             SetPageActive(currentPage);
@@ -113,8 +126,12 @@ namespace Words.UiMockups.WordListHub
 
         private void Update()
         {
-            if (filtersMenuOpen && Input.GetKeyDown(KeyCode.Escape))
-                SetFiltersMenuOpen(false);
+            if (!string.IsNullOrEmpty(lastActionMessage)
+                && Time.unscaledTime >= actionFeedbackExpiresAt)
+                ClearActionFeedback();
+
+            if (openFilterMenu != null && Input.GetKeyDown(KeyCode.Escape))
+                SetFilterMenuOpen(openFilterMenu, false);
         }
 
         private void BindAuthoredScene()
@@ -201,7 +218,7 @@ namespace Words.UiMockups.WordListHub
             BindDropdown(library.playedFilter, SetPlayedFilterFromDropdown);
             BindDropdown(library.sortFilter, SetSortModeFromDropdown);
             BindDropdown(library.directionFilter, SetSortDirectionFromDropdown);
-            BindFiltersMenu(library.filtersMenu);
+            BindFilterMenu(library.filtersMenu);
 
             if (library.groups != null)
             {
@@ -217,8 +234,10 @@ namespace Words.UiMockups.WordListHub
             }
 
             WordListHubSceneBindings.CommunityPageBinding community = sceneBindings.community;
+            BindFilterMenu(community.connectionMenu);
             BindDropdown(community.connectionState, SetMockOnlineFromDropdown);
             BindInput(community.searchInput, HandleCommunitySearchChanged);
+            BindFilterMenu(sceneBindings.achievements.filterMenu);
             BindDropdown(sceneBindings.achievements.filter, SetAchievementFilterFromDropdown);
             BindButton(sceneBindings.challenges.dailyChallenge, () => ChangePage(Page.Library));
             BindButton(sceneBindings.challenges.weeklyChallenge, () => ChangePage(Page.Library));
@@ -270,6 +289,50 @@ namespace Words.UiMockups.WordListHub
 
             if (pageRoot == null)
                 throw new InvalidOperationException("The requested page is not assigned in WordListHubSceneBindings: " + requested);
+
+            UpdateNavigationVisuals(page);
+        }
+
+        private void CacheNavigationColors()
+        {
+            WordListHubSceneBindings.ButtonBinding active = sceneBindings.navLibrary;
+            WordListHubSceneBindings.ButtonBinding inactive = sceneBindings.navChallenges;
+            if (active == null || active.button == null || inactive == null || inactive.button == null)
+                return;
+
+            activeNavigationColors = active.button.colors;
+            inactiveNavigationColors = inactive.button.colors;
+            activeNavigationBackground = active.button.targetGraphic != null
+                ? active.button.targetGraphic.color : Color.white;
+            inactiveNavigationBackground = inactive.button.targetGraphic != null
+                ? inactive.button.targetGraphic.color : Color.white;
+            activeNavigationLabel = active.label != null ? active.label.color : Color.white;
+            inactiveNavigationLabel = inactive.label != null ? inactive.label.color : Color.white;
+            navigationColorsInitialized = true;
+        }
+
+        private void UpdateNavigationVisuals(Page activePage)
+        {
+            if (!navigationColorsInitialized)
+                return;
+
+            ApplyNavigationVisual(sceneBindings.navChallenges, activePage == Page.Challenges);
+            ApplyNavigationVisual(sceneBindings.navLibrary, activePage == Page.Library);
+            ApplyNavigationVisual(sceneBindings.navCommunity, activePage == Page.Community);
+            ApplyNavigationVisual(sceneBindings.navAchievements, activePage == Page.Achievements);
+        }
+
+        private void ApplyNavigationVisual(WordListHubSceneBindings.ButtonBinding binding, bool active)
+        {
+            if (binding == null || binding.button == null)
+                return;
+
+            binding.button.colors = active ? activeNavigationColors : inactiveNavigationColors;
+            if (binding.button.targetGraphic != null)
+                binding.button.targetGraphic.color = active
+                    ? activeNavigationBackground : inactiveNavigationBackground;
+            if (binding.label != null)
+                binding.label.color = active ? activeNavigationLabel : inactiveNavigationLabel;
         }
 
         private static WordListHubPage ToScenePage(Page page)
@@ -338,7 +401,7 @@ namespace Words.UiMockups.WordListHub
             selectedDiscoveryId = null;
             librarySearchText = string.Empty;
             communitySearchText = string.Empty;
-            lastActionMessage = "Mock data reset. No game data was changed.";
+            ClearActionFeedback();
             collapsedGroups.Clear();
             editDraft = null;
             editingListId = null;
@@ -353,7 +416,6 @@ namespace Words.UiMockups.WordListHub
         {
             SetFiltersMenuOpen(false);
             currentPage = page;
-            lastActionMessage = string.Empty;
             SetPageActive(page);
             RefreshCurrentPage();
         }
@@ -416,7 +478,6 @@ namespace Words.UiMockups.WordListHub
         {
             query.LanguageFilter = (MockupLanguageFilter)Mathf.Clamp(value, 0,
                 Enum.GetValues(typeof(MockupLanguageFilter)).Length - 1);
-            lastActionMessage = "Language filter: " + FilterLabel(query.LanguageFilter);
             RefreshLibraryPage(true);
         }
 
@@ -424,7 +485,6 @@ namespace Words.UiMockups.WordListHub
         {
             query.PlayedFilter = (MockupPlayedFilter)Mathf.Clamp(value, 0,
                 Enum.GetValues(typeof(MockupPlayedFilter)).Length - 1);
-            lastActionMessage = "Played filter: " + FilterLabel(query.PlayedFilter);
             RefreshLibraryPage(true);
         }
 
@@ -432,7 +492,6 @@ namespace Words.UiMockups.WordListHub
         {
             query.SortMode = (MockupSortMode)Mathf.Clamp(value, 0,
                 Enum.GetValues(typeof(MockupSortMode)).Length - 1);
-            lastActionMessage = "Sort by: " + SortLabel(query.SortMode);
             RefreshLibraryPage();
         }
 
@@ -440,16 +499,15 @@ namespace Words.UiMockups.WordListHub
         {
             query.SortDirection = (MockupSortDirection)Mathf.Clamp(value, 0,
                 Enum.GetValues(typeof(MockupSortDirection)).Length - 1);
-            lastActionMessage = "Sort order: " + query.SortDirection;
             RefreshLibraryPage();
         }
 
-        private void BindFiltersMenu(WordListHubSceneBindings.FilterMenuBinding menu)
+        private void BindFilterMenu(WordListHubSceneBindings.FilterMenuBinding menu)
         {
             if (menu == null)
                 return;
 
-            BindButton(menu.toggleButton, () => SetFiltersMenuOpen(!filtersMenuOpen));
+            BindButton(menu.toggleButton, () => SetFilterMenuOpen(menu, menu.panel == null || !menu.panel.activeSelf));
             if (menu.sections == null)
                 return;
 
@@ -478,6 +536,12 @@ namespace Words.UiMockups.WordListHub
                         case WordListHubSceneBindings.LibraryFilterKind.Sort:
                             BindButton(option.button, () => SetSortModeFromDropdown(value));
                             break;
+                        case WordListHubSceneBindings.LibraryFilterKind.MockConnectionState:
+                            BindButton(option.button, () => SetMockOnlineFromDropdown(value));
+                            break;
+                        case WordListHubSceneBindings.LibraryFilterKind.AchievementStatus:
+                            BindButton(option.button, () => SetAchievementFilterFromDropdown(value));
+                            break;
                     }
                 }
             }
@@ -487,63 +551,134 @@ namespace Words.UiMockups.WordListHub
         {
             WordListHubSceneBindings.FilterMenuBinding menu = sceneBindings != null
                 && sceneBindings.library != null ? sceneBindings.library.filtersMenu : null;
-            if (menu == null || menu.panel == null)
+            if (open)
+                SetFilterMenuOpen(menu, true);
+            else
+                CloseAllFilterMenus();
+        }
+
+        private void SetFilterMenuOpen(WordListHubSceneBindings.FilterMenuBinding menu, bool open)
+        {
+            if (open)
             {
-                filtersMenuOpen = false;
-                return;
+                foreach (WordListHubSceneBindings.FilterMenuBinding candidate in BoundFilterMenus())
+                {
+                    if (candidate == null || candidate == menu || candidate.panel == null)
+                        continue;
+                    candidate.panel.SetActive(false);
+                    SetFilterMenuToggleLabel(candidate, false);
+                }
+                openFilterMenu = menu;
+            }
+            else if (openFilterMenu == menu)
+            {
+                openFilterMenu = null;
             }
 
-            filtersMenuOpen = open;
-            menu.panel.SetActive(open);
-            if (open && menu.scrollRect != null)
+            if (menu != null && menu.panel != null)
+                menu.panel.SetActive(open);
+            if (open && menu != null && menu.scrollRect != null)
                 menu.scrollRect.verticalNormalizedPosition = 1f;
-            if (menu.toggleLabel != null)
-                menu.toggleLabel.text = open ? "Filters  ▲" : "Filters  ▼";
+            if (menu != null)
+                SetFilterMenuToggleLabel(menu, open);
+
+            filtersMenuOpen = sceneBindings != null
+                && sceneBindings.library != null
+                && openFilterMenu == sceneBindings.library.filtersMenu;
+        }
+
+        private void CloseAllFilterMenus()
+        {
+            foreach (WordListHubSceneBindings.FilterMenuBinding menu in BoundFilterMenus())
+            {
+                if (menu == null)
+                    continue;
+                if (menu.panel != null)
+                    menu.panel.SetActive(false);
+                SetFilterMenuToggleLabel(menu, false);
+            }
+            openFilterMenu = null;
+            filtersMenuOpen = false;
+        }
+
+        private IEnumerable<WordListHubSceneBindings.FilterMenuBinding> BoundFilterMenus()
+        {
+            if (sceneBindings == null)
+                yield break;
+            if (sceneBindings.library != null)
+                yield return sceneBindings.library.filtersMenu;
+            if (sceneBindings.community != null)
+                yield return sceneBindings.community.connectionMenu;
+            if (sceneBindings.achievements != null)
+                yield return sceneBindings.achievements.filterMenu;
+        }
+
+        private static void SetFilterMenuToggleLabel(
+            WordListHubSceneBindings.FilterMenuBinding menu,
+            bool open)
+        {
+            if (menu != null && menu.toggleLabel != null)
+                menu.toggleLabel.text = (menu.toggleBaseLabel ?? "Filters") + (open ? "  ▲" : "  ▼");
         }
 
         private static void SyncFilterMenu(
             WordListHubSceneBindings.FilterMenuBinding menu,
             MockupLibraryQuery currentQuery)
         {
-            if (menu == null || menu.sections == null || currentQuery == null)
+            if (currentQuery == null)
                 return;
 
-            foreach (WordListHubSceneBindings.FilterSectionBinding section in menu.sections)
+            SyncFilterMenu(menu, kind => GetLibraryFilterValue(kind, currentQuery), "Filters");
+        }
+
+        private static int GetLibraryFilterValue(
+            WordListHubSceneBindings.LibraryFilterKind kind,
+            MockupLibraryQuery currentQuery)
+        {
+            switch (kind)
             {
-                if (section == null || section.options == null)
-                    continue;
+                case WordListHubSceneBindings.LibraryFilterKind.Order: return (int)currentQuery.SortDirection;
+                case WordListHubSceneBindings.LibraryFilterKind.Language: return (int)currentQuery.LanguageFilter;
+                case WordListHubSceneBindings.LibraryFilterKind.Played: return (int)currentQuery.PlayedFilter;
+                case WordListHubSceneBindings.LibraryFilterKind.Sort: return (int)currentQuery.SortMode;
+                default: return -1;
+            }
+        }
 
-                int selectedValue;
-                switch (section.kind)
+        private static void SyncFilterMenu(
+            WordListHubSceneBindings.FilterMenuBinding menu,
+            Func<WordListHubSceneBindings.LibraryFilterKind, int> getSelectedValue,
+            string toggleBaseLabel)
+        {
+            if (menu == null)
+                return;
+            menu.toggleBaseLabel = toggleBaseLabel;
+            if (menu.sections != null)
+            {
+                foreach (WordListHubSceneBindings.FilterSectionBinding section in menu.sections)
                 {
-                    case WordListHubSceneBindings.LibraryFilterKind.Order:
-                        selectedValue = (int)currentQuery.SortDirection;
-                        break;
-                    case WordListHubSceneBindings.LibraryFilterKind.Language:
-                        selectedValue = (int)currentQuery.LanguageFilter;
-                        break;
-                    case WordListHubSceneBindings.LibraryFilterKind.Played:
-                        selectedValue = (int)currentQuery.PlayedFilter;
-                        break;
-                    case WordListHubSceneBindings.LibraryFilterKind.Sort:
-                        selectedValue = (int)currentQuery.SortMode;
-                        break;
-                    default:
-                        continue;
-                }
-
-                foreach (WordListHubSceneBindings.FilterOptionBinding option in section.options)
-                {
-                    if (option == null)
+                    if (section == null || section.options == null)
                         continue;
 
-                    bool selected = option.value == selectedValue;
-                    if (option.selectedVisual != null)
-                        option.selectedVisual.SetActive(selected);
-                    if (option.label != null)
-                        option.label.text = (selected ? "✓  " : "    ") + option.optionLabel;
+                    int selectedValue = getSelectedValue != null ? getSelectedValue(section.kind) : -1;
+                    if (selectedValue < 0)
+                        continue;
+
+                    foreach (WordListHubSceneBindings.FilterOptionBinding option in section.options)
+                    {
+                        if (option == null)
+                            continue;
+
+                        bool selected = option.value == selectedValue;
+                        if (option.selectedVisual != null)
+                            option.selectedVisual.SetActive(selected);
+                        if (option.label != null)
+                            option.label.text = (selected ? "✓  " : "    ") + option.optionLabel;
+                    }
                 }
             }
+
+            SetFilterMenuToggleLabel(menu, menu.panel != null && menu.panel.activeSelf);
         }
 
         private void ToggleGroup(MockupLibraryGroup group)
@@ -556,7 +691,6 @@ namespace Words.UiMockups.WordListHub
         private void SelectLibraryItem(string mockId)
         {
             selectedListId = mockId;
-            lastActionMessage = string.Empty;
             RefreshLibraryPage();
         }
 
@@ -568,19 +702,15 @@ namespace Words.UiMockups.WordListHub
 
         private void ToggleFavorite(string mockId)
         {
-            bool isFavorite = store.ToggleFavorite(mockId);
-            lastActionMessage = isFavorite ? "Added to Favorites" : "Removed from Favorites";
+            store.ToggleFavorite(mockId);
             RefreshLibraryPage();
         }
 
         private void ToggleLike(string remoteId)
         {
             MockupActionResult result = store.TryToggleLike(remoteId);
-            lastActionMessage = result.Succeeded
-                ? (result.DiscoveryItem != null && result.DiscoveryItem.IsLiked
-                    ? "Liked in local mock data. No live vote was sent."
-                    : "Like removed in local mock data.")
-                : result.Message + " (mock action; no live service was contacted.)";
+            if (!result.Succeeded)
+                ShowActionFeedback(result.Message + " (mock action; no live service was contacted.)", true);
             RefreshCommunityPage();
         }
 
@@ -589,7 +719,7 @@ namespace Words.UiMockups.WordListHub
             MockupActionResult result = store.TryDownload(remoteId);
             if (!result.Succeeded || result.List == null)
             {
-                lastActionMessage = result.Message + " (mock action; no live service was contacted.)";
+                ShowActionFeedback(result.Message + " (mock action; no live service was contacted.)", true);
                 RefreshCommunityPage();
                 return;
             }
@@ -599,7 +729,7 @@ namespace Words.UiMockups.WordListHub
             ClearFiltersThatHideDownloadedItem(downloaded);
             collapsedGroups.Remove(downloaded.Group);
             currentPage = Page.Library;
-            lastActionMessage = "Added “" + downloaded.Title + "” to Community Downloads and cached it for offline use.";
+            ShowActionFeedback("Added “" + downloaded.Title + "” to Community Downloads and cached it for offline use.");
             SetPageActive(currentPage);
             RefreshLibraryPage();
             ScheduleLibraryScrollRestore(0f, false, downloaded.Id);
@@ -610,13 +740,13 @@ namespace Words.UiMockups.WordListHub
             MockupActionResult result = store.TryReportAndHide(remoteId);
             if (!result.Succeeded)
             {
-                lastActionMessage = result.Message + " (mock action; no live service was contacted.)";
+                ShowActionFeedback(result.Message + " (mock action; no live service was contacted.)", true);
                 RefreshCommunityPage();
                 return;
             }
 
             selectedDiscoveryId = null;
-            lastActionMessage = "Hidden from your Community view; a report was simulated locally. No real report was sent.";
+            ShowActionFeedback("Hidden from your Community view; a report was simulated locally. No real report was sent.");
             RefreshCommunityPage();
         }
 
@@ -624,9 +754,6 @@ namespace Words.UiMockups.WordListHub
         {
             bool online = value == 0;
             store.SetOnline(online);
-            lastActionMessage = online
-                ? "Mock network is online. No live service is connected."
-                : "Mock network is offline. Cached Play remains available; network actions will fail visibly.";
             RefreshCommunityPage();
         }
 
@@ -646,6 +773,7 @@ namespace Words.UiMockups.WordListHub
             if (!result.Succeeded || result.List == null)
             {
                 pendingPlayListId = null;
+                ShowActionFeedback(result.Message, true);
                 ShowConfirmation("Mock play unavailable",
                     result.Message + "\n\nThis is a local mockup. No live service or game was contacted.",
                     "Close", string.Empty, dialog);
@@ -659,7 +787,6 @@ namespace Words.UiMockups.WordListHub
 
             selectedListId = result.List.Id;
             pendingPlayListId = result.List.Id;
-            lastActionMessage = result.Message;
             ShowConfirmation("Mock play · " + result.List.Title,
                 "This is a simulated play result only. No game scene will start.\n"
                 + "The local list stays in its library section if you cancel.",
@@ -668,7 +795,6 @@ namespace Words.UiMockups.WordListHub
             BindButton(dialog.cancelButton, () =>
             {
                 pendingPlayListId = null;
-                lastActionMessage = "Mock play cancelled. The local list remains in its library section.";
                 CloseDialog();
                 RefreshCurrentPage();
             });
@@ -681,12 +807,11 @@ namespace Words.UiMockups.WordListHub
             CloseDialog();
             if (!completed || item == null)
             {
-                lastActionMessage = "The local mock run could not be recorded.";
+                ShowActionFeedback("The local mock run could not be recorded.", true);
                 RefreshCurrentPage();
                 return;
             }
 
-            lastActionMessage = "Mock run complete: 3 stars · 85.0 seconds. No game was launched.";
             string viewListLabel = item.Group == MockupLibraryGroup.CommunityDownloads
                 ? "View in Community Downloads" : "View in My Lists";
             WordListHubSceneBindings.ConfirmationBinding dialog = sceneBindings.modal.playResult;
@@ -718,7 +843,7 @@ namespace Words.UiMockups.WordListHub
             {
                 item = store.EditCommunityCopy(item.Id);
                 selectedListId = item.Id;
-                lastActionMessage = "Created your editable copy. The downloaded original remains unchanged.";
+                ShowActionFeedback("Created your editable copy. The downloaded original remains unchanged.");
             }
 
             OpenEditDialog(item.Id);
@@ -729,14 +854,14 @@ namespace Words.UiMockups.WordListHub
             MockupActionResult result = store.TryPublish(mockId);
             if (!result.Succeeded || result.List == null)
             {
-                lastActionMessage = result.Message + " (mock action; no live service was contacted.)";
+                ShowActionFeedback(result.Message + " (mock action; no live service was contacted.)", true);
                 RefreshLibraryPage();
                 return;
             }
 
             selectedListId = result.List.Id;
             ClearFiltersThatHide(result.List);
-            lastActionMessage = "Published this list in mock data.";
+            ShowActionFeedback("Published this list in mock data.");
             RefreshLibraryPage();
         }
 
@@ -747,11 +872,11 @@ namespace Words.UiMockups.WordListHub
             {
                 selectedListId = result.List.Id;
                 ClearFiltersThatHide(result.List);
-                lastActionMessage = "Returned this list to My Lists in mock data; its previous community identity is no longer attached.";
+                ShowActionFeedback("Returned this list to My Lists in mock data; its previous community identity is no longer attached.");
             }
             else
             {
-                lastActionMessage = result.Message + " (mock action; no live service was contacted.)";
+                ShowActionFeedback(result.Message + " (mock action; no live service was contacted.)", true);
             }
             RefreshLibraryPage();
         }
@@ -778,7 +903,7 @@ namespace Words.UiMockups.WordListHub
                 || item.PublicationStatus == MockupPublicationStatus.Published;
             if (publicationIsActive)
             {
-                lastActionMessage = "Unpublish this list before deleting its local copy. No remote action was taken.";
+                ShowActionFeedback("Unpublish this list before deleting its local copy. No remote action was taken.", true);
                 RefreshLibraryPage();
                 return;
             }
@@ -814,7 +939,7 @@ namespace Words.UiMockups.WordListHub
             pendingDeleteListId = null;
             pendingDeleteVisibleIndex = -1;
             CloseDialog();
-            lastActionMessage = result.Message;
+            ShowActionFeedback(result.Message, !result.Succeeded);
 
             if (result.Succeeded && selectedListId == deletedId)
             {
@@ -1095,7 +1220,7 @@ namespace Words.UiMockups.WordListHub
                 SetText(library.recordTime, string.Empty);
                 SetText(library.detailWordsLabel, "WORDS  ·  0");
                 SetText(library.detailWords, string.Empty);
-                SetText(library.detailStatus, string.Empty);
+                SetText(library.detailStatus, lastActionMessage);
                 SetLibraryAction(library.delete, string.Empty, false, null);
                 SetLibraryAction(library.play, string.Empty, false, null);
                 SetLibraryAction(library.edit, string.Empty, false, null);
@@ -1123,7 +1248,7 @@ namespace Words.UiMockups.WordListHub
             bool hasPublishedBinding = item.HasPublishedBinding;
             bool publicationIsActive = item.IsPubliclyVisible
                 || item.PublicationStatus == MockupPublicationStatus.Published;
-            SetText(library.detailStatus, DetailFeedbackMessage(item, publicationIsActive));
+            SetText(library.detailStatus, lastActionMessage);
             SetLibraryAction(library.delete, "Delete",
                 !publicationIsActive, () => RequestDeleteList(item.Id));
             SetLibraryAction(library.play, "Play", true, () => BeginLibraryMockPlay(item.Id));
@@ -1357,9 +1482,14 @@ namespace Words.UiMockups.WordListHub
             if (community.connectionState != null)
             {
                 SetDropdownOptions(community.connectionState,
-                    new[] { "Mock network: Online", "Mock network: Offline" }, store.IsOnline ? 0 : 1);
+                    new[] { "Network: Online", "Network: Offline" }, store.IsOnline ? 0 : 1);
                 BindDropdown(community.connectionState, SetMockOnlineFromDropdown);
             }
+            SyncFilterMenu(
+                community.connectionMenu,
+                kind => kind == WordListHubSceneBindings.LibraryFilterKind.MockConnectionState
+                    ? (store.IsOnline ? 0 : 1) : -1,
+                "Network: " + (store.IsOnline ? "Online" : "Offline"));
 
             IEnumerable<MockupDiscoveryItem> queryResults = store.VisibleDiscoveryItems;
             if (!string.IsNullOrWhiteSpace(communitySearchText))
@@ -1535,7 +1665,7 @@ namespace Words.UiMockups.WordListHub
             MockupDiscoveryItem item = store.FindDiscoveryItem(selectedDiscoveryId);
             if (item == null || !visibleItems.Any(candidate => candidate.RemoteItemId == selectedDiscoveryId))
             {
-                SetText(community.detailTitle, "Choose a shared list to see its details.");
+                SetText(community.detailTitle, "Choose a list to see its details.");
                 SetText(community.detailAuthor, string.Empty);
                 SetText(community.detailSummary, string.Empty);
                 SetText(community.detailDescription, string.Empty);
@@ -1549,19 +1679,19 @@ namespace Words.UiMockups.WordListHub
             }
 
             SetText(community.detailTitle, item.Title);
-            SetText(community.detailAuthor, "PUBLISHED BY  " + item.RemoteAuthor);
+            SetText(community.detailAuthor, "BY  " + item.RemoteAuthor);
             SetText(community.detailDescription, item.Description);
             SetText(community.detailMetadata, "SAMPLE CONTENT  ·  " + LanguageLabel(item.Language)
                 + "  ·  " + item.WordCount + " words");
             SetText(community.detailSummary, item.Words == null || item.Words.Count == 0
                 ? string.Empty : string.Join("    ", item.Words.Take(8)));
             SetText(community.detailTrustNote,
-                "Download adds a read-only copy to your library. It does not favorite the list.");
+                "Downloads are read-only and appear in Community Downloads. Likes are separate.");
             SetCommunityAction(community.like,
                 (item.IsLiked ? "♥ Liked" : "♡ Like") + "  ·  " + item.LikeCount,
                 true, () => ToggleLike(item.RemoteItemId));
             SetCommunityAction(community.download,
-                item.IsDownloaded ? "In Community Downloads" : "Download to Community Downloads",
+                item.IsDownloaded ? "Downloaded" : "Download",
                 true, () => DownloadDiscoveryItem(item.RemoteItemId));
             if (community.download != null && community.download.button != null)
                 community.download.button.interactable = !item.IsDownloaded;
@@ -1594,6 +1724,13 @@ namespace Words.UiMockups.WordListHub
             SetDropdownOptions(achievements.filter,
                 new[] { "Show: All", "Show: Unlocked", "Show: In progress" }, (int)achievementFilter);
             BindDropdown(achievements.filter, SetAchievementFilterFromDropdown);
+            string achievementFilterLabel = achievementFilter == AchievementFilter.All ? "All"
+                : achievementFilter == AchievementFilter.Unlocked ? "Unlocked" : "In progress";
+            SyncFilterMenu(
+                achievements.filterMenu,
+                kind => kind == WordListHubSceneBindings.LibraryFilterKind.AchievementStatus
+                    ? (int)achievementFilter : -1,
+                "Show: " + achievementFilterLabel);
             DestroyOwnedRuntimeChildren(achievements.cardContent);
 
             IEnumerable<MockupAchievement> filtered = store.Achievements;
@@ -1663,13 +1800,30 @@ namespace Words.UiMockups.WordListHub
 
         private void UpdateFooter()
         {
-            if (footerText != null)
+            SetText(footerText, "LOCAL MOCKUP  ·  SAMPLE DATA ONLY");
+        }
+
+        private void ShowActionFeedback(string message, bool isError = false)
+        {
+            lastActionMessage = string.IsNullOrWhiteSpace(message) ? string.Empty : message;
+            if (string.IsNullOrEmpty(lastActionMessage))
             {
-                string footerMessage = currentPage == Page.Library ? string.Empty : lastActionMessage;
-                footerText.text = string.IsNullOrEmpty(footerMessage)
-                    ? "LOCAL MOCKUP  ·  SAMPLE DATA ONLY"
-                    : "LOCAL MOCKUP  ·  " + footerMessage + "  ·  SAMPLE DATA ONLY";
+                ClearActionFeedback();
+                return;
             }
+
+            actionFeedbackExpiresAt = Time.unscaledTime
+                + (isError ? FailedActionFeedbackDuration : SuccessfulActionFeedbackDuration);
+            SetText(sceneBindings != null && sceneBindings.library != null
+                ? sceneBindings.library.detailStatus : null, lastActionMessage);
+        }
+
+        private void ClearActionFeedback()
+        {
+            lastActionMessage = string.Empty;
+            actionFeedbackExpiresAt = 0f;
+            SetText(sceneBindings != null && sceneBindings.library != null
+                ? sceneBindings.library.detailStatus : null, string.Empty);
         }
 
         private void OpenNewListDialog()
@@ -1729,7 +1883,7 @@ namespace Words.UiMockups.WordListHub
             selectedListId = item.Id;
             ClearFiltersThatHide(item);
             communitySearchText = string.Empty;
-            lastActionMessage = "Created “" + item.Title + "” with " + item.Words.Count + " words in My Lists.";
+            ShowActionFeedback("Created “" + item.Title + "” with " + item.Words.Count + " words in My Lists.");
             CloseDialog();
             currentPage = Page.Library;
             SetPageActive(currentPage);
@@ -1909,11 +2063,11 @@ namespace Words.UiMockups.WordListHub
                 ? store.SaveOwnedContentAsNewList(editingListId, editDraft)
                 : store.SaveEdit(editingListId, editDraft);
             selectedListId = result.Item.Id;
-            lastActionMessage = creatingCopy
+            ShowActionFeedback(creatingCopy
                 ? "Created a separate My List copy; the original and its scores remain unchanged."
                 : result.ShowRecordWarning
                     ? "Saved new words. Current record cleared; the earlier version record was retained."
-                    : "Saved list details. Personal record is unchanged.";
+                    : "Saved list details. Personal record is unchanged.");
             editDraft = null;
             copyEditingMode = false;
             CloseDialog();
@@ -2089,39 +2243,6 @@ namespace Words.UiMockups.WordListHub
                 return "Recently added";
             return string.Empty;
         }
-
-        private string DetailFeedbackMessage(MockupWordList item, bool publicationIsActive)
-        {
-            if (!string.IsNullOrEmpty(lastActionMessage))
-                return lastActionMessage;
-
-            var messages = new List<string>();
-            string badge = ListBadge(item);
-            if (!string.IsNullOrEmpty(badge))
-                messages.Add(badge);
-
-            if (item.PreviousContentRecords.Count > 0)
-                messages.Add("Previous-version record archived.");
-            else if (item.HasBeenPlayed)
-                messages.Add("Best saved for this version.");
-            else
-                messages.Add("No personal best yet.");
-
-            if (publicationIsActive && !item.IsReadOnly)
-                messages.Add("Unpublish before deleting.");
-
-            return string.Join("  ·  ", messages);
-        }
-
-
-
-
-
-
-
-
-
-
 
         private static bool Contains(string value, string term)
         {

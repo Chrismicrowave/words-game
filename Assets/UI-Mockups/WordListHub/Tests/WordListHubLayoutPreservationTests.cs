@@ -7,6 +7,7 @@ using TMPro;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
@@ -47,6 +48,8 @@ namespace Words.UiMockups.WordListHub.Tests
             Assert.That(bindings.card, Is.Not.Null);
             Assert.That(bindings.hubRoot, Is.Not.Null);
             Assert.That(bindings.footer, Is.Not.Null);
+            Assert.That(bindings.library.detailStatus.text, Is.Empty,
+                "The serialized action prompt should be blank before the controller runs.");
 
             WordListHubPage[] expectedPages = (WordListHubPage[])Enum.GetValues(typeof(WordListHubPage));
             Assert.That(bindings.pages, Is.Not.Null);
@@ -63,6 +66,7 @@ namespace Words.UiMockups.WordListHub.Tests
 
             AssertLibraryTemplate(bindings.library.rowTemplate);
             AssertCommunityTemplate(bindings.community.rowTemplate);
+            AssertCommunityVisualAlignment(bindings);
             AssertAchievementTemplate(bindings.achievements.cardTemplate);
             AssertAuthoredLibraryRows(bindings.library);
             AssertAuthoredCommunityRows(bindings.community);
@@ -88,13 +92,27 @@ namespace Words.UiMockups.WordListHub.Tests
         {
             WordListHubMockupController controller = harness.Controller;
             WordListHubSceneBindings bindings = harness.Bindings;
-            UiSceneSnapshot snapshot = UiSceneSnapshot.Capture(harness.Root);
+            UiSceneSnapshot snapshot = UiSceneSnapshot.Capture(
+                harness.Root, NavigationVisualComponents(bindings));
+            NavigationStyleSnapshot activeNavigationStyle =
+                NavigationStyleSnapshot.Capture(bindings.navLibrary);
+            NavigationStyleSnapshot inactiveNavigationStyle =
+                NavigationStyleSnapshot.Capture(bindings.navChallenges);
             InvokeAwake(controller);
             snapshot.AssertUnchanged("initial scene binding and refresh");
+            Assert.That(bindings.library.detailStatus.text, Is.Empty,
+                "The action feedback prompt should start empty.");
 
             AssertPageActive(bindings, WordListHubPage.Library);
+            AssertNavigationVisuals(bindings, WordListHubPage.Library,
+                activeNavigationStyle, inactiveNavigationStyle);
             Press(bindings.navCommunity.button);
             AssertPageActive(bindings, WordListHubPage.Community);
+            AssertNavigationVisuals(bindings, WordListHubPage.Community,
+                activeNavigationStyle, inactiveNavigationStyle);
+            EventSystem.current.SetSelectedGameObject(bindings.navAchievements.button.gameObject);
+            AssertNavigationVisuals(bindings, WordListHubPage.Community,
+                activeNavigationStyle, inactiveNavigationStyle);
             Assert.That(bindings.community.rowTemplate.gameObject.activeInHierarchy, Is.False,
                 "The Community source template must stay hidden when its page is active.");
 
@@ -127,6 +145,8 @@ namespace Words.UiMockups.WordListHub.Tests
 
             Press(bindings.navAchievements.button);
             AssertPageActive(bindings, WordListHubPage.Achievements);
+            AssertNavigationVisuals(bindings, WordListHubPage.Achievements,
+                activeNavigationStyle, inactiveNavigationStyle);
             Assert.That(bindings.achievements.cardTemplate.gameObject.activeInHierarchy, Is.False,
                 "The Achievement source template must stay hidden when its page is active.");
             MockupWordListStore fixtureStore = MockupWordListStore.CreateWithFixtures();
@@ -142,12 +162,18 @@ namespace Words.UiMockups.WordListHub.Tests
 
             Press(bindings.navChallenges.button);
             AssertPageActive(bindings, WordListHubPage.Challenges);
+            AssertNavigationVisuals(bindings, WordListHubPage.Challenges,
+                activeNavigationStyle, inactiveNavigationStyle);
             Press(bindings.navCommunity.button);
             AssertPageActive(bindings, WordListHubPage.Community);
+            AssertNavigationVisuals(bindings, WordListHubPage.Community,
+                activeNavigationStyle, inactiveNavigationStyle);
             AssertExactlyOneSelectedCommunityRow(bindings.community,
                 bindings.community.detailTitle.text);
             Press(bindings.navLibrary.button);
             AssertPageActive(bindings, WordListHubPage.Library);
+            AssertNavigationVisuals(bindings, WordListHubPage.Library,
+                activeNavigationStyle, inactiveNavigationStyle);
             Assert.That(bindings.library.rowTemplate.gameObject.activeInHierarchy, Is.False,
                 "The Library source template must stay hidden when its page is active.");
 
@@ -156,6 +182,8 @@ namespace Words.UiMockups.WordListHub.Tests
             Press(libraryRow.button);
             Assert.That(bindings.library.detailTitle.text, Is.EqualTo(libraryRow.title),
                 "Selecting a row should refresh the authored detail title.");
+            Assert.That(bindings.library.detailStatus.text, Is.Empty,
+                "Selecting a row should not create routine status text.");
             AssertExactlyOneSelectedLibraryRow(bindings.library, libraryRow.title);
 
             WordListHubSceneBindings.LibraryRowBinding favoriteRow =
@@ -164,9 +192,13 @@ namespace Words.UiMockups.WordListHub.Tests
             Press(favoriteRow.favoriteButton);
             Assert.That(favoriteRow.favoriteMark.text, Is.Not.EqualTo(favoriteLabelBefore),
                 "A single row-star click must toggle Favorite once; duplicate listeners would toggle it back.");
+            Assert.That(bindings.library.detailStatus.text, Is.Empty,
+                "Favorite toggles should not create a redundant action prompt.");
             AssertExactlyOneSelectedLibraryRow(bindings.library, libraryRow.title);
 
             SetDropdownValue(bindings.library.languageFilter, 1);
+            Assert.That(bindings.library.detailStatus.text, Is.Empty,
+                "Passive filters should not create action feedback.");
             MockupLibraryQuery englishQuery = new MockupLibraryQuery
             {
                 LanguageFilter = MockupLanguageFilter.English
@@ -182,6 +214,8 @@ namespace Words.UiMockups.WordListHub.Tests
             Press(bindings.navCommunity.button);
             Press(bindings.navLibrary.button);
             AssertExactlyOneSelectedLibraryRow(bindings.library, bindings.library.detailTitle.text);
+            Assert.That(bindings.library.detailStatus.text, Is.Empty,
+                "Passive navigation and search should leave the action prompt empty.");
 
             snapshot.AssertUnchanged("navigation, row selection, filtering, and favorite click");
             snapshot.AssertOriginalObjectsStillExist("navigation, row selection, filtering, and favorite click");
@@ -314,6 +348,259 @@ namespace Words.UiMockups.WordListHub.Tests
             Assert.That(menu.panel.activeSelf, Is.False,
                 "Changing pages should close the unified menu.");
             AssertPageActive(harness.Bindings, WordListHubPage.Community);
+        }
+
+        [Test]
+        public void CommunityAndAchievementMenus_KeepExistingActionsAndSelectedStateInSync()
+        {
+            WordListHubMockupController controller = harness.Controller;
+            WordListHubSceneBindings bindings = harness.Bindings;
+            InvokeAwake(controller);
+
+            WordListHubSceneBindings.FilterMenuBinding communityMenu = bindings.community.connectionMenu;
+            AssertCompactMenu(communityMenu, 2, "Mock network");
+            Assert.That(bindings.community.connectionState.gameObject.activeSelf, Is.False,
+                "The legacy Community dropdown should stay bound but hidden.");
+            Press(bindings.navCommunity.button);
+            Assert.That(communityMenu.sections[0].options[0].selectedVisual.activeSelf, Is.True);
+            Press(communityMenu.toggleButton);
+            Assert.That(communityMenu.panel.activeSelf, Is.True);
+            Press(communityMenu.sections[0].options[1].button);
+            Assert.That(GetStore(controller).IsOnline, Is.False,
+                "Offline must dispatch through the existing mock network state setter.");
+            Assert.That(bindings.community.connectionState.value, Is.EqualTo(1));
+            Assert.That(communityMenu.sections[0].options[1].selectedVisual.activeSelf, Is.True);
+            Assert.That(communityMenu.toggleLabel.text, Does.Contain("Offline"));
+            Assert.That(communityMenu.panel.activeSelf, Is.True,
+                "Choosing a network state should leave the compact menu open.");
+            Press(communityMenu.sections[0].options[0].button);
+            Assert.That(GetStore(controller).IsOnline, Is.True);
+            Assert.That(communityMenu.sections[0].options[0].selectedVisual.activeSelf, Is.True);
+            Press(communityMenu.toggleButton);
+            Assert.That(communityMenu.panel.activeSelf, Is.False);
+
+            WordListHubSceneBindings.FilterMenuBinding achievementMenu = bindings.achievements.filterMenu;
+            AssertCompactMenu(achievementMenu, 3, "Show");
+            Assert.That(bindings.achievements.filter.gameObject.activeSelf, Is.False,
+                "The legacy Achievement dropdown should stay bound but hidden.");
+            Press(bindings.navAchievements.button);
+            Press(achievementMenu.toggleButton);
+
+            MockupWordListStore fixtureStore = MockupWordListStore.CreateWithFixtures();
+            int unlockedCount = fixtureStore.Achievements.Count(
+                item => item.Status == MockupAchievementStatus.Unlocked);
+            Press(achievementMenu.sections[0].options[1].button);
+            Assert.That(bindings.achievements.filter.value, Is.EqualTo(1));
+            Assert.That(CountVisibleAchievementCards(bindings.achievements), Is.EqualTo(unlockedCount));
+            Assert.That(achievementMenu.sections[0].options[1].selectedVisual.activeSelf, Is.True);
+            Assert.That(achievementMenu.panel.activeSelf, Is.True,
+                "Choosing an achievement filter should leave the compact menu open.");
+
+            int inProgressCount = fixtureStore.Achievements.Count(
+                item => item.Status == MockupAchievementStatus.InProgress);
+            Press(achievementMenu.sections[0].options[2].button);
+            Assert.That(bindings.achievements.filter.value, Is.EqualTo(2));
+            Assert.That(CountVisibleAchievementCards(bindings.achievements), Is.EqualTo(inProgressCount));
+            Assert.That(achievementMenu.sections[0].options[2].selectedVisual.activeSelf, Is.True);
+            Assert.That(achievementMenu.toggleLabel.text, Does.Contain("In progress"));
+
+            Press(achievementMenu.toggleButton);
+            Assert.That(achievementMenu.panel.activeSelf, Is.False);
+            Press(achievementMenu.toggleButton);
+            Press(bindings.navLibrary.button);
+            Assert.That(achievementMenu.panel.activeSelf, Is.False,
+                "Navigating away from Achievements should close its menu.");
+            Press(bindings.library.filtersMenu.toggleButton);
+            Assert.That(bindings.library.filtersMenu.panel.activeSelf, Is.True);
+            Press(bindings.library.createList.button);
+            Assert.That(bindings.library.filtersMenu.panel.activeSelf, Is.False,
+                "Opening a modal should close the currently open menu.");
+            Assert.That(bindings.modal.newList.root.activeInHierarchy, Is.True);
+        }
+
+        [Test]
+        public void AchievementCarousel_ComputesOverflowForMoreThanThreeCards()
+        {
+            WordListHubMockupController controller = harness.Controller;
+            WordListHubSceneBindings.AchievementsPageBinding achievements = harness.Bindings.achievements;
+            InvokeAwake(controller);
+            Press(harness.Bindings.navAchievements.button);
+
+            Transform scrollRoot = achievements.root.transform.Find("AchievementsScroll");
+            Assert.That(scrollRoot, Is.Not.Null);
+            ScrollRect scroll = scrollRoot.GetComponent<ScrollRect>();
+            Assert.That(scroll, Is.Not.Null);
+            Assert.That(scroll.horizontal, Is.True);
+            Assert.That(scroll.vertical, Is.False);
+            Assert.That(scroll.movementType, Is.EqualTo(ScrollRect.MovementType.Clamped));
+            Assert.That(scroll.scrollSensitivity, Is.EqualTo(40f));
+            Assert.That(scroll.content, Is.EqualTo(achievements.cardContent));
+            Assert.That(scroll.viewport, Is.Not.Null);
+
+            while (CountVisibleAchievementCards(achievements) < 4)
+            {
+                GameObject fixtureCard = UnityEngine.Object.Instantiate(
+                    achievements.cardTemplate.gameObject, achievements.cardContent, false);
+                fixtureCard.name = "LocalOverflowFixture";
+                fixtureCard.SetActive(true);
+            }
+
+            Canvas.ForceUpdateCanvases();
+            LayoutRebuilder.ForceRebuildLayoutImmediate(achievements.cardContent as RectTransform);
+            RectTransform contentRect = achievements.cardContent as RectTransform;
+            Assert.That(contentRect.rect.width, Is.GreaterThan(scroll.viewport.rect.width),
+                "Four 460-pixel cards with their authored gaps should create a horizontal scroll range.");
+
+            scroll.horizontalNormalizedPosition = 0f;
+            float leftPosition = contentRect.anchoredPosition.x;
+            scroll.horizontalNormalizedPosition = 1f;
+            Canvas.ForceUpdateCanvases();
+            float rightPosition = contentRect.anchoredPosition.x;
+            Assert.That(Mathf.Abs(rightPosition - leftPosition), Is.GreaterThan(100f),
+                "The horizontal ScrollRect should be able to move across the overflow range.");
+
+            scroll.horizontalNormalizedPosition = 0.5f;
+            Canvas.ForceUpdateCanvases();
+            float beforeWheel = contentRect.anchoredPosition.x;
+            scroll.OnScroll(new PointerEventData(EventSystem.current)
+            {
+                scrollDelta = new Vector2(0f, 1f)
+            });
+            float afterWheelUp = contentRect.anchoredPosition.x;
+            Assert.That(afterWheelUp, Is.LessThan(beforeWheel),
+                "An upward wheel event should move the horizontal-only carousel via ScrollRect.OnScroll.");
+            Assert.That(Mathf.Abs(afterWheelUp - beforeWheel), Is.EqualTo(40f).Within(1f),
+                "One wheel unit should use the authored 40-pixel sensitivity.");
+
+            scroll.OnScroll(new PointerEventData(EventSystem.current)
+            {
+                scrollDelta = new Vector2(0f, -1f)
+            });
+            float afterWheelDown = contentRect.anchoredPosition.x;
+            Assert.That(afterWheelDown, Is.GreaterThan(afterWheelUp),
+                "A downward wheel event should move the carousel in the opposite direction.");
+            Assert.That(Mathf.Abs(afterWheelDown - afterWheelUp), Is.EqualTo(40f).Within(1f));
+        }
+
+        [Test]
+        public void AchievementCards_AreVerticallyContainedByViewportWithZeroHeightContent()
+        {
+            WordListHubMockupController controller = harness.Controller;
+            WordListHubSceneBindings.AchievementsPageBinding achievements = harness.Bindings.achievements;
+            InvokeAwake(controller);
+            Press(harness.Bindings.navAchievements.button);
+
+            ScrollRect scroll = achievements.root.transform.Find("AchievementsScroll").GetComponent<ScrollRect>();
+            RectTransform content = achievements.cardContent as RectTransform;
+            HorizontalLayoutGroup layout = content.GetComponent<HorizontalLayoutGroup>();
+            Assert.That(scroll.viewport, Is.Not.Null);
+            Assert.That(content.rect.height, Is.EqualTo(0f).Within(0.01f),
+                "This regression must cover the authored zero-height carousel content.");
+            Assert.That(layout.childAlignment, Is.EqualTo(TextAnchor.UpperLeft),
+                "Cards should align their top edges with the viewport instead of centering on its top edge.");
+
+            Canvas.ForceUpdateCanvases();
+            LayoutRebuilder.ForceRebuildLayoutImmediate(content);
+            Assert.That(CountVisibleAchievementCards(achievements), Is.GreaterThan(0));
+            foreach (WordListHubAchievementCardView card in achievements.cardContent
+                .GetComponentsInChildren<WordListHubAchievementCardView>(true))
+            {
+                if (card.GetComponent<WordListHubRuntimeInstance>() == null)
+                    continue;
+
+                AssertVerticallyContained(card.transform as RectTransform, scroll.viewport, card.name);
+                AssertVerticallyContained(card.icon.rectTransform, scroll.viewport, card.name + ".icon");
+                AssertVerticallyContained(card.state.rectTransform, scroll.viewport, card.name + ".state");
+                AssertVerticallyContained(card.title.rectTransform, scroll.viewport, card.name + ".title");
+                AssertVerticallyContained(card.description.rectTransform, scroll.viewport, card.name + ".description");
+                AssertVerticallyContained(card.progress.rectTransform, scroll.viewport, card.name + ".progress");
+            }
+        }
+
+        [Test]
+        public void ActionFeedback_IsOnlyShownForActionsAndExpiresWithoutBlockingNavigation()
+        {
+            WordListHubMockupController controller = harness.Controller;
+            WordListHubSceneBindings bindings = harness.Bindings;
+            InvokeAwake(controller);
+
+            MethodInfo showFeedback = typeof(WordListHubMockupController).GetMethod(
+                "ShowActionFeedback", BindingFlags.Instance | BindingFlags.NonPublic);
+            FieldInfo expiryField = typeof(WordListHubMockupController).GetField(
+                "actionFeedbackExpiresAt", BindingFlags.Instance | BindingFlags.NonPublic);
+            Assert.That(showFeedback, Is.Not.Null);
+            Assert.That(expiryField, Is.Not.Null);
+
+            showFeedback.Invoke(controller, new object[] { "Published this list.", false });
+            Assert.That(bindings.library.detailStatus.text, Is.EqualTo("Published this list."));
+            Assert.That(bindings.footer.text, Is.EqualTo("LOCAL MOCKUP  ·  SAMPLE DATA ONLY"),
+                "The footer should keep its independent sample-data notice.");
+            float successExpiry = (float)expiryField.GetValue(controller);
+            Assert.That(successExpiry - Time.unscaledTime,
+                Is.EqualTo(3f).Within(0.1f), "Successful action feedback should last three unscaled seconds.");
+
+            Press(bindings.navCommunity.button);
+            Press(bindings.navLibrary.button);
+            SetDropdownValue(bindings.library.languageFilter, 1);
+            SetInputValue(bindings.library.searchInput, "Blank Canvas");
+            Assert.That(bindings.library.detailStatus.text, Is.EqualTo("Published this list."),
+                "Passive navigation, filters, and search should not clear a live action message.");
+
+            expiryField.SetValue(controller, Time.unscaledTime - 0.1f);
+            InvokeControllerUpdate(controller);
+            Assert.That(bindings.library.detailStatus.text, Is.Empty,
+                "The action prompt should clear after its unscaled deadline.");
+
+            showFeedback.Invoke(controller, new object[] { "That action failed.", true });
+            Assert.That(bindings.library.detailStatus.text, Is.EqualTo("That action failed."));
+            float failureExpiry = (float)expiryField.GetValue(controller);
+            Assert.That(failureExpiry - Time.unscaledTime,
+                Is.EqualTo(4f).Within(0.1f), "Failure feedback should remain visible for four unscaled seconds.");
+        }
+
+        [Test]
+        public void DeletingLastVisibleList_LeavesSuccessFeedbackWhenNoListIsSelected()
+        {
+            WordListHubMockupController controller = harness.Controller;
+            WordListHubSceneBindings bindings = harness.Bindings;
+            InvokeAwake(controller);
+
+            SetInputValue(bindings.library.searchInput, "Blank Canvas");
+            Assert.That(GetStore(controller).QueryLibrary(new MockupLibraryQuery
+            {
+                SearchText = "Blank Canvas"
+            }), Has.Count.EqualTo(1));
+            Assert.That(bindings.library.detailTitle.text, Is.EqualTo("Blank Canvas"));
+
+            Press(bindings.library.delete.button);
+            Press(bindings.modal.deleteList.confirmButton);
+
+            Assert.That(GetStore(controller).FindById("mock-list-empty"), Is.Null);
+            Assert.That(bindings.library.detailTitle.text, Is.EqualTo("Choose a list to see its details."));
+            Assert.That(bindings.library.detailStatus.text,
+                Is.EqualTo("Local list removed. No remote item was changed."),
+                "Deleting the final visible list should still report success after selection becomes empty.");
+            FieldInfo selectedListId = typeof(WordListHubMockupController).GetField(
+                "selectedListId", BindingFlags.Instance | BindingFlags.NonPublic);
+            Assert.That(selectedListId.GetValue(controller), Is.Null);
+        }
+
+        private static void AssertCompactMenu(
+            WordListHubSceneBindings.FilterMenuBinding menu,
+            int expectedOptionCount,
+            string expectedHeading)
+        {
+            Assert.That(menu, Is.Not.Null);
+            Assert.That(menu.panel, Is.Not.Null);
+            Assert.That(menu.scrollRect, Is.Not.Null);
+            Assert.That(menu.sections, Has.Count.EqualTo(1));
+            Assert.That(menu.sections[0].heading.text, Is.EqualTo(expectedHeading));
+            Assert.That(menu.sections[0].options, Has.Count.EqualTo(expectedOptionCount));
+            Assert.That(menu.scrollRect.horizontal, Is.False);
+            Assert.That(menu.scrollRect.vertical, Is.True);
+            Assert.That(menu.scrollRect.viewport.GetComponent<Mask>(), Is.Not.Null);
+            Assert.That(menu.panel.GetComponent<RectTransform>().rect.height, Is.LessThan(220f),
+                "Compact menus should size to their two or three choices.");
         }
 
         [Test]
@@ -896,6 +1183,26 @@ namespace Words.UiMockups.WordListHub.Tests
             AssertQuaternion(clone.localRotation, source.localRotation, description + " localRotation");
         }
 
+        private static void AssertVerticallyContained(
+            RectTransform subject,
+            RectTransform viewport,
+            string description)
+        {
+            Vector3[] subjectCorners = new Vector3[4];
+            Vector3[] viewportCorners = new Vector3[4];
+            subject.GetWorldCorners(subjectCorners);
+            viewport.GetWorldCorners(viewportCorners);
+            float subjectMinY = subjectCorners.Min(corner => corner.y);
+            float subjectMaxY = subjectCorners.Max(corner => corner.y);
+            float viewportMinY = viewportCorners.Min(corner => corner.y);
+            float viewportMaxY = viewportCorners.Max(corner => corner.y);
+
+            Assert.That(subjectMinY, Is.GreaterThanOrEqualTo(viewportMinY - 0.01f),
+                description + " bottom edge must remain inside the viewport.");
+            Assert.That(subjectMaxY, Is.LessThanOrEqualTo(viewportMaxY + 0.01f),
+                description + " top edge must remain inside the viewport.");
+        }
+
         private static void AssertTextStyleMatches(TMP_Text source, TMP_Text clone, string description)
         {
             Assert.That(clone.font, Is.SameAs(source.font), description + " font");
@@ -932,6 +1239,184 @@ namespace Words.UiMockups.WordListHub.Tests
             Assert.That(bindings.pages.Count(page => page.root != null && page.root.activeSelf), Is.EqualTo(1),
                 "Exactly one authored page root should be active.");
             Assert.That(bindings.pages.Single(page => page.page == activePage).root.activeSelf, Is.True);
+        }
+
+        private static HashSet<Component> NavigationVisualComponents(WordListHubSceneBindings bindings)
+        {
+            var components = new HashSet<Component>();
+            foreach (WordListHubSceneBindings.ButtonBinding binding in new[]
+            {
+                bindings.navChallenges,
+                bindings.navLibrary,
+                bindings.navCommunity,
+                bindings.navAchievements
+            })
+            {
+                if (binding == null)
+                    continue;
+                if (binding.button != null)
+                {
+                    components.Add(binding.button);
+                    if (binding.button.targetGraphic != null)
+                        components.Add(binding.button.targetGraphic);
+                }
+                if (binding.label != null)
+                    components.Add(binding.label);
+            }
+            return components;
+        }
+
+        private static void AssertCommunityVisualAlignment(WordListHubSceneBindings bindings)
+        {
+            RectTransform libraryRow = bindings.library.rowTemplate.GetComponent<RectTransform>();
+            RectTransform communityRow = bindings.community.rowTemplate.GetComponent<RectTransform>();
+            LayoutElement communityRowLayout = bindings.community.rowTemplate.GetComponent<LayoutElement>();
+            Assert.That(communityRow.rect.height, Is.EqualTo(libraryRow.rect.height).Within(0.001f));
+            Assert.That(communityRowLayout.preferredHeight, Is.EqualTo(libraryRow.rect.height).Within(0.001f));
+            Assert.That(communityRowLayout.preferredWidth, Is.EqualTo(communityRow.rect.width).Within(0.001f));
+            Assert.That(communityRow.rect.width,
+                Is.LessThan(bindings.community.listScroll.viewport.rect.width));
+            Assert.That(bindings.community.rowTemplate.title.fontSize,
+                Is.EqualTo(bindings.library.rowTemplate.title.fontSize).Within(0.001f));
+            Assert.That(bindings.community.rowTemplate.metadata.fontSize,
+                Is.EqualTo(bindings.library.rowTemplate.metadata.fontSize).Within(0.001f));
+            Assert.That(bindings.community.rowTemplate.summary.textWrappingMode,
+                Is.EqualTo(TextWrappingModes.NoWrap));
+            Assert.That(bindings.community.rowTemplate.summary.overflowMode,
+                Is.EqualTo(TextOverflowModes.Ellipsis));
+
+            RectTransform communitySearch = bindings.community.searchInput.GetComponent<RectTransform>();
+            RectTransform librarySearch = bindings.library.searchInput.GetComponent<RectTransform>();
+            Assert.That(communitySearch.rect.size, Is.EqualTo(librarySearch.rect.size));
+            RectTransform communityConnection = bindings.community.connectionState.GetComponent<RectTransform>();
+            RectTransform libraryLanguage = bindings.library.languageFilter.GetComponent<RectTransform>();
+            Assert.That(communityConnection.rect.size, Is.EqualTo(libraryLanguage.rect.size));
+
+            Transform communityListTitle = bindings.community.root.transform
+                .Find("CommunityListPane/CommunityListTitle");
+            Transform libraryListTitle = bindings.library.root.transform
+                .Find("LibraryListPane/ListPaneTitle");
+            Assert.That(communityListTitle.GetComponent<TMP_Text>().fontSize,
+                Is.EqualTo(libraryListTitle.GetComponent<TMP_Text>().fontSize).Within(0.001f));
+            Assert.That(bindings.community.detailTitle.fontSize,
+                Is.EqualTo(bindings.library.detailTitle.fontSize).Within(0.001f));
+            Assert.That(bindings.community.detailAuthor.fontSize,
+                Is.EqualTo(bindings.library.detailMetadata.fontSize).Within(0.001f));
+            Assert.That(bindings.community.detailDescription.fontSize,
+                Is.EqualTo(bindings.library.detailDescription.fontSize).Within(0.001f));
+            Assert.That(bindings.community.detailSummary.fontSize,
+                Is.EqualTo(bindings.library.detailWords.fontSize).Within(0.001f));
+            Assert.That(bindings.community.like.button.GetComponent<RectTransform>().rect.height,
+                Is.EqualTo(bindings.library.play.button.GetComponent<RectTransform>().rect.height).Within(0.001f));
+            Assert.That(bindings.community.download.button.GetComponent<RectTransform>().rect.height,
+                Is.EqualTo(bindings.library.play.button.GetComponent<RectTransform>().rect.height).Within(0.001f));
+            Assert.That(bindings.community.play.button.GetComponent<RectTransform>().rect.height,
+                Is.EqualTo(bindings.library.play.button.GetComponent<RectTransform>().rect.height).Within(0.001f));
+
+            AssertNoRectOverlap(
+                bindings.community.rowTemplate.title.rectTransform,
+                bindings.community.rowTemplate.metadata.rectTransform,
+                "Community row title and metadata");
+            AssertNoRectOverlap(
+                bindings.community.rowTemplate.title.rectTransform,
+                bindings.community.rowTemplate.status.rectTransform,
+                "Community row title and status");
+            AssertNoRectOverlap(
+                bindings.community.rowTemplate.metadata.rectTransform,
+                bindings.community.rowTemplate.summary.rectTransform,
+                "Community row metadata and summary");
+            AssertNoRectOverlap(
+                bindings.community.rowTemplate.summary.rectTransform,
+                bindings.community.rowTemplate.status.rectTransform,
+                "Community row summary and status");
+
+            RectTransform detailPane = bindings.community.detailPane as RectTransform;
+            var detailFlow = new List<RectTransform>
+            {
+                detailPane.Find("DiscoveryEyebrow").GetComponent<RectTransform>(),
+                bindings.community.detailTitle.rectTransform,
+                bindings.community.detailAuthor.rectTransform,
+                bindings.community.detailDescription.rectTransform,
+                detailPane.Find("DiscoverySample").GetComponent<RectTransform>(),
+                bindings.community.detailTrustNote.rectTransform,
+                bindings.community.like.button.GetComponent<RectTransform>(),
+                bindings.community.report.button.GetComponent<RectTransform>()
+            };
+            for (int i = 0; i < detailFlow.Count; i++)
+                AssertVerticallyContained(detailFlow[i], detailPane, "Community detail " + detailFlow[i].name);
+            for (int i = 0; i < detailFlow.Count - 1; i++)
+            {
+                AssertNoRectOverlap(detailFlow[i], detailFlow[i + 1],
+                    "Community detail flow " + detailFlow[i].name + " / " + detailFlow[i + 1].name);
+            }
+            AssertNoRectOverlap(
+                bindings.community.like.button.GetComponent<RectTransform>(),
+                bindings.community.download.button.GetComponent<RectTransform>(),
+                "Community Like and Download actions");
+            AssertNoRectOverlap(
+                bindings.community.download.button.GetComponent<RectTransform>(),
+                bindings.community.play.button.GetComponent<RectTransform>(),
+                "Community Download and Play actions");
+        }
+
+        private static void AssertNoRectOverlap(RectTransform first, RectTransform second, string description)
+        {
+            Rect firstBounds = new Rect(first.anchoredPosition - first.rect.size * 0.5f, first.rect.size);
+            Rect secondBounds = new Rect(second.anchoredPosition - second.rect.size * 0.5f, second.rect.size);
+            Assert.That(firstBounds.Overlaps(secondBounds), Is.False, description + " must not overlap.");
+        }
+
+        private sealed class NavigationStyleSnapshot
+        {
+            public ColorBlock Colors { get; }
+            public Color Background { get; }
+            public Color Label { get; }
+
+            private NavigationStyleSnapshot(WordListHubSceneBindings.ButtonBinding binding)
+            {
+                Colors = binding.button.colors;
+                Background = binding.button.targetGraphic.color;
+                Label = binding.label.color;
+            }
+
+            public static NavigationStyleSnapshot Capture(WordListHubSceneBindings.ButtonBinding binding)
+            {
+                Assert.That(binding, Is.Not.Null);
+                Assert.That(binding.button, Is.Not.Null);
+                Assert.That(binding.button.targetGraphic, Is.Not.Null);
+                Assert.That(binding.label, Is.Not.Null);
+                return new NavigationStyleSnapshot(binding);
+            }
+        }
+
+        private static void AssertNavigationVisuals(
+            WordListHubSceneBindings bindings,
+            WordListHubPage activePage,
+            NavigationStyleSnapshot activeStyle,
+            NavigationStyleSnapshot inactiveStyle)
+        {
+            AssertNavigationVisual(bindings.navChallenges,
+                activePage == WordListHubPage.Challenges, activeStyle, inactiveStyle);
+            AssertNavigationVisual(bindings.navLibrary,
+                activePage == WordListHubPage.Library, activeStyle, inactiveStyle);
+            AssertNavigationVisual(bindings.navCommunity,
+                activePage == WordListHubPage.Community, activeStyle, inactiveStyle);
+            AssertNavigationVisual(bindings.navAchievements,
+                activePage == WordListHubPage.Achievements, activeStyle, inactiveStyle);
+        }
+
+        private static void AssertNavigationVisual(
+            WordListHubSceneBindings.ButtonBinding binding,
+            bool active,
+            NavigationStyleSnapshot activeStyle,
+            NavigationStyleSnapshot inactiveStyle)
+        {
+            NavigationStyleSnapshot expected = active ? activeStyle : inactiveStyle;
+            Assert.That(binding.button.interactable, Is.True, binding.button.name + " remains clickable.");
+            Assert.That(binding.button.colors.normalColor, Is.EqualTo(expected.Colors.normalColor));
+            Assert.That(binding.button.colors.selectedColor, Is.EqualTo(expected.Colors.selectedColor));
+            Assert.That(binding.button.targetGraphic.color, Is.EqualTo(expected.Background));
+            Assert.That(binding.label.color, Is.EqualTo(expected.Label));
         }
 
         private static void Press(Button button)
@@ -983,6 +1468,14 @@ namespace Words.UiMockups.WordListHub.Tests
                 "RefreshLibraryPage", BindingFlags.Instance | BindingFlags.NonPublic);
             Assert.That(refresh, Is.Not.Null);
             refresh.Invoke(controller, new object[] { false, false });
+        }
+
+        private static void InvokeControllerUpdate(WordListHubMockupController controller)
+        {
+            MethodInfo update = typeof(WordListHubMockupController).GetMethod(
+                "Update", BindingFlags.Instance | BindingFlags.NonPublic);
+            Assert.That(update, Is.Not.Null);
+            update.Invoke(controller, null);
         }
 
         private static void AssertVector2(Vector2 actual, Vector2 expected, string description)
@@ -1145,7 +1638,9 @@ namespace Words.UiMockups.WordListHub.Tests
             private readonly List<SerializedComponentState> layoutComponents =
                 new List<SerializedComponentState>();
 
-            public static UiSceneSnapshot Capture(GameObject root)
+            public static UiSceneSnapshot Capture(
+                GameObject root,
+                ISet<Component> intentionallyDynamicVisuals = null)
             {
                 var snapshot = new UiSceneSnapshot();
                 foreach (Transform transform in root.GetComponentsInChildren<Transform>(true))
@@ -1176,11 +1671,22 @@ namespace Words.UiMockups.WordListHub.Tests
                     .Where(selectable => selectable.targetGraphic != null)
                     .Select(selectable => selectable.targetGraphic));
                 foreach (TMP_Text text in root.GetComponentsInChildren<TMP_Text>(true))
-                    snapshot.texts.Add(new TextStyleState(text, selectableGraphics.Contains(text)));
+                {
+                    bool skipColor = selectableGraphics.Contains(text)
+                        || intentionallyDynamicVisuals != null && intentionallyDynamicVisuals.Contains(text);
+                    snapshot.texts.Add(new TextStyleState(text, skipColor));
+                }
                 foreach (Image image in root.GetComponentsInChildren<Image>(true))
-                    snapshot.images.Add(new ImageStyleState(image, selectableGraphics.Contains(image)));
+                {
+                    bool skipColor = selectableGraphics.Contains(image)
+                        || intentionallyDynamicVisuals != null && intentionallyDynamicVisuals.Contains(image);
+                    snapshot.images.Add(new ImageStyleState(image, skipColor));
+                }
                 foreach (Selectable selectable in sceneSelectables)
-                    snapshot.selectables.Add(new SelectableStyleState(selectable));
+                {
+                    if (intentionallyDynamicVisuals == null || !intentionallyDynamicVisuals.Contains(selectable))
+                        snapshot.selectables.Add(new SelectableStyleState(selectable));
+                }
 
                 foreach (Component component in root.GetComponentsInChildren<Component>(true))
                 {
