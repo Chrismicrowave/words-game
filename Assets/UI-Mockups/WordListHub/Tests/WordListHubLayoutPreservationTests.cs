@@ -188,6 +188,135 @@ namespace Words.UiMockups.WordListHub.Tests
         }
 
         [Test]
+        public void LibraryViewToggle_CombinesAllAndFavoritesAndPreservesQueryState()
+        {
+            WordListHubMockupController controller = harness.Controller;
+            WordListHubSceneBindings.LibraryPageBinding library = harness.Bindings.library;
+            InvokeAwake(controller);
+
+            Assert.That(library.favorites.button.gameObject.activeSelf, Is.False,
+                "The separate Favorites button should be hidden after combining the views.");
+            Assert.That(library.allLists.label.text, Is.EqualTo("Favourite"));
+            library.favorites.button.onClick.Invoke();
+            FieldInfo queryField = typeof(WordListHubMockupController).GetField(
+                "query", BindingFlags.Instance | BindingFlags.NonPublic);
+            Assert.That(queryField, Is.Not.Null);
+            MockupLibraryQuery query = (MockupLibraryQuery)queryField.GetValue(controller);
+            Assert.That(query.View, Is.EqualTo(MockupLibraryView.All),
+                "The hidden legacy button must no longer have a click listener.");
+
+            SetInputValue(library.searchInput, "word");
+            Press(library.filtersMenu.toggleButton);
+            Press(library.filtersMenu.sections[0].options[0].button);
+            Press(library.filtersMenu.sections[1].options[2].button);
+            Press(library.filtersMenu.sections[2].options[1].button);
+            Press(library.filtersMenu.sections[3].options[1].button);
+            Press(library.filtersMenu.toggleButton);
+
+            Press(library.allLists.button);
+            Assert.That(query.View, Is.EqualTo(MockupLibraryView.Favorites));
+            Assert.That(library.allLists.label.text, Is.EqualTo("Show All"));
+            AssertLibraryTogglePreservesQuery(query, library, "favorites view");
+            library.favorites.button.onClick.Invoke();
+            Assert.That(query.View, Is.EqualTo(MockupLibraryView.Favorites),
+                "The hidden legacy button must not switch the view.");
+
+            Press(library.allLists.button);
+            Assert.That(query.View, Is.EqualTo(MockupLibraryView.All));
+            Assert.That(library.allLists.label.text, Is.EqualTo("Favourite"));
+            AssertLibraryTogglePreservesQuery(query, library, "all view");
+        }
+
+        private static void AssertLibraryTogglePreservesQuery(
+            MockupLibraryQuery query,
+            WordListHubSceneBindings.LibraryPageBinding library,
+            string phase)
+        {
+            Assert.That(library.searchInput.text, Is.EqualTo("word"), phase + " search text");
+            Assert.That(query.SearchText, Is.EqualTo("word"), phase + " query search text");
+            Assert.That(query.LanguageFilter, Is.EqualTo(MockupLanguageFilter.Chinese), phase + " language filter");
+            Assert.That(query.PlayedFilter, Is.EqualTo(MockupPlayedFilter.Played), phase + " played filter");
+            Assert.That(query.SortMode, Is.EqualTo(MockupSortMode.Name), phase + " sort mode");
+            Assert.That(query.SortDirection, Is.EqualTo(MockupSortDirection.Ascending), phase + " sort direction");
+        }
+
+        [Test]
+        public void LibraryFiltersMenu_CombinesAllFiltersAndKeepsSelectionVisibleUntilClosed()
+        {
+            WordListHubMockupController controller = harness.Controller;
+            WordListHubSceneBindings.LibraryPageBinding library = harness.Bindings.library;
+            WordListHubSceneBindings.FilterMenuBinding menu = library.filtersMenu;
+            Assert.That(menu, Is.Not.Null);
+            Assert.That(menu.panel, Is.Not.Null);
+            Assert.That(menu.scrollRect, Is.Not.Null);
+            Assert.That(menu.sections, Has.Count.EqualTo(4));
+            CollectionAssert.AreEqual(
+                new[]
+                {
+                    WordListHubSceneBindings.LibraryFilterKind.Order,
+                    WordListHubSceneBindings.LibraryFilterKind.Language,
+                    WordListHubSceneBindings.LibraryFilterKind.Played,
+                    WordListHubSceneBindings.LibraryFilterKind.Sort
+                },
+                menu.sections.Select(section => section.kind));
+            CollectionAssert.AreEqual(new[] { 2, 4, 3, 6 },
+                menu.sections.Select(section => section.options.Count));
+            Assert.That(menu.scrollRect.horizontal, Is.False);
+            Assert.That(menu.scrollRect.vertical, Is.True);
+            Assert.That(menu.scrollRect.viewport.GetComponent<Mask>(), Is.Not.Null);
+            Assert.That(menu.panel.GetComponent<RectTransform>().rect.height, Is.EqualTo(400f).Within(0.01f));
+
+            InvokeAwake(controller);
+            Assert.That(menu.panel.activeSelf, Is.False, "The unified menu must start collapsed.");
+            Assert.That(library.languageFilter.gameObject.activeSelf, Is.False);
+            Assert.That(library.playedFilter.gameObject.activeSelf, Is.False);
+            Assert.That(library.sortFilter.gameObject.activeSelf, Is.False);
+            Assert.That(library.directionFilter.gameObject.activeSelf, Is.False);
+
+            Press(menu.toggleButton);
+            Assert.That(menu.panel.activeSelf, Is.True);
+            Canvas.ForceUpdateCanvases();
+            LayoutRebuilder.ForceRebuildLayoutImmediate(menu.content as RectTransform);
+            Assert.That(((RectTransform)menu.content).rect.height,
+                Is.GreaterThan(menu.scrollRect.viewport.rect.height),
+                "All four sections should extend past the viewport and remain reachable by scrolling.");
+
+            WordListHubSceneBindings.FilterOptionBinding ascending = menu.sections[0].options[0];
+            WordListHubSceneBindings.FilterOptionBinding chinese = menu.sections[1].options[2];
+            WordListHubSceneBindings.FilterOptionBinding played = menu.sections[2].options[1];
+            WordListHubSceneBindings.FilterOptionBinding byName = menu.sections[3].options[1];
+            Press(ascending.button);
+            Press(chinese.button);
+            Press(played.button);
+            Press(byName.button);
+
+            FieldInfo queryField = typeof(WordListHubMockupController).GetField(
+                "query", BindingFlags.Instance | BindingFlags.NonPublic);
+            Assert.That(queryField, Is.Not.Null);
+            MockupLibraryQuery query = (MockupLibraryQuery)queryField.GetValue(controller);
+            Assert.That(query.SortDirection, Is.EqualTo(MockupSortDirection.Ascending));
+            Assert.That(query.LanguageFilter, Is.EqualTo(MockupLanguageFilter.Chinese));
+            Assert.That(query.PlayedFilter, Is.EqualTo(MockupPlayedFilter.Played));
+            Assert.That(query.SortMode, Is.EqualTo(MockupSortMode.Name));
+            Assert.That(ascending.selectedVisual.activeSelf, Is.True);
+            Assert.That(chinese.selectedVisual.activeSelf, Is.True);
+            Assert.That(played.selectedVisual.activeSelf, Is.True);
+            Assert.That(byName.selectedVisual.activeSelf, Is.True);
+            Assert.That(chinese.label.text, Does.Contain("✓"));
+            AssertLibraryRowsMatchQuery(GetStore(controller), query, library);
+            Assert.That(menu.panel.activeSelf, Is.True,
+                "Selecting a filter should leave the menu open so other sections can be adjusted.");
+
+            Press(menu.toggleButton);
+            Assert.That(menu.panel.activeSelf, Is.False);
+            Press(menu.toggleButton);
+            Press(harness.Bindings.navCommunity.button);
+            Assert.That(menu.panel.activeSelf, Is.False,
+                "Changing pages should close the unified menu.");
+            AssertPageActive(harness.Bindings, WordListHubPage.Community);
+        }
+
+        [Test]
         public void AuthoredCreateAndDeleteDialogs_UseBoundControlsAndKeepSceneObjects()
         {
             WordListHubMockupController controller = harness.Controller;

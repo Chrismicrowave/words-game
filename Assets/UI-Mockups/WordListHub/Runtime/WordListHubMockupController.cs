@@ -88,6 +88,7 @@ namespace Words.UiMockups.WordListHub
         private bool copyEditingMode;
         private string pendingPlayListId;
         private Coroutine communityScrollRoutine;
+        private bool filtersMenuOpen;
 
         /// <summary>
         /// Retained for source compatibility with any stale Editor menu. Rebuilding
@@ -105,8 +106,15 @@ namespace Words.UiMockups.WordListHub
             EnsureStore();
             BindAuthoredScene();
             BindSceneEvents();
+            SetFiltersMenuOpen(false);
             SetPageActive(currentPage);
             RefreshCurrentPage();
+        }
+
+        private void Update()
+        {
+            if (filtersMenuOpen && Input.GetKeyDown(KeyCode.Escape))
+                SetFiltersMenuOpen(false);
         }
 
         private void BindAuthoredScene()
@@ -183,14 +191,17 @@ namespace Words.UiMockups.WordListHub
             BindButton(sceneBindings.resetMockData, ResetMockData);
 
             WordListHubSceneBindings.LibraryPageBinding library = sceneBindings.library;
-            BindButton(library.allLists, () => SetLibraryView(MockupLibraryView.All));
-            BindButton(library.favorites, () => SetLibraryView(MockupLibraryView.Favorites));
+            BindButton(library.allLists, ToggleLibraryView);
+            BindButton(library.favorites, null);
+            if (library.favorites != null && library.favorites.button != null)
+                library.favorites.button.gameObject.SetActive(false);
             BindButton(library.createList, OpenNewListDialog);
             BindInput(library.searchInput, HandleSearchChanged);
             BindDropdown(library.languageFilter, SetLanguageFilterFromDropdown);
             BindDropdown(library.playedFilter, SetPlayedFilterFromDropdown);
             BindDropdown(library.sortFilter, SetSortModeFromDropdown);
             BindDropdown(library.directionFilter, SetSortDirectionFromDropdown);
+            BindFiltersMenu(library.filtersMenu);
 
             if (library.groups != null)
             {
@@ -317,6 +328,7 @@ namespace Words.UiMockups.WordListHub
 
         private void ResetMockData()
         {
+            SetFiltersMenuOpen(false);
             CloseDialog();
             store = MockupWordListStore.CreateWithFixtures();
             query = new MockupLibraryQuery();
@@ -339,6 +351,7 @@ namespace Words.UiMockups.WordListHub
 
         private void ChangePage(Page page)
         {
+            SetFiltersMenuOpen(false);
             currentPage = page;
             lastActionMessage = string.Empty;
             SetPageActive(page);
@@ -377,6 +390,13 @@ namespace Words.UiMockups.WordListHub
         {
             query.View = view;
             RefreshLibraryPage(true);
+        }
+
+        private void ToggleLibraryView()
+        {
+            SetLibraryView(query.View == MockupLibraryView.Favorites
+                ? MockupLibraryView.All
+                : MockupLibraryView.Favorites);
         }
 
         private void HandleSearchChanged(string value)
@@ -422,6 +442,108 @@ namespace Words.UiMockups.WordListHub
                 Enum.GetValues(typeof(MockupSortDirection)).Length - 1);
             lastActionMessage = "Sort order: " + query.SortDirection;
             RefreshLibraryPage();
+        }
+
+        private void BindFiltersMenu(WordListHubSceneBindings.FilterMenuBinding menu)
+        {
+            if (menu == null)
+                return;
+
+            BindButton(menu.toggleButton, () => SetFiltersMenuOpen(!filtersMenuOpen));
+            if (menu.sections == null)
+                return;
+
+            foreach (WordListHubSceneBindings.FilterSectionBinding section in menu.sections)
+            {
+                if (section == null || section.options == null)
+                    continue;
+
+                foreach (WordListHubSceneBindings.FilterOptionBinding option in section.options)
+                {
+                    if (option == null || option.button == null)
+                        continue;
+
+                    int value = option.value;
+                    switch (section.kind)
+                    {
+                        case WordListHubSceneBindings.LibraryFilterKind.Order:
+                            BindButton(option.button, () => SetSortDirectionFromDropdown(value));
+                            break;
+                        case WordListHubSceneBindings.LibraryFilterKind.Language:
+                            BindButton(option.button, () => SetLanguageFilterFromDropdown(value));
+                            break;
+                        case WordListHubSceneBindings.LibraryFilterKind.Played:
+                            BindButton(option.button, () => SetPlayedFilterFromDropdown(value));
+                            break;
+                        case WordListHubSceneBindings.LibraryFilterKind.Sort:
+                            BindButton(option.button, () => SetSortModeFromDropdown(value));
+                            break;
+                    }
+                }
+            }
+        }
+
+        private void SetFiltersMenuOpen(bool open)
+        {
+            WordListHubSceneBindings.FilterMenuBinding menu = sceneBindings != null
+                && sceneBindings.library != null ? sceneBindings.library.filtersMenu : null;
+            if (menu == null || menu.panel == null)
+            {
+                filtersMenuOpen = false;
+                return;
+            }
+
+            filtersMenuOpen = open;
+            menu.panel.SetActive(open);
+            if (open && menu.scrollRect != null)
+                menu.scrollRect.verticalNormalizedPosition = 1f;
+            if (menu.toggleLabel != null)
+                menu.toggleLabel.text = open ? "Filters  ▲" : "Filters  ▼";
+        }
+
+        private static void SyncFilterMenu(
+            WordListHubSceneBindings.FilterMenuBinding menu,
+            MockupLibraryQuery currentQuery)
+        {
+            if (menu == null || menu.sections == null || currentQuery == null)
+                return;
+
+            foreach (WordListHubSceneBindings.FilterSectionBinding section in menu.sections)
+            {
+                if (section == null || section.options == null)
+                    continue;
+
+                int selectedValue;
+                switch (section.kind)
+                {
+                    case WordListHubSceneBindings.LibraryFilterKind.Order:
+                        selectedValue = (int)currentQuery.SortDirection;
+                        break;
+                    case WordListHubSceneBindings.LibraryFilterKind.Language:
+                        selectedValue = (int)currentQuery.LanguageFilter;
+                        break;
+                    case WordListHubSceneBindings.LibraryFilterKind.Played:
+                        selectedValue = (int)currentQuery.PlayedFilter;
+                        break;
+                    case WordListHubSceneBindings.LibraryFilterKind.Sort:
+                        selectedValue = (int)currentQuery.SortMode;
+                        break;
+                    default:
+                        continue;
+                }
+
+                foreach (WordListHubSceneBindings.FilterOptionBinding option in section.options)
+                {
+                    if (option == null)
+                        continue;
+
+                    bool selected = option.value == selectedValue;
+                    if (option.selectedVisual != null)
+                        option.selectedVisual.SetActive(selected);
+                    if (option.label != null)
+                        option.label.text = (selected ? "✓  " : "    ") + option.optionLabel;
+                }
+            }
         }
 
         private void ToggleGroup(MockupLibraryGroup group)
@@ -857,10 +979,10 @@ namespace Words.UiMockups.WordListHub
                     (int)query.SortDirection);
                 BindDropdown(library.directionFilter, SetSortDirectionFromDropdown);
             }
+            SyncFilterMenu(library.filtersMenu, query);
             if (library.allLists != null)
-                SetButtonLabel(library.allLists, "All Lists");
-            if (library.favorites != null)
-                SetButtonLabel(library.favorites, "★ Favorites");
+                SetButtonLabel(library.allLists,
+                    query.View == MockupLibraryView.Favorites ? "Show All" : "Favourite");
         }
 
         private static void SetDropdownOptions(TMP_Dropdown dropdown, IEnumerable<string> options, int value)
@@ -1006,7 +1128,7 @@ namespace Words.UiMockups.WordListHub
                 !publicationIsActive, () => RequestDeleteList(item.Id));
             SetLibraryAction(library.play, "Play", true, () => BeginLibraryMockPlay(item.Id));
 
-            SetLibraryAction(library.edit, "Edit list",
+            SetLibraryAction(library.edit, "Edit List",
                 !item.IsReadOnly && !hasPublishedBinding,
                 !item.IsReadOnly && !hasPublishedBinding
                     ? (UnityAction)(() => EditOrCopy(item.Id)) : null);
@@ -1803,6 +1925,7 @@ namespace Words.UiMockups.WordListHub
 
         private void OpenDialog(string title, float width, float height)
         {
+            SetFiltersMenuOpen(false);
             WordListHubSceneBindings.ModalBinding modal = sceneBindings.modal;
             if (modal == null || modal.root == null)
                 throw new InvalidOperationException("The authored modal layer is missing from the scene bindings.");

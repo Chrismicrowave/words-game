@@ -50,6 +50,43 @@ namespace Words.UiMockups.WordListHub
             public TMP_Text label;
         }
 
+        public enum LibraryFilterKind
+        {
+            Order,
+            Language,
+            Played,
+            Sort
+        }
+
+        [Serializable]
+        public sealed class FilterOptionBinding
+        {
+            public int value;
+            public string optionLabel;
+            public Button button;
+            public TMP_Text label;
+            public GameObject selectedVisual;
+        }
+
+        [Serializable]
+        public sealed class FilterSectionBinding
+        {
+            public LibraryFilterKind kind;
+            public TMP_Text heading;
+            public List<FilterOptionBinding> options = new List<FilterOptionBinding>();
+        }
+
+        [Serializable]
+        public sealed class FilterMenuBinding
+        {
+            public Button toggleButton;
+            public TMP_Text toggleLabel;
+            public GameObject panel;
+            public ScrollRect scrollRect;
+            public Transform content;
+            public List<FilterSectionBinding> sections = new List<FilterSectionBinding>();
+        }
+
         [Serializable]
         public sealed class DiscoveryRowBinding
         {
@@ -110,6 +147,7 @@ namespace Words.UiMockups.WordListHub
             public TMP_Dropdown playedFilter;
             public TMP_Dropdown sortFilter;
             public TMP_Dropdown directionFilter;
+            public FilterMenuBinding filtersMenu = new FilterMenuBinding();
             public ButtonBinding createList = new ButtonBinding();
             public ScrollRect listScroll;
             public Transform listContent;

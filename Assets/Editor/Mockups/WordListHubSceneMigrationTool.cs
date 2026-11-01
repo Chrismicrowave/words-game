@@ -112,6 +112,7 @@ namespace Words.UiMockups.Editor
                 string backupPath = BackupExistingScene(sceneFilePath, metaPath);
 
                 Context context = ReadContext(scene);
+                WordListHubFiltersMenuAuthoring.EnsureForMigration(context.libraryRoot, context.controller);
                 string originalLibrarySignature = CaptureLibrarySignature(context.libraryRoot);
                 var allowedLibraryAdditions = new List<Transform>();
                 var addedBranchSignatures = new Dictionary<Transform, string>();
@@ -1026,6 +1027,7 @@ namespace Words.UiMockups.Editor
                 RequireChild(context.libraryRoot, "Filter_Sort").gameObject), "library.sortFilter");
             library.directionFilter = Assign(library.directionFilter, RequireComponent<TMP_Dropdown>(
                 RequireChild(context.libraryRoot, "Filter_Direction").gameObject), "library.directionFilter");
+            WordListHubFiltersMenuAuthoring.BindExistingMenu(context.libraryRoot, library);
             library.createList = BindButtonBinding(library.createList,
                 RequireButton(context.libraryRoot, "CreateList"), "library.createList");
             library.listScroll = Assign(library.listScroll, RequireComponent<ScrollRect>(
@@ -1445,6 +1447,24 @@ namespace Words.UiMockups.Editor
             AddButton(buttons, bindings.library.allLists);
             AddButton(buttons, bindings.library.favorites);
             AddButton(buttons, bindings.library.createList);
+            if (bindings.library.filtersMenu != null)
+            {
+                if (bindings.library.filtersMenu.toggleButton != null)
+                    buttons.Add(bindings.library.filtersMenu.toggleButton);
+                if (bindings.library.filtersMenu.sections != null)
+                {
+                    foreach (WordListHubSceneBindings.FilterSectionBinding section in bindings.library.filtersMenu.sections)
+                    {
+                        if (section == null || section.options == null)
+                            continue;
+                        foreach (WordListHubSceneBindings.FilterOptionBinding option in section.options)
+                        {
+                            if (option != null && option.button != null)
+                                buttons.Add(option.button);
+                        }
+                    }
+                }
+            }
             foreach (WordListHubSceneBindings.LibraryRowBinding row in bindings.library.authoredRows)
             {
                 if (row != null && row.favoriteButton != null)
@@ -1923,6 +1943,7 @@ namespace Words.UiMockups.Editor
             {
                 GameObject clone = UnityEngine.Object.Instantiate(context.dropdownTemplate.gameObject, parent, false);
                 clone.name = name;
+                clone.SetActive(true);
                 dropdown = RequireComponent<TMP_Dropdown>(clone);
                 SetCenteredRect(RequireComponent<RectTransform>(clone), position, size);
             }
