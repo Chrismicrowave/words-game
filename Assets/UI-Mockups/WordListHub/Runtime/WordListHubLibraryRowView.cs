@@ -10,7 +10,9 @@ namespace Words.UiMockups.WordListHub
         public string itemId;
         public GameObject selectedVisual;
         public Button button;
+        public Button favoriteButton;
         public TMP_Text favoriteMark;
+        public TMP_Text bestTime;
         public TMP_Text title;
         public TMP_Text metadata;
         public GameObject badgeRoot;

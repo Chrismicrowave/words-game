@@ -142,6 +142,8 @@ namespace Words.UiMockups.WordListHub
         }
 
         public bool IsReadOnly => Ownership == MockupOwnership.CommunityDownloaded;
+        public bool HasPublishedBinding => Ownership == MockupOwnership.Owned
+            && !string.IsNullOrEmpty(RemoteItemId);
         public bool HasBeenPlayed => LastPlayedAt.HasValue;
         public IReadOnlyList<MockupPreviousRecordSummary> PreviousContentRecords =>
             previousContentRecords.AsReadOnly();

@@ -634,6 +634,18 @@ namespace Words.UiMockups.WordListHub
             RefreshLibraryPage();
         }
 
+        private void TogglePublication(string mockId)
+        {
+            MockupWordList item = store.FindById(mockId);
+            if (item == null || item.IsReadOnly)
+                return;
+
+            if (item.HasPublishedBinding)
+                Unpublish(mockId);
+            else
+                PublishList(mockId);
+        }
+
         private void RequestDeleteList(string mockId)
         {
             MockupWordList item = store.FindById(mockId);
@@ -890,6 +902,7 @@ namespace Words.UiMockups.WordListHub
         private void UpdateLibraryRow(WordListHubSceneBindings.LibraryRowBinding binding, MockupWordList item)
         {
             SetText(binding.favoriteMark, item.IsFavorite ? "★" : "☆");
+            SetText(binding.bestTime, BestTimeLabel(item));
             SetText(binding.title, item.Title);
             SetText(binding.metadata,
                 LanguageLabel(item.Language) + "  ·  " + item.WordCount + " words  ·  " + RecordLabel(item));
@@ -898,6 +911,7 @@ namespace Words.UiMockups.WordListHub
             if (binding.badgeRoot != null)
                 binding.badgeRoot.SetActive(!string.IsNullOrEmpty(badge));
             BindButton(binding.button, () => SelectLibraryItem(item.Id));
+            BindButton(binding.favoriteButton, () => ToggleFavorite(item.Id));
         }
 
         private void UpdateLibraryRow(WordListHubLibraryRowView view, MockupWordList item)
@@ -906,6 +920,7 @@ namespace Words.UiMockups.WordListHub
                 return;
             view.itemId = item.Id;
             SetText(view.favoriteMark, item.IsFavorite ? "★" : "☆");
+            SetText(view.bestTime, BestTimeLabel(item));
             SetText(view.title, item.Title);
             SetText(view.metadata,
                 LanguageLabel(item.Language) + "  ·  " + item.WordCount + " words  ·  " + RecordLabel(item));
@@ -914,6 +929,7 @@ namespace Words.UiMockups.WordListHub
             if (view.badgeRoot != null)
                 view.badgeRoot.SetActive(!string.IsNullOrEmpty(badge));
             BindButton(view.button, () => SelectLibraryItem(item.Id));
+            BindButton(view.favoriteButton, () => ToggleFavorite(item.Id));
         }
 
         private void UpdateLibrarySelectionVisuals(
@@ -955,11 +971,9 @@ namespace Words.UiMockups.WordListHub
                 SetText(library.detailMetadata, string.Empty);
                 SetText(library.recordStars, string.Empty);
                 SetText(library.recordTime, string.Empty);
-                SetText(library.recordNote, string.Empty);
                 SetText(library.detailWordsLabel, "WORDS  ·  0");
                 SetText(library.detailWords, string.Empty);
                 SetText(library.detailStatus, string.Empty);
-                SetLibraryAction(library.favorite, string.Empty, false, null);
                 SetLibraryAction(library.delete, string.Empty, false, null);
                 SetLibraryAction(library.play, string.Empty, false, null);
                 SetLibraryAction(library.edit, string.Empty, false, null);
@@ -975,31 +989,23 @@ namespace Words.UiMockups.WordListHub
             string author = item.IsReadOnly
                 ? (string.IsNullOrEmpty(item.RemoteAuthor) ? "COMMUNITY MEMBER" : item.RemoteAuthor)
                 : "YOU";
-            SetText(library.detailMetadata, "BY " + author + "   ·   " + GroupLabel(item.Group).ToUpperInvariant()
-                + "   ·   " + LanguageLabel(item.Language) + "   ·   " + item.WordCount + " WORDS"
-                + "   ·   REVISION " + item.ContentRevision);
+            SetText(library.detailMetadata, "BY " + author);
             int earnedStars = Mathf.Clamp(item.PersonalStars ?? 0, 0, 5);
             SetText(library.recordStars, new string('★', earnedStars) + new string('☆', 5 - earnedStars));
             SetText(library.recordTime, item.BestTimeSeconds.HasValue
                 ? item.BestTimeSeconds.Value.ToString("0.0") + " s" : "No run yet");
-            SetText(library.recordNote, item.PreviousContentRecords.Count > 0
-                ? "Earlier content version records are archived."
-                : item.HasBeenPlayed ? "Best record for this content version." : "Finish a run to set your record.");
             SetText(library.detailWordsLabel, "WORDS  ·  " + item.WordCount);
             SetText(library.detailWords, item.Words == null || item.Words.Count == 0
                 ? "No words in this list." : string.Join("\n", item.Words));
 
+            bool hasPublishedBinding = item.HasPublishedBinding;
             bool publicationIsActive = item.IsPubliclyVisible
                 || item.PublicationStatus == MockupPublicationStatus.Published;
             SetText(library.detailStatus, DetailFeedbackMessage(item, publicationIsActive));
-            SetLibraryAction(library.favorite, item.IsFavorite ? "★ Saved" : "☆ Save", true,
-                () => ToggleFavorite(item.Id));
             SetLibraryAction(library.delete, "Delete",
                 !publicationIsActive, () => RequestDeleteList(item.Id));
             SetLibraryAction(library.play, "Play", true, () => BeginLibraryMockPlay(item.Id));
 
-            bool hasPublishedBinding = item.Ownership == MockupOwnership.Owned
-                && !string.IsNullOrEmpty(item.RemoteItemId);
             SetLibraryAction(library.edit, "Edit list",
                 !item.IsReadOnly && !hasPublishedBinding,
                 !item.IsReadOnly && !hasPublishedBinding
@@ -1007,20 +1013,16 @@ namespace Words.UiMockups.WordListHub
             UnityAction copyEditAction = null;
             if (item.IsReadOnly)
                 copyEditAction = () => EditOrCopy(item.Id);
-            else if (hasPublishedBinding)
+            else if (item.Ownership == MockupOwnership.Owned)
                 copyEditAction = () => OpenEditDialog(item.Id, true);
-            SetLibraryAction(library.copyEditWords, "Copy & edit words", item.IsReadOnly || hasPublishedBinding,
+            SetLibraryAction(library.copyEditWords, "Copy", copyEditAction != null,
                 copyEditAction);
 
-            bool isPublished = item.PublicationStatus == MockupPublicationStatus.Published;
-            string publishLabel = isPublished ? "Published" : "Publish list";
-            SetLibraryAction(library.publish, publishLabel, !item.IsReadOnly,
-                !item.IsReadOnly && !isPublished
-                    ? (UnityAction)(() => PublishList(item.Id)) : null);
+            SetLibraryAction(library.publish, hasPublishedBinding ? "Unpublish" : "Publish", !item.IsReadOnly,
+                !item.IsReadOnly ? (UnityAction)(() => TogglePublication(item.Id)) : null);
             if (library.publish != null && library.publish.button != null)
-                library.publish.button.interactable = !isPublished;
-            SetLibraryAction(library.unpublish, "Unpublish", !item.IsReadOnly && hasPublishedBinding
-                && isPublished, () => Unpublish(item.Id));
+                library.publish.button.interactable = !item.IsReadOnly;
+            SetLibraryAction(library.unpublish, string.Empty, false, null);
         }
 
         private static void SetLibraryAction(
@@ -1612,20 +1614,20 @@ namespace Words.UiMockups.WordListHub
             RefreshLibraryPage(false, true);
         }
 
-        private void OpenEditDialog(string mockId, bool copyPublishedContentAsNewList = false)
+        private void OpenEditDialog(string mockId, bool copyAsNewList = false)
         {
             MockupWordList item = store.FindById(mockId);
             if (item == null || item.IsReadOnly)
                 return;
 
             editingListId = item.Id;
-            bool hasPublishedBinding = item.Ownership == MockupOwnership.Owned
-                && !string.IsNullOrEmpty(item.RemoteItemId);
             bool hasRemoteIdentity = !string.IsNullOrEmpty(item.RemoteItemId);
-            if (hasRemoteIdentity && (!copyPublishedContentAsNewList || !hasPublishedBinding))
+            if (copyAsNewList && item.Ownership != MockupOwnership.Owned)
+                return;
+            if (hasRemoteIdentity && (!copyAsNewList || !item.HasPublishedBinding))
                 return;
 
-            copyEditingMode = copyPublishedContentAsNewList && hasPublishedBinding;
+            copyEditingMode = copyAsNewList;
             editDraft = store.CreateEditDraft(item.Id);
             if (editDraft.Words == null)
                 editDraft.Words = item.Words == null ? new List<string>() : new List<string>(item.Words);
@@ -1705,7 +1707,7 @@ namespace Words.UiMockups.WordListHub
             if (editSaveHintText != null)
             {
                 editSaveHintText.text = copyEditingMode
-                    ? "This creates an independent My List. The published original and its scores stay unchanged."
+                    ? "This creates an independent My List. The original and its scores stay unchanged."
                     : hasGameplayChange
                         ? "Saving changed words clears the current record; the previous record stays in history."
                         : string.Empty;
@@ -1766,7 +1768,7 @@ namespace Words.UiMockups.WordListHub
                 ShowConfirmation(
                     copyEditingMode ? "Create a separate local copy?" : "Confirm content change",
                     copyEditingMode
-                        ? "A new My List will be created with an independent ID. The published original and its scores stay unchanged."
+                        ? "A new My List will be created with an independent ID. The original and its scores stay unchanged."
                         : "This changes the list's playable words. Current stars and best time will be cleared for this version; the previous record stays in its history.",
                     copyEditingMode ? "Create copy" : "Save changed words",
                     "Keep editing", sceneBindings.modal.contentChange);
@@ -1780,13 +1782,13 @@ namespace Words.UiMockups.WordListHub
         {
             if (editDraft == null)
                 return;
-            bool creatingPublishedVersion = copyEditingMode;
-            MockupEditResult result = creatingPublishedVersion
-                ? store.SavePublishedContentAsNewList(editingListId, editDraft)
+            bool creatingCopy = copyEditingMode;
+            MockupEditResult result = creatingCopy
+                ? store.SaveOwnedContentAsNewList(editingListId, editDraft)
                 : store.SaveEdit(editingListId, editDraft);
             selectedListId = result.Item.Id;
-            lastActionMessage = creatingPublishedVersion
-                ? "Created a separate My List copy; the published original and its scores remain unchanged."
+            lastActionMessage = creatingCopy
+                ? "Created a separate My List copy; the original and its scores remain unchanged."
                 : result.ShowRecordWarning
                     ? "Saved new words. Current record cleared; the earlier version record was retained."
                     : "Saved list details. Personal record is unchanged.";
@@ -1947,6 +1949,13 @@ namespace Words.UiMockups.WordListHub
             if (!item.PersonalStars.HasValue)
                 return item.HasBeenPlayed ? "played" : "not played";
             return new string('★', Mathf.Clamp(item.PersonalStars.Value, 0, 5));
+        }
+
+        private static string BestTimeLabel(MockupWordList item)
+        {
+            return item.BestTimeSeconds.HasValue
+                ? item.BestTimeSeconds.Value.ToString("0.0") + " s"
+                : "—";
         }
 
         private static string ListBadge(MockupWordList item)

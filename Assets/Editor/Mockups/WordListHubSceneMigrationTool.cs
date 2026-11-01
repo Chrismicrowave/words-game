@@ -787,7 +787,20 @@ namespace Words.UiMockups.Editor
             WordListHubSceneBindings bindings = GetOrAddBindings(context);
             if (bindings.library.rowTemplate != null)
             {
-                ValidateTemplate(bindings.library.rowTemplate.transform, "Library row template");
+                WordListHubLibraryRowView existingView = bindings.library.rowTemplate;
+                existingView.button = RequireComponent<Button>(existingView.gameObject);
+                existingView.selectedVisual = RequireChild(existingView.transform, SelectionVisualName).gameObject;
+                existingView.favoriteMark = FindText(existingView.transform, "FavoriteMark");
+                existingView.favoriteButton = EnsureFavoriteButton(existingView.favoriteMark);
+                existingView.bestTime = EnsureBestTimeLabel(existingView.transform);
+                existingView.title = FindText(existingView.transform, "ListTitle");
+                existingView.metadata = FindText(existingView.transform, "ListMetadata");
+                Transform existingBadge = existingView.transform.Find("ListBadge");
+                existingView.badgeRoot = existingBadge != null ? existingBadge.gameObject : null;
+                existingView.badge = existingBadge != null ? existingBadge.GetComponent<TMP_Text>() : null;
+                ClearButtonListeners(existingView.button, context.controller);
+                ClearButtonListeners(existingView.favoriteButton, context.controller);
+                ValidateTemplate(existingView.transform, "Library row template");
                 return;
             }
 
@@ -811,6 +824,8 @@ namespace Words.UiMockups.Editor
                 view = clone.AddComponent<WordListHubLibraryRowView>();
             view.button = clone.GetComponent<Button>();
             view.favoriteMark = FindText(clone.transform, "FavoriteMark");
+            view.favoriteButton = EnsureFavoriteButton(view.favoriteMark);
+            view.bestTime = EnsureBestTimeLabel(clone.transform);
             view.title = FindText(clone.transform, "ListTitle");
             view.metadata = FindText(clone.transform, "ListMetadata");
             Transform badge = clone.transform.Find("ListBadge");
@@ -818,6 +833,7 @@ namespace Words.UiMockups.Editor
             view.badge = badge != null ? badge.GetComponent<TMP_Text>() : null;
             view.itemId = string.Empty;
             ClearButtonListeners(view.button, context.controller);
+            ClearButtonListeners(view.favoriteButton, context.controller);
             SetSliced(clone.transform, clone.transform.Find(SelectionVisualName));
             bindings.library.rowTemplate = view;
         }
@@ -1029,8 +1045,13 @@ namespace Words.UiMockups.Editor
                 FindText(RequireChild(RequireChild(detail, "DetailRecordPanel"), "RecordStars")), "library.recordStars");
             library.recordTime = Assign(library.recordTime,
                 FindText(RequireChild(RequireChild(detail, "DetailRecordPanel"), "RecordTime")), "library.recordTime");
-            library.recordNote = Assign(library.recordNote,
-                FindText(RequireChild(RequireChild(detail, "DetailRecordPanel"), "RecordNote")), "library.recordNote");
+            Transform detailFavorite = detail.Find("Action_Favorite");
+            if (detailFavorite != null)
+                detailFavorite.gameObject.SetActive(false);
+            Transform detailRecordPanel = detail.Find("DetailRecordPanel");
+            Transform recordNote = detailRecordPanel != null ? detailRecordPanel.Find("RecordNote") : null;
+            if (recordNote != null)
+                recordNote.gameObject.SetActive(false);
             Transform wordsPanel = RequireChild(detail, "DetailWordsPanel");
             library.detailWordsLabel = Assign(library.detailWordsLabel,
                 FindText(RequireChild(wordsPanel, "DetailWordsLabel")), "library.detailWordsLabel");
@@ -1038,13 +1059,16 @@ namespace Words.UiMockups.Editor
                 FindText(RequireChild(RequireChild(RequireChild(RequireChild(wordsPanel, "DetailWordsScroll"), "Viewport"), "Content"), "DetailWords")), "library.detailWords");
             library.detailStatus = Assign(library.detailStatus,
                 FindText(RequireChild(RequireChild(detail, "DetailFeedbackPanel"), "DetailStatus")), "library.detailStatus");
-            library.favorite = BindOptionalButtonBinding(library.favorite, detail, "Action_Favorite", "library.favorite");
             library.delete = BindButtonBinding(library.delete, context.libraryDeleteButton, "library.delete");
             library.play = BindOptionalButtonBinding(library.play, detail, "Action_PlayLibrary", "library.play");
             library.edit = BindOptionalButtonBinding(library.edit, detail, "Action_Edit", "library.edit");
             library.copyEditWords = BindOptionalButtonBinding(library.copyEditWords, detail, "Action_CopyEditWords", "library.copyEditWords");
             library.publish = BindOptionalButtonBinding(library.publish, detail, "Action_Publish", "library.publish");
             library.unpublish = BindOptionalButtonBinding(library.unpublish, detail, "Action_Unpublish", "library.unpublish");
+            if (library.copyEditWords.label != null)
+                library.copyEditWords.label.text = "Copy";
+            if (library.unpublish.button != null)
+                library.unpublish.button.gameObject.SetActive(false);
 
             if (library.groups == null)
                 library.groups = new List<WordListHubSceneBindings.GroupBinding>();
@@ -1064,6 +1088,9 @@ namespace Words.UiMockups.Editor
                     continue;
                 string listId = child.name.Substring("LibraryItem_".Length);
                 Button button = RequireComponent<Button>(child.gameObject);
+                TMP_Text favoriteMark = FindText(child, "FavoriteMark");
+                Button favoriteButton = EnsureFavoriteButton(favoriteMark);
+                TMP_Text bestTime = EnsureBestTimeLabel(child);
                 TMP_Text badge = FindText(child, "ListBadge");
                 AddOrValidateLibraryRow(library.authoredRows, new WordListHubSceneBindings.LibraryRowBinding
                 {
@@ -1071,13 +1098,98 @@ namespace Words.UiMockups.Editor
                     root = child.gameObject,
                     selectedVisual = RequireChild(child, SelectionVisualName).gameObject,
                     button = button,
-                    favoriteMark = FindText(child, "FavoriteMark"),
+                    favoriteButton = favoriteButton,
+                    favoriteMark = favoriteMark,
+                    bestTime = bestTime,
                     title = FindText(child, "ListTitle"),
                     metadata = FindText(child, "ListMetadata"),
                     badgeRoot = badge != null ? badge.gameObject : null,
                     badge = badge
                 });
+                ClearButtonListeners(favoriteButton, context.controller);
             }
+        }
+
+        private static Button EnsureFavoriteButton(TMP_Text favoriteMark)
+        {
+            if (favoriteMark == null)
+                return null;
+
+            Button button = favoriteMark.GetComponent<Button>();
+            if (button == null)
+                button = favoriteMark.gameObject.AddComponent<Button>();
+            favoriteMark.raycastTarget = true;
+            button.targetGraphic = favoriteMark;
+            button.transition = Selectable.Transition.None;
+            button.navigation = new Navigation { mode = Navigation.Mode.None };
+            return button;
+        }
+
+        private static TMP_Text EnsureBestTimeLabel(Transform row)
+        {
+            TMP_Text existing = FindText(row, "BestTime");
+            if (existing != null)
+            {
+                RectTransform existingRect = existing.rectTransform;
+                if (existingRect != null)
+                {
+                    existingRect.anchorMin = new Vector2(0.5f, 0.5f);
+                    existingRect.anchorMax = new Vector2(0.5f, 0.5f);
+                    existingRect.pivot = new Vector2(0.5f, 0.5f);
+                    existingRect.anchoredPosition = new Vector2(-255f, 0f);
+                    existingRect.sizeDelta = new Vector2(72f, 22f);
+                }
+                existing.raycastTarget = false;
+                MakeRoomForBestTime(FindText(row, "ListTitle"));
+                MakeRoomForBestTime(FindText(row, "ListMetadata"));
+                return existing;
+            }
+
+            TMP_Text styleSource = FindText(row, "ListMetadata");
+            if (styleSource == null)
+                return null;
+
+            var labelObject = new GameObject("BestTime", typeof(RectTransform), typeof(CanvasRenderer),
+                typeof(TextMeshProUGUI));
+            labelObject.transform.SetParent(row, false);
+            RectTransform rect = (RectTransform)labelObject.transform;
+            rect.anchorMin = new Vector2(0.5f, 0.5f);
+            rect.anchorMax = new Vector2(0.5f, 0.5f);
+            rect.pivot = new Vector2(0.5f, 0.5f);
+            rect.anchoredPosition = new Vector2(-255f, 0f);
+            rect.sizeDelta = new Vector2(72f, 22f);
+
+            TextMeshProUGUI label = labelObject.GetComponent<TextMeshProUGUI>();
+            label.font = styleSource.font;
+            label.fontSharedMaterial = styleSource.fontSharedMaterial;
+            label.fontSize = styleSource.fontSize;
+            label.color = styleSource.color;
+            label.fontStyle = styleSource.fontStyle;
+            label.alignment = TextAlignmentOptions.MidlineLeft;
+            label.enableWordWrapping = false;
+            label.raycastTarget = false;
+            label.text = "—";
+
+            MakeRoomForBestTime(FindText(row, "ListTitle"));
+            MakeRoomForBestTime(styleSource);
+            return label;
+        }
+
+        private static void MakeRoomForBestTime(TMP_Text text)
+        {
+            if (text == null)
+                return;
+            RectTransform rect = text.rectTransform;
+            if (rect == null || !Mathf.Approximately(rect.anchoredPosition.x, -35f)
+                || !Mathf.Approximately(rect.sizeDelta.x, 450f))
+                return;
+
+            Vector2 position = rect.anchoredPosition;
+            position.x = -15f;
+            rect.anchoredPosition = position;
+            Vector2 size = rect.sizeDelta;
+            size.x = 410f;
+            rect.sizeDelta = size;
         }
 
         private static Button EnsureLibraryDeleteButton(Context context)
@@ -1333,7 +1445,11 @@ namespace Words.UiMockups.Editor
             AddButton(buttons, bindings.library.allLists);
             AddButton(buttons, bindings.library.favorites);
             AddButton(buttons, bindings.library.createList);
-            AddButton(buttons, bindings.library.favorite);
+            foreach (WordListHubSceneBindings.LibraryRowBinding row in bindings.library.authoredRows)
+            {
+                if (row != null && row.favoriteButton != null)
+                    buttons.Add(row.favoriteButton);
+            }
             AddButton(buttons, bindings.library.delete);
             AddButton(buttons, bindings.library.play);
             AddButton(buttons, bindings.library.edit);
@@ -1538,9 +1654,13 @@ namespace Words.UiMockups.Editor
             }
             if (existing.root != row.root || existing.button != row.button)
                 throw new InvalidOperationException("Existing authored Library row binding no longer matches " + row.listId + ".");
+            if (existing.favoriteButton == null) existing.favoriteButton = row.favoriteButton;
+            else if (existing.favoriteButton != row.favoriteButton) throw new InvalidOperationException("Existing authored Library favorite reference changed: " + row.listId);
             if (existing.selectedVisual == null) existing.selectedVisual = row.selectedVisual;
             else if (existing.selectedVisual != row.selectedVisual) throw new InvalidOperationException("Existing authored Library row selection reference changed: " + row.listId);
             if (existing.favoriteMark == null) existing.favoriteMark = row.favoriteMark;
+            if (existing.bestTime == null) existing.bestTime = row.bestTime;
+            else if (existing.bestTime != row.bestTime) throw new InvalidOperationException("Existing authored Library time reference changed: " + row.listId);
             if (existing.title == null) existing.title = row.title;
             if (existing.metadata == null) existing.metadata = row.metadata;
             if (existing.badgeRoot == null) existing.badgeRoot = row.badgeRoot;

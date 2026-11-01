@@ -33,7 +33,9 @@ namespace Words.UiMockups.WordListHub
             public GameObject root;
             public GameObject selectedVisual;
             public Button button;
+            public Button favoriteButton;
             public TMP_Text favoriteMark;
+            public TMP_Text bestTime;
             public TMP_Text title;
             public TMP_Text metadata;
             public GameObject badgeRoot;
@@ -122,11 +124,9 @@ namespace Words.UiMockups.WordListHub
             public TMP_Text detailMetadata;
             public TMP_Text recordStars;
             public TMP_Text recordTime;
-            public TMP_Text recordNote;
             public TMP_Text detailWordsLabel;
             public TMP_Text detailWords;
             public TMP_Text detailStatus;
-            public ButtonBinding favorite = new ButtonBinding();
             public ButtonBinding delete = new ButtonBinding();
             public ButtonBinding play = new ButtonBinding();
             public ButtonBinding edit = new ButtonBinding();

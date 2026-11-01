@@ -615,6 +615,78 @@ namespace Words.UiMockups.WordListHub.Tests
         }
 
         [Test]
+        public void OwnedCopy_createsIndependentMyList_withoutRemoteIdentityOrRecords()
+        {
+            MockupWordList source = store.FindById("mock-list-travel-copy");
+            store.ToggleFavorite(source.Id);
+            store.CompleteRun(source.Id, 4, 61f);
+
+            MockupWordListEdit contentEdit = store.CreateEditDraft(source.Id);
+            contentEdit.Words.Add("source revision");
+            store.SaveEdit(source.Id, contentEdit);
+            store.CompleteRun(source.Id, 3, 72f);
+
+            string sourceTitle = source.Title;
+            string sourceDescription = source.Description;
+            string sourceTags = source.Tags;
+            List<string> sourceWords = new List<string>(source.Words);
+            int? sourceStars = source.PersonalStars;
+            float? sourceBestTime = source.BestTimeSeconds;
+            int sourcePlayCount = source.PlayCount;
+            int sourceHistoryCount = source.PreviousContentRecords.Count;
+            bool sourceFavorite = source.IsFavorite;
+            System.DateTime sourceModifiedAt = source.ModifiedAt;
+
+            MockupWordListEdit draft = store.CreateEditDraft(source.Id);
+            draft.Title = "Travel Phrases Copy";
+            draft.Description = "An independent local copy.";
+            draft.Tags = "travel,copy";
+
+            MockupEditResult result = store.SaveOwnedContentAsNewList(source.Id, draft);
+            MockupWordList copy = result.Item;
+
+            Assert.That(result.CreatedNewList, Is.True);
+            Assert.That(result.ContentChanged, Is.False);
+            Assert.That(result.ShowRecordWarning, Is.False);
+            Assert.That(copy.Id, Is.Not.EqualTo(source.Id));
+            Assert.That(copy.Title, Is.EqualTo(draft.Title));
+            Assert.That(copy.Description, Is.EqualTo(draft.Description));
+            Assert.That(copy.Tags, Is.EqualTo(draft.Tags));
+            Assert.That(copy.Language, Is.EqualTo(source.Language));
+            Assert.That(copy.Words, Is.EqualTo(sourceWords));
+            Assert.That(copy.WordCount, Is.EqualTo(copy.Words.Count));
+            Assert.That(copy.Ownership, Is.EqualTo(MockupOwnership.Owned));
+            Assert.That(copy.Group, Is.EqualTo(MockupLibraryGroup.MyLists));
+            Assert.That(copy.IsReadOnly, Is.False);
+            Assert.That(copy.HasOfflineCache, Is.True);
+            Assert.That(copy.HasPublishedBinding, Is.False);
+            Assert.That(copy.RemoteItemId, Is.Null);
+            Assert.That(copy.RemoteAuthor, Is.Null);
+            Assert.That(copy.IsPubliclyVisible, Is.False);
+            Assert.That(copy.DownloadStatus, Is.EqualTo(MockupDownloadStatus.None));
+            Assert.That(copy.PublicationStatus, Is.EqualTo(MockupPublicationStatus.NotPublished));
+            Assert.That(copy.ContentRevision, Is.EqualTo(1));
+            Assert.That(copy.LastPlayedAt, Is.Null);
+            Assert.That(copy.PersonalStars, Is.Null);
+            Assert.That(copy.BestTimeSeconds, Is.Null);
+            Assert.That(copy.PlayCount, Is.Zero);
+            Assert.That(copy.IsFavorite, Is.False);
+            Assert.That(copy.PreviousContentRecords, Is.Empty);
+
+            Assert.That(source.Title, Is.EqualTo(sourceTitle));
+            Assert.That(source.Description, Is.EqualTo(sourceDescription));
+            Assert.That(source.Tags, Is.EqualTo(sourceTags));
+            Assert.That(source.Words, Is.EqualTo(sourceWords));
+            Assert.That(source.PersonalStars, Is.EqualTo(sourceStars));
+            Assert.That(source.BestTimeSeconds, Is.EqualTo(sourceBestTime));
+            Assert.That(source.PlayCount, Is.EqualTo(sourcePlayCount));
+            Assert.That(source.PreviousContentRecords, Has.Count.EqualTo(sourceHistoryCount));
+            Assert.That(source.IsFavorite, Is.EqualTo(sourceFavorite));
+            Assert.That(source.ModifiedAt, Is.EqualTo(sourceModifiedAt));
+            Assert.That(source.Group, Is.EqualTo(MockupLibraryGroup.MyLists));
+        }
+
+        [Test]
         public void DiscardingAnEditDraft_leavesTheLibraryItemUnchanged()
         {
             MockupWordList item = store.FindById("mock-list-travel-copy");
@@ -996,8 +1068,10 @@ namespace Words.UiMockups.WordListHub.Tests
             foreach (WordListHubSceneBindings.GroupBinding group in bindings.library.groups)
                 yield return group.button;
             foreach (WordListHubSceneBindings.LibraryRowBinding row in bindings.library.authoredRows)
+            {
                 yield return row.button;
-            yield return bindings.library.favorite.button;
+                yield return row.favoriteButton;
+            }
             yield return bindings.library.delete.button;
             yield return bindings.library.play.button;
             yield return bindings.library.edit.button;

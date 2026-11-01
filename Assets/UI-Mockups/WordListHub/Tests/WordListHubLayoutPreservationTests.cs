@@ -158,10 +158,12 @@ namespace Words.UiMockups.WordListHub.Tests
                 "Selecting a row should refresh the authored detail title.");
             AssertExactlyOneSelectedLibraryRow(bindings.library, libraryRow.title);
 
-            string favoriteLabelBefore = bindings.library.favorite.label.text;
-            Press(bindings.library.favorite.button);
-            Assert.That(bindings.library.favorite.label.text, Is.Not.EqualTo(favoriteLabelBefore),
-                "A single click must toggle Favorite once; duplicate listeners would toggle it back.");
+            WordListHubSceneBindings.LibraryRowBinding favoriteRow =
+                bindings.library.authoredRows.First(row => row != null);
+            string favoriteLabelBefore = favoriteRow.favoriteMark.text;
+            Press(favoriteRow.favoriteButton);
+            Assert.That(favoriteRow.favoriteMark.text, Is.Not.EqualTo(favoriteLabelBefore),
+                "A single row-star click must toggle Favorite once; duplicate listeners would toggle it back.");
             AssertExactlyOneSelectedLibraryRow(bindings.library, libraryRow.title);
 
             SetDropdownValue(bindings.library.languageFilter, 1);
@@ -255,7 +257,7 @@ namespace Words.UiMockups.WordListHub.Tests
                 "After download the new local copy should be selected in the Library.");
             Assert.That(CountLibraryRowsByTitle(bindings.library, candidate.Title), Is.EqualTo(1));
             Assert.That(bindings.library.copyEditWords.button.gameObject.activeInHierarchy, Is.True);
-            Assert.That(bindings.library.copyEditWords.label.text, Is.EqualTo("Copy & edit words"));
+            Assert.That(bindings.library.copyEditWords.label.text, Is.EqualTo("Copy"));
             Assert.That(bindings.library.edit.button.gameObject.activeInHierarchy, Is.False,
                 "A community download should use the shared copy action, not a separate edit entry.");
             Assert.That(bindings.library.delete.label.text, Is.EqualTo("Delete"));
@@ -271,12 +273,75 @@ namespace Words.UiMockups.WordListHub.Tests
             Assert.That(bindings.library.copyEditWords.button, Is.SameAs(sharedCopyAction),
                 "All copy entry states must reuse the same authored Scene button.");
             Assert.That(sharedCopyAction.gameObject.activeInHierarchy, Is.True);
-            Assert.That(bindings.library.copyEditWords.label.text, Is.EqualTo("Copy & edit words"));
+            Assert.That(bindings.library.copyEditWords.label.text, Is.EqualTo("Copy"));
             Assert.That(bindings.library.edit.button.gameObject.activeInHierarchy, Is.False,
-                "The published original is immutable; use the shared Copy & edit words action.");
+                "The published original is immutable; use the shared Copy action.");
             AssertExactlyOneSelectedLibraryRow(bindings.library, published.Title);
             snapshot.AssertUnchanged("Community download");
             snapshot.AssertOriginalObjectsStillExist("Community download");
+        }
+
+        [Test]
+        public void MyListsShowSeparateEditAndCopy_withOneBindingDrivenPublicationToggle()
+        {
+            WordListHubMockupController controller = harness.Controller;
+            WordListHubSceneBindings bindings = harness.Bindings;
+            UiSceneSnapshot snapshot = UiSceneSnapshot.Capture(harness.Root);
+            InvokeAwake(controller);
+
+            MockupWordListStore store = GetStore(controller);
+            MockupWordList source = store.FindById("mock-list-travel-copy");
+            Assert.That(source, Is.Not.Null);
+            Press(FindLibraryButton(bindings.library, source.Id));
+
+            Assert.That(bindings.library.edit.button.gameObject.activeInHierarchy, Is.True);
+            Assert.That(bindings.library.copyEditWords.button.gameObject.activeInHierarchy, Is.True);
+            Assert.That(bindings.library.copyEditWords.label.text, Is.EqualTo("Copy"));
+            Assert.That(bindings.library.publish.button.gameObject.activeInHierarchy, Is.True);
+            Assert.That(bindings.library.publish.label.text, Is.EqualTo("Publish"));
+            Assert.That(bindings.library.unpublish.button.gameObject.activeSelf, Is.False);
+
+            Press(bindings.library.copyEditWords.button);
+            Assert.That(bindings.modal.editList.root.activeInHierarchy, Is.True);
+            Assert.That(bindings.modal.editList.saveButtonLabel.text, Is.EqualTo("Save editable copy"));
+            SetInputValueWithoutNotify(bindings.modal.editList.titleInput, "Travel Phrases Copy");
+            Press(bindings.modal.editList.saveButton);
+            Assert.That(bindings.modal.contentChange.root.activeInHierarchy, Is.True);
+            Press(bindings.modal.contentChange.confirmButton);
+
+            MockupWordList copy = store.QueryLibrary(new MockupLibraryQuery
+                { View = MockupLibraryView.MyLists })
+                .Single(item => item.Title == "Travel Phrases Copy");
+            Assert.That(copy.Id, Is.Not.EqualTo(source.Id));
+            Assert.That(copy.Group, Is.EqualTo(MockupLibraryGroup.MyLists));
+            Assert.That(copy.HasPublishedBinding, Is.False);
+            Assert.That(copy.RemoteItemId, Is.Null);
+            Assert.That(source.Title, Is.EqualTo("Travel Phrases"));
+            Assert.That(bindings.library.detailTitle.text, Is.EqualTo(copy.Title));
+
+            Press(bindings.library.publish.button);
+            Assert.That(copy.HasPublishedBinding, Is.True);
+            Assert.That(bindings.library.publish.label.text, Is.EqualTo("Unpublish"));
+            Assert.That(bindings.library.publish.button.gameObject.activeInHierarchy, Is.True);
+            Assert.That(bindings.library.unpublish.button.gameObject.activeSelf, Is.False);
+            Assert.That(bindings.library.edit.button.gameObject.activeInHierarchy, Is.False);
+
+            // A bound remote identity drives the toggle even if the visible status is stale.
+            typeof(MockupWordList).GetProperty(nameof(MockupWordList.PublicationStatus))
+                .GetSetMethod(true).Invoke(copy, new object[] { MockupPublicationStatus.NotPublished });
+            InvokeRefreshLibraryPage(controller);
+            Assert.That(bindings.library.publish.label.text, Is.EqualTo("Unpublish"));
+            Assert.That(bindings.library.publish.button.interactable, Is.True);
+
+            Press(bindings.library.publish.button);
+            Assert.That(copy.HasPublishedBinding, Is.False);
+            Assert.That(copy.Group, Is.EqualTo(MockupLibraryGroup.MyLists));
+            Assert.That(bindings.library.publish.label.text, Is.EqualTo("Publish"));
+            Assert.That(bindings.library.edit.button.gameObject.activeInHierarchy, Is.True);
+            Assert.That(bindings.library.copyEditWords.button.gameObject.activeInHierarchy, Is.True);
+            Assert.That(bindings.library.unpublish.button.gameObject.activeSelf, Is.False);
+            snapshot.AssertUnchanged("Edit, Copy and publication toggle");
+            snapshot.AssertOriginalObjectsStillExist("Edit, Copy and publication toggle");
         }
 
         private static void AssertLibraryRowsMatchQuery(
@@ -462,7 +527,11 @@ namespace Words.UiMockups.WordListHub.Tests
                 AssertSelectedVisual(row.selectedVisual, row.root.transform,
                     "Authored Library row " + row.listId);
                 Assert.That(row.button, Is.Not.Null);
+                Assert.That(row.favoriteButton, Is.Not.Null);
+                Assert.That(row.favoriteButton.targetGraphic, Is.EqualTo(row.favoriteMark));
                 Assert.That(row.favoriteMark, Is.Not.Null);
+                Assert.That(row.bestTime, Is.Not.Null);
+                Assert.That(row.bestTime.raycastTarget, Is.False);
                 Assert.That(row.title, Is.Not.Null);
                 Assert.That(row.metadata, Is.Not.Null);
             }
@@ -514,11 +583,17 @@ namespace Words.UiMockups.WordListHub.Tests
             Assert.That(template, Is.Not.Null, "A Scene-authored Library row template is required.");
             AssertSelectedVisual(template.selectedVisual, template.transform, "Library row template");
             Assert.That(template.button, Is.Not.Null);
+            Assert.That(template.favoriteButton, Is.Not.Null);
+            Assert.That(template.favoriteButton.targetGraphic, Is.EqualTo(template.favoriteMark));
             Assert.That(template.favoriteMark, Is.Not.Null);
+            Assert.That(template.bestTime, Is.Not.Null);
+            Assert.That(template.bestTime.raycastTarget, Is.False);
             Assert.That(template.title, Is.Not.Null);
             Assert.That(template.metadata, Is.Not.Null);
             AssertReferenceWithin(template.transform, template.button.transform, "Library row button");
+            AssertReferenceWithin(template.transform, template.favoriteButton.transform, "Library favorite button");
             AssertReferenceWithin(template.transform, template.favoriteMark.transform, "Library favorite text");
+            AssertReferenceWithin(template.transform, template.bestTime.transform, "Library best time text");
             AssertReferenceWithin(template.transform, template.title.transform, "Library title text");
             AssertReferenceWithin(template.transform, template.metadata.transform, "Library metadata text");
             if (template.badge != null)
@@ -610,12 +685,15 @@ namespace Words.UiMockups.WordListHub.Tests
                 AssertRectShapeMatches(library.rowTemplate.transform as RectTransform,
                     row.transform as RectTransform, row.name);
                 AssertReferenceWithin(row.transform, row.button.transform, row.name + ".button");
+                AssertReferenceWithin(row.transform, row.favoriteButton.transform, row.name + ".favoriteButton");
                 AssertReferenceWithin(row.transform, row.favoriteMark.transform, row.name + ".favorite");
+                AssertReferenceWithin(row.transform, row.bestTime.transform, row.name + ".bestTime");
                 AssertReferenceWithin(row.transform, row.title.transform, row.name + ".title");
                 AssertReferenceWithin(row.transform, row.metadata.transform, row.name + ".metadata");
                 if (row.badge != null)
                     AssertReferenceWithin(row.transform, row.badge.transform, row.name + ".badge");
                 AssertTextStyleMatches(library.rowTemplate.favoriteMark, row.favoriteMark, row.name + ".favorite");
+                AssertTextStyleMatches(library.rowTemplate.bestTime, row.bestTime, row.name + ".bestTime");
                 AssertTextStyleMatches(library.rowTemplate.title, row.title, row.name + ".title");
                 AssertTextStyleMatches(library.rowTemplate.metadata, row.metadata, row.name + ".metadata");
                 if (library.rowTemplate.badge != null)
@@ -768,6 +846,14 @@ namespace Words.UiMockups.WordListHub.Tests
                 "Awake", BindingFlags.Instance | BindingFlags.NonPublic);
             Assert.That(awake, Is.Not.Null, "The test needs a controller initialization entry point.");
             awake.Invoke(controller, null);
+        }
+
+        private static void InvokeRefreshLibraryPage(WordListHubMockupController controller)
+        {
+            MethodInfo refresh = typeof(WordListHubMockupController).GetMethod(
+                "RefreshLibraryPage", BindingFlags.Instance | BindingFlags.NonPublic);
+            Assert.That(refresh, Is.Not.Null);
+            refresh.Invoke(controller, new object[] { false, false });
         }
 
         private static void AssertVector2(Vector2 actual, Vector2 expected, string description)

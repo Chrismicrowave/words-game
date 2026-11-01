@@ -578,8 +578,26 @@ namespace Words.UiMockups.WordListHub
                 throw new ArgumentNullException(nameof(edit));
 
             MockupWordList source = RequireList(mockId);
-            if (source.Ownership != MockupOwnership.Owned || string.IsNullOrEmpty(source.RemoteItemId))
+            if (!source.HasPublishedBinding)
                 throw new InvalidOperationException("Only a previously published owned list can be copied.");
+
+            return SaveOwnedContentAsNewList(source, edit);
+        }
+
+        public MockupEditResult SaveOwnedContentAsNewList(string mockId, MockupWordListEdit edit)
+        {
+            if (edit == null)
+                throw new ArgumentNullException(nameof(edit));
+
+            MockupWordList source = RequireList(mockId);
+            if (source.Ownership != MockupOwnership.Owned)
+                throw new InvalidOperationException("Only an owned list can be copied.");
+
+            return SaveOwnedContentAsNewList(source, edit);
+        }
+
+        private MockupEditResult SaveOwnedContentAsNewList(MockupWordList source, MockupWordListEdit edit)
+        {
 
             List<string> nextWords = ResolveEditedWords(source, edit);
             bool contentChanged = source.Language != edit.Language
