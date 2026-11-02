@@ -57,7 +57,11 @@ namespace Words.UiMockups.WordListHub
             Played,
             Sort,
             MockConnectionState,
-            AchievementStatus
+            AchievementStatus,
+            CommunityOrder,
+            CommunityLanguage,
+            CommunityDownloadState,
+            CommunitySort
         }
 
         [Serializable]

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Text;
 
 namespace Words.UiMockups.WordListHub
 {
@@ -79,6 +80,21 @@ namespace Words.UiMockups.WordListHub
     {
         New,
         Updated
+    }
+
+    public enum MockupDiscoveryDownloadFilter
+    {
+        All,
+        Downloaded,
+        NotDownloaded
+    }
+
+    public enum MockupDiscoverySortMode
+    {
+        Default,
+        Name,
+        Likes,
+        WordCount
     }
 
     public enum MockupReportStatus
@@ -231,6 +247,15 @@ namespace Words.UiMockups.WordListHub
         public MockupSortDirection SortDirection { get; set; } = MockupSortDirection.Descending;
     }
 
+    public sealed class MockupDiscoveryQuery
+    {
+        public string SearchText { get; set; } = "";
+        public MockupLanguageFilter LanguageFilter { get; set; } = MockupLanguageFilter.All;
+        public MockupDiscoveryDownloadFilter DownloadFilter { get; set; } = MockupDiscoveryDownloadFilter.All;
+        public MockupDiscoverySortMode SortMode { get; set; } = MockupDiscoverySortMode.Default;
+        public MockupSortDirection SortDirection { get; set; } = MockupSortDirection.Ascending;
+    }
+
     public sealed class MockupWordListEdit
     {
         public string Title { get; set; }
@@ -245,6 +270,228 @@ namespace Words.UiMockups.WordListHub
         /// </summary>
         public bool GameplayContentChanged { get; set; }
         public string Tags { get; set; }
+    }
+
+    /// <summary>
+    /// Parses the mockup's optional inline pronunciation annotation. Chinese syllables
+    /// follow the display text in source-character order: "苹果 | ping guo".
+    /// </summary>
+    public static class MockupWordContent
+    {
+        private const char PinyinSeparator = '|';
+        private const string MissingPinyinLabel = " (pinyin not set)";
+
+        public static bool TryValidateWordText(
+            string text,
+            IEnumerable<string> unchangedLegacyWords,
+            out string error)
+        {
+            if (string.IsNullOrEmpty(text))
+                return TryValidateWordLines(null, unchangedLegacyWords, out error);
+
+            string normalizedLineEndings = text.Replace("\r\n", "\n").Replace('\r', '\n');
+            return TryValidateWordLines(
+                normalizedLineEndings.Split(new[] { '\n' }, StringSplitOptions.None),
+                unchangedLegacyWords,
+                out error);
+        }
+
+        public static bool TryValidateWordLines(
+            IEnumerable<string> words,
+            IEnumerable<string> unchangedLegacyWords,
+            out string error)
+        {
+            var legacyWordCounts = new Dictionary<string, int>(StringComparer.Ordinal);
+            if (unchangedLegacyWords != null)
+            {
+                foreach (string legacyWord in unchangedLegacyWords)
+                {
+                    string value = legacyWord == null ? string.Empty : legacyWord.Trim();
+                    if (value.Length == 0 || value.IndexOf(PinyinSeparator) >= 0
+                        || CountHanCharacters(value) == 0)
+                        continue;
+
+                    int count;
+                    legacyWordCounts.TryGetValue(value, out count);
+                    legacyWordCounts[value] = count + 1;
+                }
+            }
+
+            int lineNumber = 0;
+            if (words != null)
+            {
+                foreach (string word in words)
+                {
+                    lineNumber++;
+                    string value = word == null ? string.Empty : word.Trim();
+                    if (string.IsNullOrWhiteSpace(value))
+                        continue;
+                    int hanCharacterCount = CountHanCharacters(value);
+                    if (hanCharacterCount == 0)
+                        continue;
+
+                    int separatorIndex = value.IndexOf(PinyinSeparator);
+                    if (separatorIndex < 0)
+                    {
+                        int unchangedCount;
+                        if (legacyWordCounts.TryGetValue(value, out unchangedCount) && unchangedCount > 0)
+                        {
+                            legacyWordCounts[value] = unchangedCount - 1;
+                            continue;
+                        }
+
+                        error = "Line " + lineNumber
+                            + ": add one lowercase pinyin syllable per Chinese character using 'display | ni hao'.";
+                        return false;
+                    }
+
+                    if (separatorIndex != value.LastIndexOf(PinyinSeparator))
+                    {
+                        error = "Line " + lineNumber + ": use one '|' between the display text and pinyin.";
+                        return false;
+                    }
+
+                    string display = value.Substring(0, separatorIndex).Trim();
+                    string pinyinText = value.Substring(separatorIndex + 1).Trim();
+                    if (display.Length == 0 || pinyinText.Length == 0)
+                    {
+                        error = "Line " + lineNumber
+                            + ": add one lowercase pinyin syllable per Chinese character using 'display | ni hao'.";
+                        return false;
+                    }
+
+                    string[] syllables = SplitSyllables(pinyinText);
+                    if (syllables.Length != hanCharacterCount)
+                    {
+                        error = "Line " + lineNumber + ": expected " + hanCharacterCount
+                            + " pinyin syllable(s), one per Chinese character.";
+                        return false;
+                    }
+
+                    foreach (string syllable in syllables)
+                    {
+                        if (!IsLowercasePinyinSyllable(syllable))
+                        {
+                            error = "Line " + lineNumber
+                                + ": pinyin must use lowercase a-z only, with no tone marks.";
+                            return false;
+                        }
+                    }
+                }
+            }
+
+            error = null;
+            return true;
+        }
+
+        public static string FormatForDetail(string word)
+        {
+            string value = word ?? string.Empty;
+            if (CountHanCharacters(value) == 0)
+                return value;
+
+            string display;
+            string[] syllables;
+            if (!TryParsePinyinAnnotation(value, out display, out syllables))
+            {
+                return value.IndexOf(PinyinSeparator) < 0
+                    ? value + MissingPinyinLabel
+                    : value;
+            }
+
+            var formatted = new StringBuilder(display.Length + syllables.Length * 5);
+            int syllableIndex = 0;
+            bool previousWasHan = false;
+            foreach (char character in display)
+            {
+                if (IsHanCharacter(character))
+                {
+                    if (previousWasHan)
+                        formatted.Append(' ');
+                    formatted.Append(character).Append('(').Append(syllables[syllableIndex++]).Append(')');
+                    previousWasHan = true;
+                }
+                else
+                {
+                    formatted.Append(character);
+                    previousWasHan = false;
+                }
+            }
+
+            return formatted.ToString();
+        }
+
+        private static bool TryParsePinyinAnnotation(string value, out string display, out string[] syllables)
+        {
+            display = null;
+            syllables = null;
+            int separatorIndex = value.IndexOf(PinyinSeparator);
+            if (separatorIndex < 0 || separatorIndex != value.LastIndexOf(PinyinSeparator))
+                return false;
+
+            display = value.Substring(0, separatorIndex).Trim();
+            if (display.Length == 0 || CountHanCharacters(display) == 0)
+                return false;
+
+            string pinyinText = value.Substring(separatorIndex + 1).Trim();
+            if (pinyinText.Length == 0)
+                return false;
+
+            syllables = SplitSyllables(pinyinText);
+            if (syllables.Length != CountHanCharacters(display))
+                return false;
+
+            foreach (string syllable in syllables)
+            {
+                if (!IsLowercasePinyinSyllable(syllable))
+                    return false;
+            }
+
+            return true;
+        }
+
+        private static string[] SplitSyllables(string pinyinText)
+        {
+            return pinyinText.Split(
+                new[] { ' ', '\t', '\r', '\n' },
+                StringSplitOptions.RemoveEmptyEntries);
+        }
+
+        private static bool IsLowercasePinyinSyllable(string syllable)
+        {
+            if (string.IsNullOrEmpty(syllable))
+                return false;
+
+            foreach (char character in syllable)
+            {
+                if (character < 'a' || character > 'z')
+                    return false;
+            }
+
+            return true;
+        }
+
+        private static int CountHanCharacters(string value)
+        {
+            int count = 0;
+            if (value == null)
+                return count;
+
+            foreach (char character in value)
+            {
+                if (IsHanCharacter(character))
+                    count++;
+            }
+
+            return count;
+        }
+
+        private static bool IsHanCharacter(char character)
+        {
+            // Match the production PinyinLookup.IsChinese range.
+            return character >= '\u4e00' && character <= '\u9fff';
+        }
+
     }
 
     public sealed class MockupEditResult

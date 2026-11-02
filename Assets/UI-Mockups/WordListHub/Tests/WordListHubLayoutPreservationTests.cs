@@ -358,24 +358,55 @@ namespace Words.UiMockups.WordListHub.Tests
             InvokeAwake(controller);
 
             WordListHubSceneBindings.FilterMenuBinding communityMenu = bindings.community.connectionMenu;
-            AssertCompactMenu(communityMenu, 2, "Mock network");
+            Assert.That(communityMenu.sections.Count, Is.EqualTo(4));
+            Assert.That(communityMenu.sections[0].options.Count, Is.EqualTo(2));
+            Assert.That(communityMenu.sections[1].options.Count, Is.EqualTo(4));
+            Assert.That(communityMenu.sections[2].options.Count, Is.EqualTo(3));
+            Assert.That(communityMenu.sections[3].options.Count, Is.EqualTo(4));
             Assert.That(bindings.community.connectionState.gameObject.activeSelf, Is.False,
-                "The legacy Community dropdown should stay bound but hidden.");
+                "The legacy Community dropdown should remain hidden.");
+            Assert.That(bindings.community.connectionState.onValueChanged.GetPersistentEventCount(), Is.EqualTo(0),
+                "The mock network state control should no longer be part of the Community UI.");
             Press(bindings.navCommunity.button);
             Assert.That(communityMenu.sections[0].options[0].selectedVisual.activeSelf, Is.True);
             Press(communityMenu.toggleButton);
             Assert.That(communityMenu.panel.activeSelf, Is.True);
+
+            MockupWordListStore store = GetStore(controller);
+            Assert.That(store.IsOnline, Is.True);
             Press(communityMenu.sections[0].options[1].button);
-            Assert.That(GetStore(controller).IsOnline, Is.False,
-                "Offline must dispatch through the existing mock network state setter.");
-            Assert.That(bindings.community.connectionState.value, Is.EqualTo(1));
             Assert.That(communityMenu.sections[0].options[1].selectedVisual.activeSelf, Is.True);
-            Assert.That(communityMenu.toggleLabel.text, Does.Contain("Offline"));
             Assert.That(communityMenu.panel.activeSelf, Is.True,
-                "Choosing a network state should leave the compact menu open.");
-            Press(communityMenu.sections[0].options[0].button);
-            Assert.That(GetStore(controller).IsOnline, Is.True);
-            Assert.That(communityMenu.sections[0].options[0].selectedVisual.activeSelf, Is.True);
+                "Choosing a filter should leave the menu open so other sections can be adjusted.");
+            Assert.That(store.IsOnline, Is.True,
+                "Community filters must not change the mock network state.");
+
+            Press(communityMenu.sections[1].options[2].button);
+            Assert.That(communityMenu.sections[1].options[2].selectedVisual.activeSelf, Is.True);
+            Assert.That(store.QueryDiscoveryWithFilters(GetCommunityQuery(controller))
+                .Select(item => item.RemoteItemId), Is.EquivalentTo(new[] { "mock-ugc-night-market" }));
+
+            Press(communityMenu.sections[1].options[0].button);
+            Press(communityMenu.sections[2].options[1].button);
+            Assert.That(communityMenu.sections[2].options[1].selectedVisual.activeSelf, Is.True);
+            Assert.That(store.QueryDiscoveryWithFilters(GetCommunityQuery(controller)).Count, Is.EqualTo(2));
+
+            Press(communityMenu.sections[2].options[0].button);
+            Press(communityMenu.sections[0].options[1].button);
+            Press(communityMenu.sections[3].options[3].button);
+            Assert.That(communityMenu.sections[3].options[3].selectedVisual.activeSelf, Is.True);
+            Assert.That(store.QueryDiscoveryWithFilters(GetCommunityQuery(controller))[0].RemoteItemId,
+                Is.EqualTo("mock-ugc-night-market"),
+                "Word count sorting should use the selected direction.");
+
+            Press(communityMenu.sections[3].options[0].button);
+            Assert.That(store.QueryDiscoveryWithFilters(GetCommunityQuery(controller))[0].RemoteItemId,
+                Is.EqualTo("mock-ugc-airport-mix"),
+                "Default descending order should reverse the original discovery order.");
+            Assert.That(communityMenu.toggleLabel.text, Does.Contain("Filters"));
+            bindings.community.connectionState.value = 1;
+            Assert.That(store.IsOnline, Is.True,
+                "Changing the hidden legacy dropdown must not toggle online/offline behavior.");
             Press(communityMenu.toggleButton);
             Assert.That(communityMenu.panel.activeSelf, Is.False);
 
@@ -862,6 +893,14 @@ namespace Words.UiMockups.WordListHub.Tests
             return (MockupWordListStore)storeField.GetValue(controller);
         }
 
+        private static MockupDiscoveryQuery GetCommunityQuery(WordListHubMockupController controller)
+        {
+            FieldInfo queryField = typeof(WordListHubMockupController).GetField(
+                "communityQuery", BindingFlags.Instance | BindingFlags.NonPublic);
+            Assert.That(queryField, Is.Not.Null, "The Community filter query is required for the Scene binding test.");
+            return (MockupDiscoveryQuery)queryField.GetValue(controller);
+        }
+
         private static RowAction FindFirstLibraryRow(WordListHubSceneBindings.LibraryPageBinding library)
         {
             WordListHubSceneBindings.LibraryRowBinding authored = library.authoredRows.FirstOrDefault(row =>
@@ -948,6 +987,9 @@ namespace Words.UiMockups.WordListHub.Tests
                 Assert.That(row.favoriteMark, Is.Not.Null);
                 Assert.That(row.bestTime, Is.Not.Null);
                 Assert.That(row.bestTime.raycastTarget, Is.False);
+                Assert.That(row.bestTime.rectTransform.rect.height, Is.EqualTo(26f).Within(0.001f));
+                Assert.That(row.bestTime.textWrappingMode, Is.EqualTo(TextWrappingModes.NoWrap));
+                AssertTextRendersWithin(row.bestTime, "Authored Library row " + row.listId + ".bestTime");
                 Assert.That(row.title, Is.Not.Null);
                 Assert.That(row.metadata, Is.Not.Null);
             }
@@ -1110,6 +1152,7 @@ namespace Words.UiMockups.WordListHub.Tests
                     AssertReferenceWithin(row.transform, row.badge.transform, row.name + ".badge");
                 AssertTextStyleMatches(library.rowTemplate.favoriteMark, row.favoriteMark, row.name + ".favorite");
                 AssertTextStyleMatches(library.rowTemplate.bestTime, row.bestTime, row.name + ".bestTime");
+                AssertTextRendersWithin(row.bestTime, row.name + ".bestTime");
                 AssertTextStyleMatches(library.rowTemplate.title, row.title, row.name + ".title");
                 AssertTextStyleMatches(library.rowTemplate.metadata, row.metadata, row.name + ".metadata");
                 if (library.rowTemplate.badge != null)
@@ -1136,6 +1179,24 @@ namespace Words.UiMockups.WordListHub.Tests
                 AssertTextStyleMatches(community.rowTemplate.metadata, row.metadata, row.name + ".metadata");
                 AssertTextStyleMatches(community.rowTemplate.summary, row.summary, row.name + ".summary");
                 AssertTextStyleMatches(community.rowTemplate.status, row.status, row.name + ".status");
+
+                RectTransform rowRect = row.transform as RectTransform;
+                AssertRectContained(row.title.rectTransform, rowRect, row.name + ".title");
+                AssertRectContained(row.metadata.rectTransform, rowRect, row.name + ".metadata");
+                AssertRectContained(row.summary.rectTransform, rowRect, row.name + ".summary");
+                AssertRectContained(row.status.rectTransform, rowRect, row.name + ".status");
+                AssertTextRendersWithin(row.title, row.name + ".title");
+                AssertTextRendersWithin(row.metadata, row.name + ".metadata");
+                AssertTextRendersWithin(row.summary, row.name + ".summary");
+                AssertTextRendersWithin(row.status, row.name + ".status");
+                AssertNoRectOverlap(row.title.rectTransform, row.metadata.rectTransform,
+                    row.name + " title and metadata");
+                AssertNoRectOverlap(row.title.rectTransform, row.status.rectTransform,
+                    row.name + " title and status");
+                AssertNoRectOverlap(row.metadata.rectTransform, row.summary.rectTransform,
+                    row.name + " metadata and summary");
+                AssertNoRectOverlap(row.summary.rectTransform, row.status.rectTransform,
+                    row.name + " summary and status");
             }
         }
 
@@ -1201,6 +1262,55 @@ namespace Words.UiMockups.WordListHub.Tests
                 description + " bottom edge must remain inside the viewport.");
             Assert.That(subjectMaxY, Is.LessThanOrEqualTo(viewportMaxY + 0.01f),
                 description + " top edge must remain inside the viewport.");
+        }
+
+        private static void AssertCommunityLabelLayout(
+            TMP_Text text,
+            Vector2 position,
+            Vector2 size,
+            string description)
+        {
+            AssertVector2(text.rectTransform.anchoredPosition, position, description + " position");
+            AssertVector2(text.rectTransform.sizeDelta, size, description + " size");
+            Assert.That(text.textWrappingMode, Is.EqualTo(TextWrappingModes.NoWrap), description + " wrapping");
+            Assert.That(text.overflowMode, Is.EqualTo(TextOverflowModes.Ellipsis), description + " overflow");
+        }
+
+        private static void AssertRectContained(
+            RectTransform subject,
+            RectTransform parent,
+            string description)
+        {
+            Vector3[] subjectCorners = new Vector3[4];
+            Vector3[] parentCorners = new Vector3[4];
+            subject.GetWorldCorners(subjectCorners);
+            parent.GetWorldCorners(parentCorners);
+            float subjectMinX = subjectCorners.Min(corner => corner.x);
+            float subjectMaxX = subjectCorners.Max(corner => corner.x);
+            float subjectMinY = subjectCorners.Min(corner => corner.y);
+            float subjectMaxY = subjectCorners.Max(corner => corner.y);
+            float parentMinX = parentCorners.Min(corner => corner.x);
+            float parentMaxX = parentCorners.Max(corner => corner.x);
+            float parentMinY = parentCorners.Min(corner => corner.y);
+            float parentMaxY = parentCorners.Max(corner => corner.y);
+
+            Assert.That(subjectMinX, Is.GreaterThanOrEqualTo(parentMinX - 0.01f), description + " left edge");
+            Assert.That(subjectMaxX, Is.LessThanOrEqualTo(parentMaxX + 0.01f), description + " right edge");
+            Assert.That(subjectMinY, Is.GreaterThanOrEqualTo(parentMinY - 0.01f), description + " bottom edge");
+            Assert.That(subjectMaxY, Is.LessThanOrEqualTo(parentMaxY + 0.01f), description + " top edge");
+        }
+
+        private static void AssertTextRendersWithin(TMP_Text text, string description)
+        {
+            if (text == null || string.IsNullOrWhiteSpace(text.text))
+                return;
+
+            text.ForceMeshUpdate(true, true);
+            Assert.That(text.textInfo.characterCount, Is.GreaterThan(0),
+                description + " should produce at least one visible character.");
+            Assert.That(text.preferredHeight,
+                Is.LessThanOrEqualTo(text.rectTransform.rect.height + 0.1f),
+                description + " should fit its authored text box.");
         }
 
         private static void AssertTextStyleMatches(TMP_Text source, TMP_Text clone, string description)
@@ -1284,6 +1394,16 @@ namespace Words.UiMockups.WordListHub.Tests
                 Is.EqualTo(TextWrappingModes.NoWrap));
             Assert.That(bindings.community.rowTemplate.summary.overflowMode,
                 Is.EqualTo(TextOverflowModes.Ellipsis));
+            AssertCommunityLabelLayout(bindings.community.rowTemplate.title,
+                new Vector2(-55f, 22f), new Vector2(340f, 30f), "Community row title");
+            AssertCommunityLabelLayout(bindings.community.rowTemplate.metadata,
+                new Vector2(-55f, -5f), new Vector2(340f, 24f), "Community row metadata");
+            AssertCommunityLabelLayout(bindings.community.rowTemplate.summary,
+                new Vector2(-55f, -27f), new Vector2(340f, 20f), "Community row summary");
+            AssertCommunityLabelLayout(bindings.community.rowTemplate.status,
+                new Vector2(185f, 0f), new Vector2(110f, 20f), "Community row status");
+            Assert.That(bindings.community.rowTemplate.status.alignment,
+                Is.EqualTo(TextAlignmentOptions.MidlineRight));
 
             RectTransform communitySearch = bindings.community.searchInput.GetComponent<RectTransform>();
             RectTransform librarySearch = bindings.library.searchInput.GetComponent<RectTransform>();
@@ -2064,6 +2184,31 @@ namespace Words.UiMockups.WordListHub.Tests
                 Assert.That(EditorJsonUtility.ToJson(component), Is.EqualTo(serializedState),
                     phase + " changed serialized layout settings on " + component.GetType().Name + ".");
             }
+        }
+    }
+
+    [TestFixture]
+    public sealed class WordListHubSceneSerializationTests
+    {
+        private const string MockupScenePath = "Assets/Scenes/UI-Mockups/WordListHubMockup.unity";
+
+        [Test]
+        public void SceneFile_PreservesUnityYamlPreambleAndEndsWithSceneRoots()
+        {
+            string sceneText = System.IO.File.ReadAllText(MockupScenePath).Replace("\r\n", "\n");
+            const string expectedPreamble = "%YAML 1.1\n%TAG !u! tag:unity3d.com,2011:\n";
+            Assert.That(sceneText.StartsWith(expectedPreamble, StringComparison.Ordinal), Is.True,
+                "Unity's !u! document tags require the YAML tag directive at the start of the scene.");
+
+            int lastDocumentStart = sceneText.LastIndexOf("\n--- !u!", StringComparison.Ordinal);
+            Assert.That(lastDocumentStart, Is.GreaterThanOrEqualTo(0),
+                "The scene should contain a final Unity YAML document.");
+            string lastDocument = sceneText.Substring(lastDocumentStart + 1).TrimEnd();
+            string[] lastDocumentLines = lastDocument.Split('\n');
+            Assert.That(lastDocumentLines[0], Does.StartWith("--- !u!1660057539 &"));
+            Assert.That(lastDocumentLines.Length, Is.GreaterThan(1));
+            Assert.That(lastDocumentLines[1], Is.EqualTo("SceneRoots:"),
+                "SceneRoots must be the final serialized document in a Unity scene.");
         }
     }
 }

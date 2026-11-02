@@ -270,11 +270,21 @@ namespace Words.UiMockups.Editor
                 "MockConnectionState",
                 CommunityToggleName,
                 CommunityPopupName,
-                new SectionSpec(WordListHubSceneBindings.LibraryFilterKind.MockConnectionState,
-                    "Network", "Online", "Offline"),
+                new[]
+                {
+                    new SectionSpec(WordListHubSceneBindings.LibraryFilterKind.CommunityOrder,
+                        "Order", "Ascending", "Descending"),
+                    new SectionSpec(WordListHubSceneBindings.LibraryFilterKind.CommunityLanguage,
+                        "Language", "All", "English", "Chinese", "Mixed"),
+                    new SectionSpec(WordListHubSceneBindings.LibraryFilterKind.CommunityDownloadState,
+                        "Download", "All", "Downloaded", "Not downloaded"),
+                    new SectionSpec(WordListHubSceneBindings.LibraryFilterKind.CommunitySort,
+                        "Sort", "Default", "Name", "Likes", "Word count")
+                },
                 new Vector2(0f, 267f),
                 new Vector2(200f, 40f),
-                0);
+                0,
+                preserveExistingGeometry: true);
         }
 
         public static void EnsureAchievementsMenuForMigration(Transform pageRoot, Button buttonTemplate)
@@ -285,8 +295,11 @@ namespace Words.UiMockups.Editor
                 "AchievementFilter",
                 AchievementsToggleName,
                 AchievementsPopupName,
-                new SectionSpec(WordListHubSceneBindings.LibraryFilterKind.AchievementStatus,
-                    "Show", "All", "Unlocked", "In progress"),
+                new[]
+                {
+                    new SectionSpec(WordListHubSceneBindings.LibraryFilterKind.AchievementStatus,
+                        "Show", "All", "Unlocked", "In progress")
+                },
                 new Vector2(0f, 216f),
                 new Vector2(210f, 38f),
                 0);
@@ -303,8 +316,17 @@ namespace Words.UiMockups.Editor
                 "MockConnectionState",
                 CommunityToggleName,
                 CommunityPopupName,
-                new SectionSpec(WordListHubSceneBindings.LibraryFilterKind.MockConnectionState,
-                    "Network", "Online", "Offline"));
+                new[]
+                {
+                    new SectionSpec(WordListHubSceneBindings.LibraryFilterKind.CommunityOrder,
+                        "Order", "Ascending", "Descending"),
+                    new SectionSpec(WordListHubSceneBindings.LibraryFilterKind.CommunityLanguage,
+                        "Language", "All", "English", "Chinese", "Mixed"),
+                    new SectionSpec(WordListHubSceneBindings.LibraryFilterKind.CommunityDownloadState,
+                        "Download", "All", "Downloaded", "Not downloaded"),
+                    new SectionSpec(WordListHubSceneBindings.LibraryFilterKind.CommunitySort,
+                        "Sort", "Default", "Name", "Likes", "Word count")
+                });
         }
 
         public static void BindExistingAchievementsMenu(
@@ -318,8 +340,11 @@ namespace Words.UiMockups.Editor
                 "AchievementFilter",
                 AchievementsToggleName,
                 AchievementsPopupName,
-                new SectionSpec(WordListHubSceneBindings.LibraryFilterKind.AchievementStatus,
-                    "Show", "All", "Unlocked", "In progress"));
+                new[]
+                {
+                    new SectionSpec(WordListHubSceneBindings.LibraryFilterKind.AchievementStatus,
+                        "Show", "All", "Unlocked", "In progress")
+                });
         }
 
         private static void EnsureCompactMenuForMigration(
@@ -328,15 +353,18 @@ namespace Words.UiMockups.Editor
             string legacyDropdownName,
             string toggleName,
             string popupName,
-            SectionSpec section,
+            SectionSpec[] sections,
             Vector2 togglePosition,
             Vector2 toggleSize,
-            int selectedValue)
+            int selectedValue,
+            bool preserveExistingGeometry = false)
         {
             if (pageRoot == null)
                 throw new ArgumentNullException(nameof(pageRoot));
             if (buttonTemplate == null)
                 throw new ArgumentNullException(nameof(buttonTemplate));
+            if (sections == null || sections.Length == 0)
+                throw new ArgumentException("At least one filter section is required.", nameof(sections));
 
             HideLegacyFilter(pageRoot, legacyDropdownName);
             Image templateImage = buttonTemplate.GetComponent<Image>();
@@ -344,18 +372,34 @@ namespace Words.UiMockups.Editor
             if (textTemplate == null)
                 throw new InvalidOperationException("The View_All style button has no TMP label.");
 
+            bool hadToggle = pageRoot.Find(toggleName) != null;
+            bool hadPopup = pageRoot.Find(popupName) != null;
             Button toggle = EnsureButtonClone(pageRoot, toggleName, buttonTemplate);
             TMP_Text toggleLabel = toggle.GetComponentInChildren<TMP_Text>(true);
             if (toggleLabel == null)
                 throw new InvalidOperationException("The filter trigger has no TMP label: " + toggleName);
-            ConfigureToggle(toggle, toggleLabel, togglePosition, toggleSize, section.title);
+            string toggleBaseLabel = preserveExistingGeometry ? "Filters" : sections[0].title;
+            if (preserveExistingGeometry && hadToggle)
+                ConfigureToggleAppearance(toggle, toggleLabel, toggleBaseLabel);
+            else
+                ConfigureToggle(toggle, toggleLabel, togglePosition, toggleSize, toggleBaseLabel);
 
             GameObject popup = EnsurePopup(pageRoot, popupName, templateImage);
             RectTransform popupRect = popup.GetComponent<RectTransform>();
-            float contentHeight = 20f + 26f + section.options.Length * 36f;
-            float popupHeight = contentHeight + 8f;
-            ConfigurePopupRect(popupRect, new Vector2(togglePosition.x, togglePosition.y - 27f),
-                new Vector2(380f, popupHeight));
+            float contentHeight = 20f + sections.Length * 26f
+                + sections.Sum(section => section.options.Length * 36f)
+                + Mathf.Max(0, sections.Length - 1) * 2f;
+            float popupHeight = preserveExistingGeometry ? 400f : contentHeight + 8f;
+            if (preserveExistingGeometry && hadPopup)
+            {
+                if (popupRect.sizeDelta.y < popupHeight)
+                    popupRect.sizeDelta = new Vector2(popupRect.sizeDelta.x, popupHeight);
+            }
+            else
+            {
+                ConfigurePopupRect(popupRect, new Vector2(togglePosition.x, togglePosition.y - 27f),
+                    new Vector2(380f, popupHeight));
+            }
 
             ScrollRect scroll = EnsureComponent<ScrollRect>(popup);
             ConfigurePopupImage(EnsureComponent<Image>(popup), templateImage);
@@ -369,30 +413,62 @@ namespace Words.UiMockups.Editor
             scroll.inertia = true;
             scroll.scrollSensitivity = 30f;
 
-            TMP_Text heading = EnsureHeading(content, section, textTemplate);
-            var options = new List<WordListHubSceneBindings.FilterOptionBinding>(section.options.Length);
-            for (int value = 0; value < section.options.Length; value++)
+            if (preserveExistingGeometry)
+                ReuseLegacyCommunitySection(content);
+
+            var sectionBindings = new List<WordListHubSceneBindings.FilterSectionBinding>(sections.Length);
+            foreach (SectionSpec section in sections)
             {
-                Button optionButton = EnsureOptionButton(content, section, value, section.options[value], buttonTemplate);
-                TMP_Text optionLabel = optionButton.GetComponentInChildren<TMP_Text>(true);
-                GameObject selectedVisual = EnsureSelectedVisual(optionButton, templateImage);
-                bool selected = value == selectedValue;
-                selectedVisual.SetActive(selected);
-                optionLabel.text = (selected ? "✓  " : "    ") + section.options[value];
-                options.Add(new WordListHubSceneBindings.FilterOptionBinding
+                EnsureHeading(content, section, textTemplate);
+                var options = new List<WordListHubSceneBindings.FilterOptionBinding>(section.options.Length);
+                for (int value = 0; value < section.options.Length; value++)
                 {
-                    value = value,
-                    optionLabel = section.options[value],
-                    button = optionButton,
-                    label = optionLabel,
-                    selectedVisual = selectedVisual
+                    Button optionButton = EnsureOptionButton(
+                        content, section, value, section.options[value], buttonTemplate);
+                    TMP_Text optionLabel = optionButton.GetComponentInChildren<TMP_Text>(true);
+                    GameObject selectedVisual = EnsureSelectedVisual(optionButton, templateImage);
+                    bool selected = value == selectedValue;
+                    selectedVisual.SetActive(selected);
+                    optionLabel.text = (selected ? "✓  " : "    ") + section.options[value];
+                    options.Add(new WordListHubSceneBindings.FilterOptionBinding
+                    {
+                        value = value,
+                        optionLabel = section.options[value],
+                        button = optionButton,
+                        label = optionLabel,
+                        selectedVisual = selectedVisual
+                    });
+                }
+
+                sectionBindings.Add(new WordListHubSceneBindings.FilterSectionBinding
+                {
+                    kind = section.kind,
+                    heading = FindText(content, "SectionHeading_" + section.kind),
+                    options = options
                 });
             }
 
-            popup.transform.SetAsLastSibling();
-            toggle.transform.SetSiblingIndex(popup.transform.GetSiblingIndex());
-            popup.transform.SetAsLastSibling();
+            if (!preserveExistingGeometry)
+            {
+                popup.transform.SetAsLastSibling();
+                toggle.transform.SetSiblingIndex(popup.transform.GetSiblingIndex());
+                popup.transform.SetAsLastSibling();
+            }
             popup.SetActive(false);
+        }
+
+        private static void ReuseLegacyCommunitySection(Transform content)
+        {
+            Transform heading = content.Find("SectionHeading_MockConnectionState");
+            if (heading != null && content.Find("SectionHeading_CommunityOrder") == null)
+                heading.name = "SectionHeading_CommunityOrder";
+
+            for (int value = 0; value < 2; value++)
+            {
+                Transform option = content.Find("FilterOption_MockConnectionState_" + value);
+                if (option != null && content.Find("FilterOption_CommunityOrder_" + value) == null)
+                    option.name = "FilterOption_CommunityOrder_" + value;
+            }
         }
 
         private static WordListHubSceneBindings.FilterMenuBinding BindExistingCompactMenu(
@@ -400,7 +476,7 @@ namespace Words.UiMockups.Editor
             string legacyDropdownName,
             string toggleName,
             string popupName,
-            SectionSpec section)
+            SectionSpec[] sections)
         {
             if (pageRoot == null)
                 throw new InvalidOperationException("The page root for " + popupName + " is missing.");
@@ -419,23 +495,37 @@ namespace Words.UiMockups.Editor
             if (viewport == null || content == null)
                 throw new InvalidOperationException("The filter popup is missing its Viewport or Content: " + popupName);
 
-            TMP_Text heading = FindText(content, "SectionHeading_" + section.kind);
-            var options = new List<WordListHubSceneBindings.FilterOptionBinding>(section.options.Length);
-            for (int value = 0; value < section.options.Length; value++)
+            var sectionBindings = new List<WordListHubSceneBindings.FilterSectionBinding>(sections.Length);
+            foreach (SectionSpec section in sections)
             {
-                Transform optionRoot = content.Find(OptionName(section, value));
-                if (optionRoot == null)
-                    throw new InvalidOperationException("The filter option is missing: " + OptionName(section, value));
-                Button button = RequireComponent<Button>(optionRoot.gameObject);
-                TMP_Text label = button.GetComponentInChildren<TMP_Text>(true);
-                Transform selectedVisual = optionRoot.Find("SelectedVisual");
-                options.Add(new WordListHubSceneBindings.FilterOptionBinding
+                TMP_Text heading = FindText(content, "SectionHeading_" + section.kind);
+                if (heading == null)
+                    throw new InvalidOperationException("The filter section heading is missing: " + section.kind);
+
+                var options = new List<WordListHubSceneBindings.FilterOptionBinding>(section.options.Length);
+                for (int value = 0; value < section.options.Length; value++)
                 {
-                    value = value,
-                    optionLabel = section.options[value],
-                    button = button,
-                    label = label,
-                    selectedVisual = selectedVisual != null ? selectedVisual.gameObject : null
+                    Transform optionRoot = content.Find(OptionName(section, value));
+                    if (optionRoot == null)
+                        throw new InvalidOperationException("The filter option is missing: " + OptionName(section, value));
+                    Button button = RequireComponent<Button>(optionRoot.gameObject);
+                    TMP_Text label = button.GetComponentInChildren<TMP_Text>(true);
+                    Transform selectedVisual = optionRoot.Find("SelectedVisual");
+                    options.Add(new WordListHubSceneBindings.FilterOptionBinding
+                    {
+                        value = value,
+                        optionLabel = section.options[value],
+                        button = button,
+                        label = label,
+                        selectedVisual = selectedVisual != null ? selectedVisual.gameObject : null
+                    });
+                }
+
+                sectionBindings.Add(new WordListHubSceneBindings.FilterSectionBinding
+                {
+                    kind = section.kind,
+                    heading = heading,
+                    options = options
                 });
             }
 
@@ -443,19 +533,11 @@ namespace Words.UiMockups.Editor
             {
                 toggleButton = toggle,
                 toggleLabel = toggleLabel,
-                toggleBaseLabel = section.title,
+                toggleBaseLabel = sections.Length == 1 ? sections[0].title : "Filters",
                 panel = popupRoot.gameObject,
                 scrollRect = scroll,
                 content = content,
-                sections = new List<WordListHubSceneBindings.FilterSectionBinding>
-                {
-                    new WordListHubSceneBindings.FilterSectionBinding
-                    {
-                        kind = section.kind,
-                        heading = heading,
-                        options = options
-                    }
-                }
+                sections = sectionBindings
             };
         }
 
@@ -670,6 +752,11 @@ namespace Words.UiMockups.Editor
             rect.anchoredPosition = position;
             rect.sizeDelta = size;
 
+            ConfigureToggleAppearance(toggle, label, baseLabel);
+        }
+
+        private static void ConfigureToggleAppearance(Button toggle, TMP_Text label, string baseLabel)
+        {
             Image image = EnsureComponent<Image>(toggle.gameObject);
             image.color = Accent;
             image.raycastTarget = true;

@@ -178,6 +178,155 @@ namespace Words.UiMockups.WordListHub.Tests
         }
 
         [Test]
+        public void DiscoveryFilters_composeLanguageDownloadAndMetadataSearch()
+        {
+            var expectedByLanguage = new Dictionary<MockupLanguageFilter, string[]>
+            {
+                { MockupLanguageFilter.All, new[]
+                    { "mock-ugc-night-market", "mock-ugc-cafe-abroad", "mock-ugc-weekend-garden", "mock-ugc-airport-mix" } },
+                { MockupLanguageFilter.English, new[] { "mock-ugc-weekend-garden" } },
+                { MockupLanguageFilter.Chinese, new[] { "mock-ugc-night-market" } },
+                { MockupLanguageFilter.Mixed, new[] { "mock-ugc-cafe-abroad", "mock-ugc-airport-mix" } }
+            };
+
+            foreach (KeyValuePair<MockupLanguageFilter, string[]> expected in expectedByLanguage)
+            {
+                IReadOnlyList<MockupDiscoveryItem> results = store.QueryDiscoveryWithFilters(
+                    new MockupDiscoveryQuery { LanguageFilter = expected.Key });
+                CollectionAssert.AreEqual(expected.Value, results.Select(item => item.RemoteItemId));
+            }
+
+            var allDownloads = store.QueryDiscoveryWithFilters(new MockupDiscoveryQuery
+            {
+                DownloadFilter = MockupDiscoveryDownloadFilter.All
+            });
+            CollectionAssert.AreEqual(
+                new[] { "mock-ugc-night-market", "mock-ugc-cafe-abroad", "mock-ugc-weekend-garden", "mock-ugc-airport-mix" },
+                allDownloads.Select(item => item.RemoteItemId));
+
+            var downloaded = store.QueryDiscoveryWithFilters(new MockupDiscoveryQuery
+            {
+                DownloadFilter = MockupDiscoveryDownloadFilter.Downloaded
+            });
+            CollectionAssert.AreEqual(new[] { "mock-ugc-night-market", "mock-ugc-cafe-abroad" },
+                downloaded.Select(item => item.RemoteItemId));
+
+            var notDownloaded = store.QueryDiscoveryWithFilters(new MockupDiscoveryQuery
+            {
+                DownloadFilter = MockupDiscoveryDownloadFilter.NotDownloaded
+            });
+            CollectionAssert.AreEqual(new[] { "mock-ugc-weekend-garden", "mock-ugc-airport-mix" },
+                notDownloaded.Select(item => item.RemoteItemId));
+
+            IReadOnlyList<MockupDiscoveryItem> combined = store.QueryDiscoveryWithFilters(new MockupDiscoveryQuery
+            {
+                SearchText = "  phrases  ",
+                LanguageFilter = MockupLanguageFilter.Mixed,
+                DownloadFilter = MockupDiscoveryDownloadFilter.NotDownloaded,
+                SortMode = MockupDiscoverySortMode.WordCount,
+                SortDirection = MockupSortDirection.Descending
+            });
+            CollectionAssert.AreEqual(new[] { "mock-ugc-airport-mix" },
+                combined.Select(item => item.RemoteItemId));
+            Assert.That(combined.All(item => item.Language == MockupLanguage.Mixed && !item.IsDownloaded), Is.True);
+        }
+
+        [Test]
+        public void DiscoverySorts_keepDefaultInsertionOrderAndBreakTiesDeterministically()
+        {
+            MockupDiscoveryItem cafe = store.FindDiscoveryItem("mock-ugc-cafe-abroad");
+            MockupDiscoveryItem garden = store.FindDiscoveryItem("mock-ugc-weekend-garden");
+            SetDiscoveryProperty(cafe, nameof(MockupDiscoveryItem.Title), "Shared Title");
+            SetDiscoveryProperty(garden, nameof(MockupDiscoveryItem.Title), "Shared Title");
+            SetDiscoveryProperty(cafe, nameof(MockupDiscoveryItem.LikeCount), garden.LikeCount);
+            SetDiscoveryProperty(cafe, nameof(MockupDiscoveryItem.WordCount), garden.WordCount);
+
+            string[] ids(MockupDiscoveryQuery query) => store.QueryDiscoveryWithFilters(query)
+                .Select(item => item.RemoteItemId).ToArray();
+
+            CollectionAssert.AreEqual(
+                new[] { "mock-ugc-night-market", "mock-ugc-cafe-abroad", "mock-ugc-weekend-garden", "mock-ugc-airport-mix" },
+                ids(new MockupDiscoveryQuery()));
+            CollectionAssert.AreEqual(
+                new[] { "mock-ugc-airport-mix", "mock-ugc-weekend-garden", "mock-ugc-cafe-abroad", "mock-ugc-night-market" },
+                ids(new MockupDiscoveryQuery { SortDirection = MockupSortDirection.Descending }));
+
+            CollectionAssert.AreEqual(
+                new[] { "mock-ugc-airport-mix", "mock-ugc-cafe-abroad", "mock-ugc-weekend-garden", "mock-ugc-night-market" },
+                ids(new MockupDiscoveryQuery { SortMode = MockupDiscoverySortMode.Name }));
+            CollectionAssert.AreEqual(
+                new[] { "mock-ugc-night-market", "mock-ugc-cafe-abroad", "mock-ugc-weekend-garden", "mock-ugc-airport-mix" },
+                ids(new MockupDiscoveryQuery
+                {
+                    SortMode = MockupDiscoverySortMode.Name,
+                    SortDirection = MockupSortDirection.Descending
+                }));
+
+            CollectionAssert.AreEqual(
+                new[] { "mock-ugc-cafe-abroad", "mock-ugc-weekend-garden", "mock-ugc-night-market", "mock-ugc-airport-mix" },
+                ids(new MockupDiscoveryQuery { SortMode = MockupDiscoverySortMode.Likes }));
+            CollectionAssert.AreEqual(
+                new[] { "mock-ugc-airport-mix", "mock-ugc-night-market", "mock-ugc-cafe-abroad", "mock-ugc-weekend-garden" },
+                ids(new MockupDiscoveryQuery
+                {
+                    SortMode = MockupDiscoverySortMode.Likes,
+                    SortDirection = MockupSortDirection.Descending
+                }));
+
+            CollectionAssert.AreEqual(
+                new[] { "mock-ugc-cafe-abroad", "mock-ugc-weekend-garden", "mock-ugc-airport-mix", "mock-ugc-night-market" },
+                ids(new MockupDiscoveryQuery { SortMode = MockupDiscoverySortMode.WordCount }));
+            CollectionAssert.AreEqual(
+                new[] { "mock-ugc-night-market", "mock-ugc-airport-mix", "mock-ugc-cafe-abroad", "mock-ugc-weekend-garden" },
+                ids(new MockupDiscoveryQuery
+                {
+                    SortMode = MockupDiscoverySortMode.WordCount,
+                    SortDirection = MockupSortDirection.Descending
+                }));
+        }
+
+        [Test]
+        public void LegacyDiscoverySearchAndDownloadChangesRespectCommunityVisibility()
+        {
+            CollectionAssert.AreEqual(new[] { "mock-ugc-night-market" },
+                store.QueryDiscovery("night market").Select(item => item.RemoteItemId));
+            CollectionAssert.AreEqual(new[] { "mock-ugc-airport-mix" },
+                store.QueryDiscovery("Airport phrases").Select(item => item.RemoteItemId));
+            CollectionAssert.AreEqual(new[] { "mock-ugc-weekend-garden" },
+                store.QueryDiscovery("GreenType").Select(item => item.RemoteItemId));
+
+            CollectionAssert.AreEqual(new[] { "mock-ugc-night-market", "mock-ugc-cafe-abroad" },
+                store.QueryDiscoveryWithFilters(new MockupDiscoveryQuery
+                {
+                    DownloadFilter = MockupDiscoveryDownloadFilter.Downloaded
+                }).Select(item => item.RemoteItemId));
+
+            MockupWordList downloaded = store.Download("mock-ugc-weekend-garden");
+            Assert.That(downloaded.RemoteItemId, Is.EqualTo("mock-ugc-weekend-garden"));
+            CollectionAssert.AreEqual(
+                new[] { "mock-ugc-night-market", "mock-ugc-cafe-abroad", "mock-ugc-weekend-garden" },
+                store.QueryDiscoveryWithFilters(new MockupDiscoveryQuery
+                {
+                    DownloadFilter = MockupDiscoveryDownloadFilter.Downloaded
+                }).Select(item => item.RemoteItemId));
+            CollectionAssert.AreEqual(new[] { "mock-ugc-airport-mix" },
+                store.QueryDiscoveryWithFilters(new MockupDiscoveryQuery
+                {
+                    DownloadFilter = MockupDiscoveryDownloadFilter.NotDownloaded
+                }).Select(item => item.RemoteItemId));
+
+            Assert.That(store.HideForCurrentUser("mock-ugc-weekend-garden").Succeeded, Is.True);
+            Assert.That(store.TryReportAndHide("mock-ugc-cafe-abroad").Succeeded, Is.True);
+            Assert.That(store.TryResolveReport("mock-ugc-cafe-abroad", true).Succeeded, Is.True);
+            CollectionAssert.AreEqual(new[] { "mock-ugc-night-market", "mock-ugc-airport-mix" },
+                store.QueryDiscovery().Select(item => item.RemoteItemId));
+            Assert.That(store.QueryDiscoveryWithFilters(new MockupDiscoveryQuery
+            {
+                DownloadFilter = MockupDiscoveryDownloadFilter.Downloaded
+            }).All(item => !item.IsHiddenByCurrentUser && !item.IsRemovedFromCommunity), Is.True);
+        }
+
+        [Test]
         public void Fixtures_coverLongMixedTextEmptyListsAndLockedAchievements()
         {
             MockupWordList longMixed = store.FindById("mock-list-long-mixed");
@@ -367,9 +516,9 @@ namespace Words.UiMockups.WordListHub.Tests
         public void CreateAndEditWords_trimsSkipsBlankLinesAndKeepsTextMeaning()
         {
             MockupWordList item = store.CreateList("Typed words", MockupLanguage.Mixed,
-                new[] { " apple ", "", "   ", "早上 Morning!", "Keep.Case?" });
+                new[] { " apple ", "", "   ", "早上 Morning! | zao shang", "Keep.Case?" });
 
-            CollectionAssert.AreEqual(new[] { "apple", "早上 Morning!", "Keep.Case?" }, item.Words);
+            CollectionAssert.AreEqual(new[] { "apple", "早上 Morning! | zao shang", "Keep.Case?" }, item.Words);
             Assert.That(item.WordCount, Is.EqualTo(item.Words.Count));
 
             MockupWordListEdit draft = store.CreateEditDraft(item.Id);
@@ -386,6 +535,125 @@ namespace Words.UiMockups.WordListHub.Tests
         {
             Assert.Throws<System.ArgumentException>(() => store.CreateList(
                 "Blank input", MockupLanguage.English, new[] { "", "  " }));
+        }
+
+        [Test]
+        public void PinyinAnnotations_validatePerHanCharacterAndFormatWithoutChangingEnglishText()
+        {
+            string error;
+            Assert.That(MockupWordContent.TryValidateWordLines(new[]
+            {
+                "apple — 苹果 | ping guo",
+                "行 | hang",
+                "行 | xing",
+                "A|B"
+            }, null, out error), Is.True, error);
+
+            Assert.That(MockupWordContent.FormatForDetail("apple — 苹果 | ping guo"),
+                Is.EqualTo("apple — 苹(ping) 果(guo)"));
+            Assert.That(MockupWordContent.FormatForDetail("行 | hang"), Is.EqualTo("行(hang)"));
+            Assert.That(MockupWordContent.FormatForDetail("行 | xing"), Is.EqualTo("行(xing)"));
+            Assert.That(MockupWordContent.FormatForDetail("你，好! | ni hao"), Is.EqualTo("你(ni)，好(hao)!"));
+            Assert.That(MockupWordContent.FormatForDetail("A|B"), Is.EqualTo("A|B"));
+            Assert.That(MockupWordContent.FormatForDetail("苹果"), Is.EqualTo("苹果 (pinyin not set)"));
+        }
+
+        [TestCase("苹果 | ping", "Line 1: expected 2 pinyin syllable(s)")]
+        [TestCase("苹果 | PING guo", "Line 1: pinyin must use lowercase a-z")]
+        [TestCase("苹果 | pǐng guǒ", "Line 1: pinyin must use lowercase a-z")]
+        [TestCase("苹果 | ping guo | extra", "Line 1: use one '|'")]
+        public void PinyinAnnotations_reportInvalidLines(string word, string expectedError)
+        {
+            string error;
+            Assert.That(MockupWordContent.TryValidateWordLines(new[] { word }, null, out error), Is.False);
+            Assert.That(error, Does.Contain(expectedError));
+        }
+
+        [Test]
+        public void PinyinAnnotationText_reportsOriginalLineNumberAndAllowsUnchangedLegacyHanzi()
+        {
+            string error;
+            Assert.That(MockupWordContent.TryValidateWordText("apple\n\n苹果 | ping", null, out error), Is.False);
+            Assert.That(error, Does.StartWith("Line 3:"));
+            Assert.That(MockupWordContent.TryValidateWordLines(new[] { "苹果" }, null, out error), Is.False);
+            Assert.That(MockupWordContent.TryValidateWordLines(new[] { "苹果" }, new[] { "苹果" }, out error),
+                Is.True, error);
+
+            Assert.Throws<System.ArgumentException>(() => store.CreateList(
+                "Missing pinyin", MockupLanguage.Chinese, new[] { "苹果" }));
+        }
+
+        [Test]
+        public void ExistingLegacyHanziCanStayUntouchedButCannotBeAddedAgain()
+        {
+            MockupWordList legacy = store.FindById("mock-list-hsk-starter");
+            legacy.Words[0] = "苹果";
+            MockupWordListEdit metadataDraft = store.CreateEditDraft(legacy.Id);
+            metadataDraft.Title += " Updated";
+
+            MockupEditResult metadataResult = store.SaveEdit(legacy.Id, metadataDraft);
+            Assert.That(metadataResult.ContentChanged, Is.False);
+            Assert.That(legacy.Words[0], Is.EqualTo("苹果"));
+
+            MockupEditResult copyResult = store.SaveOwnedContentAsNewList(
+                legacy.Id, store.CreateEditDraft(legacy.Id));
+            Assert.That(copyResult.Item.Words[0], Is.EqualTo("苹果"));
+
+            MockupWordListEdit duplicateDraft = store.CreateEditDraft(legacy.Id);
+            duplicateDraft.Words[1] = "苹果";
+            Assert.Throws<System.ArgumentException>(() =>
+                store.SaveOwnedContentAsNewList(legacy.Id, duplicateDraft));
+        }
+
+        [Test]
+        public void AllSeededChineseAndMixedLibraryAndCommunityLinesHavePinyin()
+        {
+            foreach (MockupWordList item in store.QueryLibrary(new MockupLibraryQuery()))
+            {
+                Assert.That(MockupWordContent.TryValidateWordLines(item.Words, null, out string error),
+                    Is.True, item.Title + ": " + error);
+            }
+
+            foreach (MockupDiscoveryItem item in store.DiscoveryItems)
+            {
+                Assert.That(MockupWordContent.TryValidateWordLines(item.Words, null, out string error),
+                    Is.True, item.Title + ": " + error);
+            }
+        }
+
+        [Test]
+        public void PinyinOnlyEditIsGameplayContentAndCopiesDownloadsKeepTheExactAnnotation()
+        {
+            MockupWordList onePhrase = store.CreateList(
+                "One phrase", MockupLanguage.Chinese, new[] { "你好吗 | ni hao ma" });
+            Assert.That(onePhrase.WordCount, Is.EqualTo(1));
+
+            MockupWordList item = store.CreateList("Polyphonic", MockupLanguage.Chinese, new[] { "行 | hang" });
+            store.CompleteRun(item.Id, 4, 21f);
+            MockupWordListEdit pronunciationDraft = store.CreateEditDraft(item.Id);
+            pronunciationDraft.Words[0] = "行 | xing";
+
+            MockupEditResult editResult = store.SaveEdit(item.Id, pronunciationDraft);
+
+            Assert.That(editResult.ContentChanged, Is.True);
+            Assert.That(item.ContentRevision, Is.EqualTo(2));
+            Assert.That(item.Words, Is.EqualTo(new[] { "行 | xing" }));
+            Assert.That(item.PreviousContentRecords, Has.Count.EqualTo(1));
+            Assert.That(item.PreviousContentRecords[0].PersonalStars, Is.EqualTo(4));
+            Assert.That(item.PersonalStars, Is.Null);
+
+            MockupEditResult copyResult = store.SaveOwnedContentAsNewList(
+                item.Id, store.CreateEditDraft(item.Id));
+            Assert.That(copyResult.Item.Words, Is.EqualTo(new[] { "行 | xing" }));
+
+            MockupDiscoveryItem remote = store.FindDiscoveryItem("mock-ugc-airport-mix");
+            MockupWordList downloaded = store.Download(remote.RemoteItemId);
+            CollectionAssert.AreEqual(remote.Words, downloaded.Words);
+            Assert.That(downloaded.Words.All(word => MockupWordContent.TryValidateWordLines(
+                new[] { word }, null, out string _)), Is.True);
+
+            MockupWordList communityCopy = store.EditCommunityCopy(downloaded.Id);
+            CollectionAssert.AreEqual(remote.Words, communityCopy.Words);
         }
 
         [Test]
@@ -804,12 +1072,12 @@ namespace Words.UiMockups.WordListHub.Tests
 
             MockupWordListEdit contentDraft = store.CreateEditDraft(item.Id);
             contentDraft.Language = MockupLanguage.Chinese;
-            contentDraft.Words[0] = "改";
+            contentDraft.Words[0] = "改 | gai";
             MockupEditResult contentResult = store.SaveEdit(item.Id, contentDraft);
             Assert.That(contentResult.ContentChanged, Is.True);
             Assert.That(contentResult.ShowRecordWarning, Is.True);
             Assert.That(item.Language, Is.EqualTo(MockupLanguage.Chinese));
-            Assert.That(item.Words[0], Is.EqualTo("改"));
+            Assert.That(item.Words[0], Is.EqualTo("改 | gai"));
             Assert.That(item.ContentRevision, Is.EqualTo(oldRevision + 1));
             Assert.That(item.PersonalStars, Is.Null);
             Assert.That(item.BestTimeSeconds, Is.Null);
@@ -1046,6 +1314,13 @@ namespace Words.UiMockups.WordListHub.Tests
             MockupWordListEdit languageDraft = store.CreateEditDraft(item.Id);
             languageDraft.Language = MockupLanguage.Chinese;
             Assert.Throws<System.InvalidOperationException>(() => store.SaveEdit(item.Id, languageDraft));
+        }
+
+        private static void SetDiscoveryProperty<T>(MockupDiscoveryItem item, string propertyName, T value)
+        {
+            System.Reflection.PropertyInfo property = typeof(MockupDiscoveryItem).GetProperty(propertyName);
+            Assert.That(property, Is.Not.Null, "Missing discovery property: " + propertyName);
+            property.SetValue(item, value, null);
         }
 
         private void AssertViewContainsOnly(MockupLibraryView view, MockupLibraryGroup expectedGroup)

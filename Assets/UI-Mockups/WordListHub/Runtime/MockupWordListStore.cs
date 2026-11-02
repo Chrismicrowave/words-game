@@ -91,16 +91,67 @@ namespace Words.UiMockups.WordListHub
 
         public IReadOnlyList<MockupDiscoveryItem> QueryDiscovery(string searchText = null)
         {
+            return QueryDiscoveryWithFilters(new MockupDiscoveryQuery { SearchText = searchText });
+        }
+
+        public IReadOnlyList<MockupDiscoveryItem> QueryDiscoveryWithFilters(MockupDiscoveryQuery query)
+        {
+            query = query ?? new MockupDiscoveryQuery();
             IEnumerable<MockupDiscoveryItem> results = VisibleDiscoveryItems;
-            if (!string.IsNullOrWhiteSpace(searchText))
+            if (!string.IsNullOrWhiteSpace(query.SearchText))
             {
-                string term = searchText.Trim();
+                string term = query.SearchText.Trim();
                 results = results.Where(item => Contains(item.Title, term)
                     || Contains(item.Description, term)
                     || Contains(item.RemoteAuthor, term));
             }
 
-            return results.ToList().AsReadOnly();
+            if (query.LanguageFilter != MockupLanguageFilter.All)
+            {
+                string language = query.LanguageFilter.ToString();
+                results = results.Where(item => item.Language.ToString() == language);
+            }
+
+            if (query.DownloadFilter == MockupDiscoveryDownloadFilter.Downloaded)
+                results = results.Where(item => item.IsDownloaded);
+            else if (query.DownloadFilter == MockupDiscoveryDownloadFilter.NotDownloaded)
+                results = results.Where(item => !item.IsDownloaded);
+
+            List<MockupDiscoveryItem> ordered = results.ToList();
+            switch (query.SortMode)
+            {
+                case MockupDiscoverySortMode.Name:
+                    ordered = query.SortDirection == MockupSortDirection.Descending
+                        ? ordered.OrderByDescending(item => item.Title, StringComparer.OrdinalIgnoreCase)
+                            .ThenBy(item => item.RemoteItemId, StringComparer.Ordinal).ToList()
+                        : ordered.OrderBy(item => item.Title, StringComparer.OrdinalIgnoreCase)
+                            .ThenBy(item => item.RemoteItemId, StringComparer.Ordinal).ToList();
+                    break;
+                case MockupDiscoverySortMode.Likes:
+                    ordered = query.SortDirection == MockupSortDirection.Descending
+                        ? ordered.OrderByDescending(item => item.LikeCount)
+                            .ThenBy(item => item.Title, StringComparer.OrdinalIgnoreCase)
+                            .ThenBy(item => item.RemoteItemId, StringComparer.Ordinal).ToList()
+                        : ordered.OrderBy(item => item.LikeCount)
+                            .ThenBy(item => item.Title, StringComparer.OrdinalIgnoreCase)
+                            .ThenBy(item => item.RemoteItemId, StringComparer.Ordinal).ToList();
+                    break;
+                case MockupDiscoverySortMode.WordCount:
+                    ordered = query.SortDirection == MockupSortDirection.Descending
+                        ? ordered.OrderByDescending(item => item.WordCount)
+                            .ThenBy(item => item.Title, StringComparer.OrdinalIgnoreCase)
+                            .ThenBy(item => item.RemoteItemId, StringComparer.Ordinal).ToList()
+                        : ordered.OrderBy(item => item.WordCount)
+                            .ThenBy(item => item.Title, StringComparer.OrdinalIgnoreCase)
+                            .ThenBy(item => item.RemoteItemId, StringComparer.Ordinal).ToList();
+                    break;
+                default:
+                    if (query.SortDirection == MockupSortDirection.Descending)
+                        ordered.Reverse();
+                    break;
+            }
+
+            return ordered.AsReadOnly();
         }
 
         public void SetOnline(bool online)
@@ -443,6 +494,7 @@ namespace Words.UiMockups.WordListHub
         {
             List<string> normalizedWords = NormalizeWords(words);
             RequireAtLeastOneWord(normalizedWords);
+            RequireValidWordPinyin(normalizedWords, null);
 
             MockupWordList created = CreateList(title, language);
             created.Words = normalizedWords;
@@ -530,6 +582,7 @@ namespace Words.UiMockups.WordListHub
                 throw new InvalidOperationException("Community downloads are read-only. Create a copy first.");
 
             List<string> nextWords = ResolveEditedWords(item, edit);
+            RequireValidWordPinyin(nextWords, item.Words);
             bool contentChanged = item.Language != edit.Language
                 || !WordsEqual(item.Words, nextWords);
             if (contentChanged)
@@ -600,6 +653,7 @@ namespace Words.UiMockups.WordListHub
         {
 
             List<string> nextWords = ResolveEditedWords(source, edit);
+            RequireValidWordPinyin(nextWords, source.Words);
             bool contentChanged = source.Language != edit.Language
                 || !WordsEqual(source.Words, nextWords);
             RequireAtLeastOneWord(nextWords);
@@ -991,6 +1045,14 @@ namespace Words.UiMockups.WordListHub
                 throw new ArgumentException("Enter at least one non-empty word.", nameof(words));
         }
 
+        private static void RequireValidWordPinyin(
+            IEnumerable<string> words,
+            IEnumerable<string> unchangedLegacyWords)
+        {
+            if (!MockupWordContent.TryValidateWordLines(words, unchangedLegacyWords, out string error))
+                throw new ArgumentException(error, nameof(words));
+        }
+
         private static List<string> ResolveEditedWords(MockupWordList item, MockupWordListEdit edit)
         {
             List<string> currentWords = item.Words ?? new List<string>();
@@ -1065,33 +1127,49 @@ namespace Words.UiMockups.WordListHub
 
         private static readonly string[] ChineseSampleWords =
         {
-            "苹果", "花园", "种子", "土壤", "浇水", "叶子", "花朵", "窗户", "早上", "车票",
-            "车站", "站台", "换乘", "市场", "收据", "借用", "归还", "安静", "明亮", "邻居",
-            "天气", "雨伞", "架子", "篮子", "街角", "选择", "新鲜", "关门", "入口", "出口",
-            "左边", "右边"
+            "苹果 | ping guo", "花园 | hua yuan", "种子 | zhong zi", "土壤 | tu rang",
+            "浇水 | jiao shui", "叶子 | ye zi", "花朵 | hua duo", "窗户 | chuang hu",
+            "早上 | zao shang", "车票 | che piao", "车站 | che zhan", "站台 | zhan tai",
+            "换乘 | huan cheng", "市场 | shi chang", "收据 | shou ju", "借用 | jie yong",
+            "归还 | gui huan", "安静 | an jing", "明亮 | ming liang", "邻居 | lin ju",
+            "天气 | tian qi", "雨伞 | yu san", "架子 | jia zi", "篮子 | lan zi",
+            "街角 | jie jiao", "选择 | xuan ze", "新鲜 | xin xian", "关门 | guan men",
+            "入口 | ru kou", "出口 | chu kou", "左边 | zuo bian", "右边 | you bian"
         };
 
         private static readonly string[] MixedSampleWords =
         {
-            "apple — 苹果", "garden — 花园", "seed — 种子", "soil — 土壤", "water — 浇水",
-            "leaf — 叶子", "flower — 花朵", "window — 窗户", "morning — 早上", "ticket — 车票",
-            "station — 车站", "platform — 站台", "transfer — 换乘", "market — 市场",
-            "receipt — 收据", "borrow — 借用", "return — 归还", "quiet — 安静", "bright — 明亮",
-            "neighbour — 邻居", "weather — 天气", "umbrella — 雨伞", "shelf — 架子",
-            "basket — 篮子", "corner — 街角", "choose — 选择", "fresh — 新鲜", "closed — 关门",
-            "entrance — 入口", "exit — 出口", "left — 左边", "right — 右边",
-            "street — 街道", "crosswalk — 斑马线", "bridge — 桥", "river — 河", "bus — 公交车",
-            "train — 火车", "subway — 地铁", "schedule — 时刻表", "delay — 延误", "direction — 方向",
-            "map — 地图", "nearby — 附近", "straight — 直走", "turn — 转弯", "next station — 下一站",
-            "arrival — 到达", "departure — 出发", "luggage — 行李", "passport — 护照", "gate — 登机口",
-            "boarding pass — 登机牌", "information desk — 问询台", "restroom — 洗手间", "snack — 小吃",
-            "spicy — 辣", "sweet — 甜", "vegetarian — 素食", "menu — 菜单", "order — 点餐",
-            "bill — 账单", "cash — 现金", "bank card — 银行卡", "change — 找零", "queue — 排队",
-            "available — 有空", "sold out — 售罄", "repair — 修理", "lost and found — 失物招领",
-            "emergency — 紧急情况", "pharmacy — 药店", "hospital — 医院", "medicine — 药",
-            "headache — 头痛", "appointment — 预约", "address — 地址", "phone number — 电话号码",
-            "internet — 网络", "password — 密码", "battery — 电池", "charger — 充电器", "key — 钥匙",
-            "elevator — 电梯", "stairs — 楼梯", "floor — 楼层", "apartment — 公寓", "help — 帮助"
+            "apple — 苹果 | ping guo", "garden — 花园 | hua yuan", "seed — 种子 | zhong zi",
+            "soil — 土壤 | tu rang", "water — 浇水 | jiao shui", "leaf — 叶子 | ye zi",
+            "flower — 花朵 | hua duo", "window — 窗户 | chuang hu", "morning — 早上 | zao shang",
+            "ticket — 车票 | che piao", "station — 车站 | che zhan", "platform — 站台 | zhan tai",
+            "transfer — 换乘 | huan cheng", "market — 市场 | shi chang", "receipt — 收据 | shou ju",
+            "borrow — 借用 | jie yong", "return — 归还 | gui huan", "quiet — 安静 | an jing",
+            "bright — 明亮 | ming liang", "neighbour — 邻居 | lin ju", "weather — 天气 | tian qi",
+            "umbrella — 雨伞 | yu san", "shelf — 架子 | jia zi", "basket — 篮子 | lan zi",
+            "corner — 街角 | jie jiao", "choose — 选择 | xuan ze", "fresh — 新鲜 | xin xian",
+            "closed — 关门 | guan men", "entrance — 入口 | ru kou", "exit — 出口 | chu kou",
+            "left — 左边 | zuo bian", "right — 右边 | you bian", "street — 街道 | jie dao",
+            "crosswalk — 斑马线 | ban ma xian", "bridge — 桥 | qiao", "river — 河 | he",
+            "bus — 公交车 | gong jiao che", "train — 火车 | huo che", "subway — 地铁 | di tie",
+            "schedule — 时刻表 | shi ke biao", "delay — 延误 | yan wu", "direction — 方向 | fang xiang",
+            "map — 地图 | di tu", "nearby — 附近 | fu jin", "straight — 直走 | zhi zou",
+            "turn — 转弯 | zhuan wan", "next station — 下一站 | xia yi zhan", "arrival — 到达 | dao da",
+            "departure — 出发 | chu fa", "luggage — 行李 | xing li", "passport — 护照 | hu zhao",
+            "gate — 登机口 | deng ji kou", "boarding pass — 登机牌 | deng ji pai",
+            "information desk — 问询台 | wen xun tai", "restroom — 洗手间 | xi shou jian",
+            "snack — 小吃 | xiao chi", "spicy — 辣 | la", "sweet — 甜 | tian",
+            "vegetarian — 素食 | su shi", "menu — 菜单 | cai dan", "order — 点餐 | dian can",
+            "bill — 账单 | zhang dan", "cash — 现金 | xian jin", "bank card — 银行卡 | yin hang ka",
+            "change — 找零 | zhao ling", "queue — 排队 | pai dui", "available — 有空 | you kong",
+            "sold out — 售罄 | shou qing", "repair — 修理 | xiu li",
+            "lost and found — 失物招领 | shi wu zhao ling", "emergency — 紧急情况 | jin ji qing kuang",
+            "pharmacy — 药店 | yao dian", "hospital — 医院 | yi yuan", "medicine — 药 | yao",
+            "headache — 头痛 | tou tong", "appointment — 预约 | yu yue", "address — 地址 | di zhi",
+            "phone number — 电话号码 | dian hua hao ma", "internet — 网络 | wang luo",
+            "password — 密码 | mi ma", "battery — 电池 | dian chi", "charger — 充电器 | chong dian qi",
+            "key — 钥匙 | yao shi", "elevator — 电梯 | dian ti", "stairs — 楼梯 | lou ti",
+            "floor — 楼层 | lou ceng", "apartment — 公寓 | gong yu", "help — 帮助 | bang zhu"
         };
 
         private static DateTime FixtureDate(string isoDate, int hour)

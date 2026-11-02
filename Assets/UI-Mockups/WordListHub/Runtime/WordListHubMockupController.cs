@@ -65,7 +65,7 @@ namespace Words.UiMockups.WordListHub
         private string selectedListId;
         private string selectedDiscoveryId;
         private string librarySearchText = string.Empty;
-        private string communitySearchText = string.Empty;
+        private MockupDiscoveryQuery communityQuery = new MockupDiscoveryQuery();
         private string lastActionMessage = string.Empty;
         private float actionFeedbackExpiresAt;
         private Transform card;
@@ -235,7 +235,8 @@ namespace Words.UiMockups.WordListHub
 
             WordListHubSceneBindings.CommunityPageBinding community = sceneBindings.community;
             BindFilterMenu(community.connectionMenu);
-            BindDropdown(community.connectionState, SetMockOnlineFromDropdown);
+            if (community.connectionState != null)
+                community.connectionState.gameObject.SetActive(false);
             BindInput(community.searchInput, HandleCommunitySearchChanged);
             BindFilterMenu(sceneBindings.achievements.filterMenu);
             BindDropdown(sceneBindings.achievements.filter, SetAchievementFilterFromDropdown);
@@ -400,7 +401,7 @@ namespace Words.UiMockups.WordListHub
             selectedListId = null;
             selectedDiscoveryId = null;
             librarySearchText = string.Empty;
-            communitySearchText = string.Empty;
+            communityQuery = new MockupDiscoveryQuery();
             ClearActionFeedback();
             collapsedGroups.Clear();
             editDraft = null;
@@ -470,7 +471,7 @@ namespace Words.UiMockups.WordListHub
 
         private void HandleCommunitySearchChanged(string value)
         {
-            communitySearchText = value ?? string.Empty;
+            communityQuery.SearchText = value ?? string.Empty;
             RefreshCommunityPage();
         }
 
@@ -536,8 +537,17 @@ namespace Words.UiMockups.WordListHub
                         case WordListHubSceneBindings.LibraryFilterKind.Sort:
                             BindButton(option.button, () => SetSortModeFromDropdown(value));
                             break;
-                        case WordListHubSceneBindings.LibraryFilterKind.MockConnectionState:
-                            BindButton(option.button, () => SetMockOnlineFromDropdown(value));
+                        case WordListHubSceneBindings.LibraryFilterKind.CommunityOrder:
+                            BindButton(option.button, () => SetCommunitySortDirection(value));
+                            break;
+                        case WordListHubSceneBindings.LibraryFilterKind.CommunityLanguage:
+                            BindButton(option.button, () => SetCommunityLanguageFilter(value));
+                            break;
+                        case WordListHubSceneBindings.LibraryFilterKind.CommunityDownloadState:
+                            BindButton(option.button, () => SetCommunityDownloadFilter(value));
+                            break;
+                        case WordListHubSceneBindings.LibraryFilterKind.CommunitySort:
+                            BindButton(option.button, () => SetCommunitySortMode(value));
                             break;
                         case WordListHubSceneBindings.LibraryFilterKind.AchievementStatus:
                             BindButton(option.button, () => SetAchievementFilterFromDropdown(value));
@@ -642,6 +652,28 @@ namespace Words.UiMockups.WordListHub
                 case WordListHubSceneBindings.LibraryFilterKind.Played: return (int)currentQuery.PlayedFilter;
                 case WordListHubSceneBindings.LibraryFilterKind.Sort: return (int)currentQuery.SortMode;
                 default: return -1;
+            }
+        }
+
+        private static int GetCommunityFilterValue(
+            WordListHubSceneBindings.LibraryFilterKind kind,
+            MockupDiscoveryQuery currentQuery)
+        {
+            if (currentQuery == null)
+                return -1;
+
+            switch (kind)
+            {
+                case WordListHubSceneBindings.LibraryFilterKind.CommunityOrder:
+                    return (int)currentQuery.SortDirection;
+                case WordListHubSceneBindings.LibraryFilterKind.CommunityLanguage:
+                    return (int)currentQuery.LanguageFilter;
+                case WordListHubSceneBindings.LibraryFilterKind.CommunityDownloadState:
+                    return (int)currentQuery.DownloadFilter;
+                case WordListHubSceneBindings.LibraryFilterKind.CommunitySort:
+                    return (int)currentQuery.SortMode;
+                default:
+                    return -1;
             }
         }
 
@@ -750,10 +782,31 @@ namespace Words.UiMockups.WordListHub
             RefreshCommunityPage();
         }
 
-        private void SetMockOnlineFromDropdown(int value)
+        private void SetCommunitySortDirection(int value)
         {
-            bool online = value == 0;
-            store.SetOnline(online);
+            communityQuery.SortDirection = (MockupSortDirection)Mathf.Clamp(
+                value, 0, Enum.GetValues(typeof(MockupSortDirection)).Length - 1);
+            RefreshCommunityPage();
+        }
+
+        private void SetCommunityLanguageFilter(int value)
+        {
+            communityQuery.LanguageFilter = (MockupLanguageFilter)Mathf.Clamp(
+                value, 0, Enum.GetValues(typeof(MockupLanguageFilter)).Length - 1);
+            RefreshCommunityPage();
+        }
+
+        private void SetCommunityDownloadFilter(int value)
+        {
+            communityQuery.DownloadFilter = (MockupDiscoveryDownloadFilter)Mathf.Clamp(
+                value, 0, Enum.GetValues(typeof(MockupDiscoveryDownloadFilter)).Length - 1);
+            RefreshCommunityPage();
+        }
+
+        private void SetCommunitySortMode(int value)
+        {
+            communityQuery.SortMode = (MockupDiscoverySortMode)Mathf.Clamp(
+                value, 0, Enum.GetValues(typeof(MockupDiscoverySortMode)).Length - 1);
             RefreshCommunityPage();
         }
 
@@ -1243,7 +1296,7 @@ namespace Words.UiMockups.WordListHub
                 ? item.BestTimeSeconds.Value.ToString("0.0") + " s" : "No run yet");
             SetText(library.detailWordsLabel, "WORDS  ·  " + item.WordCount);
             SetText(library.detailWords, item.Words == null || item.Words.Count == 0
-                ? "No words in this list." : string.Join("\n", item.Words));
+                ? "No words in this list." : string.Join("\n", item.Words.Select(MockupWordContent.FormatForDetail)));
 
             bool hasPublishedBinding = item.HasPublishedBinding;
             bool publicationIsActive = item.IsPubliclyVisible
@@ -1478,27 +1531,11 @@ namespace Words.UiMockups.WordListHub
                 ? community.listScroll.content.anchoredPosition
                 : Vector2.zero;
             if (community.searchInput != null)
-                community.searchInput.SetTextWithoutNotify(communitySearchText);
-            if (community.connectionState != null)
-            {
-                SetDropdownOptions(community.connectionState,
-                    new[] { "Network: Online", "Network: Offline" }, store.IsOnline ? 0 : 1);
-                BindDropdown(community.connectionState, SetMockOnlineFromDropdown);
-            }
-            SyncFilterMenu(
-                community.connectionMenu,
-                kind => kind == WordListHubSceneBindings.LibraryFilterKind.MockConnectionState
-                    ? (store.IsOnline ? 0 : 1) : -1,
-                "Network: " + (store.IsOnline ? "Online" : "Offline"));
+                community.searchInput.SetTextWithoutNotify(communityQuery.SearchText);
+            SyncFilterMenu(community.connectionMenu,
+                kind => GetCommunityFilterValue(kind, communityQuery), "Filters");
 
-            IEnumerable<MockupDiscoveryItem> queryResults = store.VisibleDiscoveryItems;
-            if (!string.IsNullOrWhiteSpace(communitySearchText))
-            {
-                string term = communitySearchText.Trim();
-                queryResults = queryResults.Where(item => Contains(item.Title, term)
-                    || Contains(item.Description, term));
-            }
-            List<MockupDiscoveryItem> items = queryResults.ToList();
+            List<MockupDiscoveryItem> items = store.QueryDiscoveryWithFilters(communityQuery).ToList();
             if (string.IsNullOrEmpty(selectedDiscoveryId)
                 || !items.Any(item => item.RemoteItemId == selectedDiscoveryId))
             {
@@ -1562,7 +1599,7 @@ namespace Words.UiMockups.WordListHub
 
             if (community.emptyNotice != null)
             {
-                community.emptyNotice.text = "No shared lists match this search.";
+                community.emptyNotice.text = "No community lists match these filters.";
                 community.emptyNotice.gameObject.SetActive(items.Count == 0);
             }
 
@@ -1684,7 +1721,7 @@ namespace Words.UiMockups.WordListHub
             SetText(community.detailMetadata, "SAMPLE CONTENT  ·  " + LanguageLabel(item.Language)
                 + "  ·  " + item.WordCount + " words");
             SetText(community.detailSummary, item.Words == null || item.Words.Count == 0
-                ? string.Empty : string.Join("    ", item.Words.Take(8)));
+                ? string.Empty : string.Join("    ", item.Words.Take(8).Select(MockupWordContent.FormatForDetail)));
             SetText(community.detailTrustNote,
                 "Downloads are read-only and appear in Community Downloads. Likes are separate.");
             SetCommunityAction(community.like,
@@ -1849,6 +1886,7 @@ namespace Words.UiMockups.WordListHub
             if (newListWordsInput != null)
                 newListWordsInput.SetTextWithoutNotify(string.Empty);
             SetText(form.validationText, string.Empty);
+            SetText(form.wordsLabel, WordsInputHint(newListLanguage));
             if (form.languageDropdown != null)
                 SetDropdownOptions(form.languageDropdown,
                     new[] { "English", "Chinese", "Mixed" }, (int)newListLanguage);
@@ -1858,12 +1896,15 @@ namespace Words.UiMockups.WordListHub
         {
             newListLanguage = (MockupLanguage)Mathf.Clamp(value, 0,
                 Enum.GetValues(typeof(MockupLanguage)).Length - 1);
+            if (sceneBindings != null && sceneBindings.modal != null && sceneBindings.modal.newList != null)
+                SetText(sceneBindings.modal.newList.wordsLabel, WordsInputHint(newListLanguage));
         }
 
         private void CreateNewList()
         {
             string title = newListTitleInput != null ? newListTitleInput.text.Trim() : string.Empty;
-            List<string> words = ParseWords(newListWordsInput != null ? newListWordsInput.text : string.Empty);
+            string wordText = newListWordsInput != null ? newListWordsInput.text : string.Empty;
+            List<string> words = ParseWords(wordText);
             if (string.IsNullOrWhiteSpace(title))
             {
                 SetDialogValidation("Enter a list name.");
@@ -1874,6 +1915,11 @@ namespace Words.UiMockups.WordListHub
                 SetDialogValidation("Enter at least one word. Blank lines are ignored.");
                 return;
             }
+            if (!MockupWordContent.TryValidateWordText(wordText, null, out string pinyinError))
+            {
+                SetDialogValidation(pinyinError);
+                return;
+            }
 
             MockupWordList item = store.CreateList(title, newListLanguage, words);
             MockupWordListEdit details = store.CreateEditDraft(item.Id);
@@ -1882,7 +1928,7 @@ namespace Words.UiMockups.WordListHub
             store.SaveEdit(item.Id, details);
             selectedListId = item.Id;
             ClearFiltersThatHide(item);
-            communitySearchText = string.Empty;
+            communityQuery.SearchText = string.Empty;
             ShowActionFeedback("Created “" + item.Title + "” with " + item.Words.Count + " words in My Lists.");
             CloseDialog();
             currentPage = Page.Library;
@@ -1949,7 +1995,7 @@ namespace Words.UiMockups.WordListHub
                 SetDropdownOptions(form.languageDropdown, new[] { "English", "Chinese", "Mixed" }, (int)editLanguage);
                 form.languageDropdown.interactable = true;
             }
-            SetText(form.wordsLabel, "Words (one per line)");
+            SetText(form.wordsLabel, WordsInputHint(editLanguage));
             SetText(form.validationText, string.Empty);
             if (editSaveButton != null)
                 SetText(form.saveButtonLabel, copyEditingMode ? "Save editable copy" : "Save changes");
@@ -2023,8 +2069,9 @@ namespace Words.UiMockups.WordListHub
             editDraft.Description = editDescriptionInput != null ? editDescriptionInput.text : editDraft.Description;
             editDraft.Tags = editTagsInput != null ? editTagsInput.text.Trim() : editDraft.Tags;
             editDraft.Language = editLanguage;
+            string wordText = editWordsInput != null ? editWordsInput.text : string.Empty;
             if (editWordsInput != null)
-                editDraft.Words = ParseWords(editWordsInput.text);
+                editDraft.Words = ParseWords(wordText);
             editDraft.WordCount = editDraft.Words != null ? editDraft.Words.Count : 0;
 
             if (string.IsNullOrWhiteSpace(editDraft.Title))
@@ -2035,6 +2082,14 @@ namespace Words.UiMockups.WordListHub
             if (editDraft.Words == null || editDraft.Words.Count == 0)
             {
                 SetDialogValidation("Enter at least one word. Blank lines are ignored.");
+                return;
+            }
+            IEnumerable<string> unchangedLegacyWords = null;
+            MockupWordList original = store.FindById(editingListId);
+            unchangedLegacyWords = original != null ? original.Words : null;
+            if (!MockupWordContent.TryValidateWordText(wordText, unchangedLegacyWords, out string pinyinError))
+            {
+                SetDialogValidation(pinyinError);
                 return;
             }
 
@@ -2142,6 +2197,19 @@ namespace Words.UiMockups.WordListHub
         {
             return string.Join("\n", (words ?? Enumerable.Empty<string>())
                 .Where(word => !string.IsNullOrWhiteSpace(word)));
+        }
+
+        private static string WordsInputHint(MockupLanguage language)
+        {
+            switch (language)
+            {
+                case MockupLanguage.Chinese:
+                    return "Words per line · e.g. 苹果 | ping guo";
+                case MockupLanguage.Mixed:
+                    return "Words per line · add pinyin after |";
+                default:
+                    return "Words (one per line)";
+            }
         }
 
         private static bool WordsEqual(IEnumerable<string> left, IEnumerable<string> right)

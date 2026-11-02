@@ -936,6 +936,7 @@ namespace Words.UiMockups.Editor
             WordListHubSceneBindings bindings = GetOrAddBindings(context);
             if (bindings.community.rowTemplate != null)
             {
+                ConfigureCommunityRowTextLayout(bindings.community.rowTemplate);
                 ValidateTemplate(bindings.community.rowTemplate.transform, "Community row template");
                 return;
             }
@@ -1005,7 +1006,31 @@ namespace Words.UiMockups.Editor
             view.status = favorite;
             ClearButtonListeners(view.button, context.controller);
             SetSliced(clone.transform, clone.transform.Find(SelectionVisualName));
+            ConfigureCommunityRowTextLayout(view);
             bindings.community.rowTemplate = view;
+        }
+
+        private static void ConfigureCommunityRowTextLayout(WordListHubDiscoveryRowView view)
+        {
+            if (view == null)
+                return;
+
+            ConfigureCommunityRowLabel(view.title, new Vector2(-55f, 22f), new Vector2(340f, 30f));
+            ConfigureCommunityRowLabel(view.metadata, new Vector2(-55f, -5f), new Vector2(340f, 24f));
+            ConfigureCommunityRowLabel(view.summary, new Vector2(-55f, -27f), new Vector2(340f, 20f));
+            ConfigureCommunityRowLabel(view.status, new Vector2(185f, 0f), new Vector2(110f, 20f));
+            if (view.status != null)
+                view.status.alignment = TextAlignmentOptions.MidlineRight;
+        }
+
+        private static void ConfigureCommunityRowLabel(TMP_Text text, Vector2 position, Vector2 size)
+        {
+            if (text == null)
+                return;
+
+            SetCenteredRect(text.rectTransform, position, size);
+            text.textWrappingMode = TextWrappingModes.NoWrap;
+            text.overflowMode = TextOverflowModes.Ellipsis;
         }
 
         private static void EnsureAchievementTemplate(Context context)
@@ -1236,8 +1261,10 @@ namespace Words.UiMockups.Editor
                     existingRect.anchorMax = new Vector2(0.5f, 0.5f);
                     existingRect.pivot = new Vector2(0.5f, 0.5f);
                     existingRect.anchoredPosition = new Vector2(-255f, 0f);
-                    existingRect.sizeDelta = new Vector2(72f, 22f);
+                    existingRect.sizeDelta = new Vector2(72f, 26f);
                 }
+                existing.textWrappingMode = TextWrappingModes.NoWrap;
+                existing.overflowMode = TextOverflowModes.Ellipsis;
                 existing.raycastTarget = false;
                 MakeRoomForBestTime(FindText(row, "ListTitle"));
                 MakeRoomForBestTime(FindText(row, "ListMetadata"));
@@ -1256,7 +1283,7 @@ namespace Words.UiMockups.Editor
             rect.anchorMax = new Vector2(0.5f, 0.5f);
             rect.pivot = new Vector2(0.5f, 0.5f);
             rect.anchoredPosition = new Vector2(-255f, 0f);
-            rect.sizeDelta = new Vector2(72f, 22f);
+            rect.sizeDelta = new Vector2(72f, 26f);
 
             TextMeshProUGUI label = labelObject.GetComponent<TextMeshProUGUI>();
             label.font = styleSource.font;
@@ -1265,7 +1292,8 @@ namespace Words.UiMockups.Editor
             label.color = styleSource.color;
             label.fontStyle = styleSource.fontStyle;
             label.alignment = TextAlignmentOptions.MidlineLeft;
-            label.enableWordWrapping = false;
+            label.textWrappingMode = TextWrappingModes.NoWrap;
+            label.overflowMode = TextOverflowModes.Ellipsis;
             label.raycastTarget = false;
             label.text = "—";
 
