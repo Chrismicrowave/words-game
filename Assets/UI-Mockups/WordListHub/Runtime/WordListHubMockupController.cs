@@ -50,6 +50,12 @@ namespace Words.UiMockups.WordListHub
         [SerializeField] private Sprite wordWithDUnlockedIcon;
         [SerializeField] private Sprite wordWithDLockedIcon;
 
+        [Header("Word Preview")]
+        [SerializeField, Min(0.1f), Tooltip(
+            "Scale for the glyph and pinyin text in both stacked word previews. "
+            + "Changes take effect when the mockup initializes.")]
+        private float wordPreviewFontScale = 2f;
+
         private readonly HashSet<MockupLibraryGroup> collapsedGroups =
             new HashSet<MockupLibraryGroup>();
 
@@ -150,9 +156,15 @@ namespace Words.UiMockups.WordListHub
         private void InitializeRubyWordsViews()
         {
             if (sceneBindings.library.detailWords != null && libraryRubyWordsView == null)
-                libraryRubyWordsView = MockupRubyWordsView.CreateLibrary(sceneBindings.library.detailWords);
+                libraryRubyWordsView = MockupRubyWordsView.CreateLibrary(
+                    sceneBindings.library.detailWords, wordPreviewFontScale);
             if (sceneBindings.community.detailSummary != null && communityRubyWordsView == null)
-                communityRubyWordsView = MockupRubyWordsView.CreateCommunity(sceneBindings.community.detailSummary);
+                communityRubyWordsView = MockupRubyWordsView.CreateCommunity(
+                    sceneBindings.community.detailSummary,
+                    libraryRubyWordsView == null || libraryRubyWordsView.ScrollRect == null
+                        ? null
+                        : libraryRubyWordsView.ScrollRect.verticalScrollbar,
+                    wordPreviewFontScale);
         }
 
         private void BindAuthoredScene()
@@ -2361,10 +2373,15 @@ namespace Words.UiMockups.WordListHub
         private const string LibraryRootName = "RuntimeRubyWords";
         private const string CommunityViewportName = "RuntimeRubyWordsViewport";
         private const string CommunityContentName = "RuntimeRubyWordsContent";
+        private const string CommunityScrollbarName = "RuntimeRubyWordsScrollbar";
         private const float HorizontalInset = 2f;
         private const float CellGap = 3f;
         private const float WrapGap = 2f;
         private const float EntryGap = 7f;
+        private const float ContentFontSizeIncrease = 2f;
+        private const float PinyinFontRatio = 0.72f;
+        private const float TextBandHeightRatio = 1.5f;
+        private const float CommunityScrollbarGap = 2f;
 
         private readonly TMP_Text sourceText;
         private readonly RectTransform layoutRoot;
@@ -2386,20 +2403,26 @@ namespace Words.UiMockups.WordListHub
             TMP_Text text,
             RectTransform root,
             ScrollRect scroll,
-            VerticalLayoutGroup layout)
+            VerticalLayoutGroup layout,
+            float previewFontScale)
         {
             sourceText = text;
             layoutRoot = root;
             scrollRect = scroll;
             verticalLayout = layout;
-            bodyFontSize = Mathf.Max(12f, text.fontSize);
-            pinyinFontSize = Mathf.Clamp(bodyFontSize * 0.72f, 11f, 12f);
-            pinyinBandHeight = Mathf.Ceil(Mathf.Max(15f, pinyinFontSize * 1.35f)) + 2f;
-            glyphBandHeight = Mathf.Ceil(Mathf.Max(18f, bodyFontSize * 1.35f)) + 2f;
+            float baseBodyFontSize = Mathf.Max(12f, text.fontSize);
+            float basePinyinFontSize = Mathf.Clamp(
+                (baseBodyFontSize - ContentFontSizeIncrease) * PinyinFontRatio, 11f, 12f)
+                + ContentFontSizeIncrease;
+            float safePreviewFontScale = Mathf.Max(0.1f, previewFontScale);
+            bodyFontSize = baseBodyFontSize * safePreviewFontScale;
+            pinyinFontSize = basePinyinFontSize * safePreviewFontScale;
+            pinyinBandHeight = Mathf.Ceil(Mathf.Max(15f, pinyinFontSize * TextBandHeightRatio)) + 2f;
+            glyphBandHeight = Mathf.Ceil(Mathf.Max(18f, bodyFontSize * TextBandHeightRatio)) + 2f;
             cellHeight = pinyinBandHeight + glyphBandHeight;
         }
 
-        public static MockupRubyWordsView CreateLibrary(TMP_Text legacyText)
+        public static MockupRubyWordsView CreateLibrary(TMP_Text legacyText, float previewFontScale)
         {
             if (legacyText == null || legacyText.transform.parent == null)
                 return null;
@@ -2431,13 +2454,19 @@ namespace Words.UiMockups.WordListHub
             rootElement.flexibleWidth = 1f;
 
             ScrollRect existingScroll = legacyText.GetComponentInParent<ScrollRect>(true);
-            return new MockupRubyWordsView(legacyText, root, existingScroll, layout);
+            return new MockupRubyWordsView(legacyText, root, existingScroll, layout, previewFontScale);
         }
 
-        public static MockupRubyWordsView CreateCommunity(TMP_Text legacyText)
+        public static MockupRubyWordsView CreateCommunity(
+            TMP_Text legacyText,
+            Scrollbar scrollbarTemplate,
+            float previewFontScale)
         {
             if (legacyText == null)
                 return null;
+            if (scrollbarTemplate == null)
+                throw new InvalidOperationException(
+                    "Community stacked word previews require the Library detail scrollbar template.");
 
             RectTransform viewportRegion = legacyText.rectTransform;
             RectTransform viewport = viewportRegion.Find(CommunityViewportName) as RectTransform;
@@ -2477,6 +2506,17 @@ namespace Words.UiMockups.WordListHub
             fitter.horizontalFit = ContentSizeFitter.FitMode.Unconstrained;
             fitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
 
+            Scrollbar communityScrollbar = CreateCommunityScrollbar(viewportRegion, scrollbarTemplate);
+            RectTransform scrollbarRect = communityScrollbar.transform as RectTransform;
+            RectTransform templateScrollbarRect = scrollbarTemplate.transform as RectTransform;
+            float scrollbarWidth = Mathf.Max(templateScrollbarRect.rect.width, templateScrollbarRect.sizeDelta.x);
+            scrollbarRect.anchorMin = new Vector2(1f, 0f);
+            scrollbarRect.anchorMax = Vector2.one;
+            scrollbarRect.pivot = new Vector2(1f, 1f);
+            scrollbarRect.anchoredPosition = Vector2.zero;
+            scrollbarRect.sizeDelta = new Vector2(scrollbarWidth, 0f);
+            content.sizeDelta = new Vector2(-(scrollbarWidth + CommunityScrollbarGap), content.sizeDelta.y);
+
             LayoutElement contentElement = content.GetComponent<LayoutElement>();
             if (contentElement == null)
                 contentElement = content.gameObject.AddComponent<LayoutElement>();
@@ -2489,12 +2529,33 @@ namespace Words.UiMockups.WordListHub
             scroll.vertical = true;
             scroll.movementType = ScrollRect.MovementType.Clamped;
             scroll.inertia = false;
-            scroll.scrollSensitivity = 24f;
+            scroll.scrollSensitivity = 40f;
             scroll.horizontalScrollbar = null;
-            scroll.verticalScrollbar = null;
+            scroll.verticalScrollbar = communityScrollbar;
+            scroll.verticalScrollbarVisibility = ScrollRect.ScrollbarVisibility.AutoHide;
+            scroll.verticalScrollbarSpacing = 0f;
 
             legacyText.enabled = false;
-            return new MockupRubyWordsView(legacyText, content, scroll, layout);
+            return new MockupRubyWordsView(legacyText, content, scroll, layout, previewFontScale);
+        }
+
+        private static Scrollbar CreateCommunityScrollbar(RectTransform communityRegion, Scrollbar template)
+        {
+            Transform existing = communityRegion.Find(CommunityScrollbarName);
+            Scrollbar scrollbar = existing == null ? null : existing.GetComponent<Scrollbar>();
+            if (scrollbar != null)
+                return scrollbar;
+
+            GameObject clone = UnityEngine.Object.Instantiate(template.gameObject, communityRegion, false);
+            clone.name = CommunityScrollbarName;
+            clone.SetActive(true);
+            scrollbar = clone.GetComponent<Scrollbar>();
+            if (scrollbar == null)
+                throw new InvalidOperationException("The Library detail scrollbar template has no Scrollbar component.");
+
+            scrollbar.onValueChanged.RemoveAllListeners();
+            scrollbar.direction = template.direction;
+            return scrollbar;
         }
 
         public void SetWords(IReadOnlyList<string> nextWords)

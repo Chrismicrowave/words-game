@@ -631,7 +631,7 @@ namespace Words.UiMockups.Editor
             heading.text = spec.title;
             heading.color = MutedInk;
             heading.fontStyle = FontStyles.Bold;
-            heading.fontSize = 16f;
+            heading.fontSize = 18f;
             heading.enableAutoSizing = false;
             heading.alignment = TextAlignmentOptions.MidlineLeft;
             heading.raycastTarget = false;

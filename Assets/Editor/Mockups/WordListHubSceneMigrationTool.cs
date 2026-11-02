@@ -506,7 +506,7 @@ namespace Words.UiMockups.Editor
         private static void BuildCommunityPage(Context context)
         {
             Transform page = context.communityRoot;
-            EnsureText(context, page, "CommunityHeading", "DISCOVER COMMUNITY LISTS", 18f, MutedInk,
+            EnsureText(context, page, "CommunityHeading", "DISCOVER COMMUNITY LISTS", 20f, MutedInk,
                 TextAlignmentOptions.MidlineLeft, new Vector2(-540f, 267f), new Vector2(420f, 36f), true);
             EnsureDropdown(context, page, "MockConnectionState",
                 new[] { "Network: Online", "Network: Offline" }, 0,
@@ -516,12 +516,12 @@ namespace Words.UiMockups.Editor
 
             Transform listPane = EnsurePanel(context, page, "CommunityListPane", context.libraryListPane,
                 new Vector2(-460f, -30f), new Vector2(580f, 510f));
-            EnsureText(context, listPane, "CommunityListTitle", "POPULAR THIS WEEK", 18f, MutedInk,
+            EnsureText(context, listPane, "CommunityListTitle", "POPULAR THIS WEEK", 20f, MutedInk,
                 TextAlignmentOptions.MidlineLeft, new Vector2(0f, 226f), new Vector2(520f, 34f), true);
             ScrollRect scroll = EnsureScroll(context, listPane, "CommunityScroll",
                 new Vector2(0f, -22f), new Vector2(550f, 445f));
             TMP_Text empty = EnsureText(context, listPane, "CommunityEmptyNotice",
-                "No shared lists match this search.", 17f, MutedInk,
+                "No shared lists match this search.", 19f, MutedInk,
                 TextAlignmentOptions.Center, new Vector2(0f, -22f), new Vector2(500f, 70f), false);
             empty.gameObject.SetActive(false);
 
@@ -532,24 +532,24 @@ namespace Words.UiMockups.Editor
 
         private static void BuildCommunityDetail(Context context, Transform pane)
         {
-            EnsureText(context, pane, "DiscoveryEyebrow", "COMMUNITY WORD LIST", 15f, MutedInk,
+            EnsureText(context, pane, "DiscoveryEyebrow", "COMMUNITY WORD LIST", 17f, MutedInk,
                 TextAlignmentOptions.MidlineLeft, new Vector2(0f, 222f), new Vector2(800f, 24f), true);
-            EnsureText(context, pane, "DiscoveryDetailTitle", "Community list title", 26.2f, Ink,
+            EnsureText(context, pane, "DiscoveryDetailTitle", "Community list title", 28.2f, Ink,
                 TextAlignmentOptions.MidlineLeft, new Vector2(0f, 166f), new Vector2(760f, 52f), true);
-            EnsureText(context, pane, "DiscoveryAuthor", "BY  Community member", 13f, AccentDark,
+            EnsureText(context, pane, "DiscoveryAuthor", "BY  Community member", 15f, AccentDark,
                 TextAlignmentOptions.MidlineLeft, new Vector2(0f, 112f), new Vector2(760f, 24f), true);
-            EnsureText(context, pane, "DiscoveryDetailDesc", "A shared word list.", 16f, MutedInk,
+            EnsureText(context, pane, "DiscoveryDetailDesc", "A shared word list.", 18f, MutedInk,
                 TextAlignmentOptions.TopLeft, new Vector2(0f, 57f), new Vector2(760f, 58f), false);
 
             Transform sample = EnsurePanel(context, pane, "DiscoverySample", context.libraryDetailPane,
                 new Vector2(0f, -32f), new Vector2(760f, 120f));
-            EnsureText(context, sample, "SampleLabel", "SAMPLE CONTENT  ·  English  ·  0 words", 14f, MutedInk,
+            EnsureText(context, sample, "SampleLabel", "SAMPLE CONTENT  ·  English  ·  0 words", 16f, MutedInk,
                 TextAlignmentOptions.MidlineLeft, new Vector2(0f, 36f), new Vector2(700f, 22f), true);
-            EnsureText(context, sample, "SampleWords", "sample  words", 16f, Ink,
+            EnsureText(context, sample, "SampleWords", "sample  words", 18f, Ink,
                 TextAlignmentOptions.MidlineLeft, new Vector2(0f, -4f), new Vector2(700f, 48f), true);
             EnsureText(context, pane, "CommunityTrustNote",
                 "Downloads are read-only and appear in Community Downloads. Likes are separate.",
-                13f, MutedInk, TextAlignmentOptions.MidlineLeft,
+                15f, MutedInk, TextAlignmentOptions.MidlineLeft,
                 new Vector2(0f, -108f), new Vector2(760f, 24f), false);
 
             EnsureButton(context, pane, "Action_Like", "♡ Like  ·  0", 172f, 60f, PaperAlt,
@@ -565,9 +565,9 @@ namespace Words.UiMockups.Editor
         private static void BuildAchievementsPage(Context context)
         {
             Transform page = context.achievementsRoot;
-            EnsureText(context, page, "AchievementsHeading", "ACHIEVEMENTS", 18f, MutedInk,
+            EnsureText(context, page, "AchievementsHeading", "ACHIEVEMENTS", 20f, MutedInk,
                 TextAlignmentOptions.MidlineLeft, new Vector2(-600f, 267f), new Vector2(320f, 38f), true);
-            EnsureText(context, page, "AchievementsCaption", "SAMPLE PROGRESS  ·  LOCAL PREVIEW", 15f, MutedInk,
+            EnsureText(context, page, "AchievementsCaption", "SAMPLE PROGRESS  ·  LOCAL PREVIEW", 17f, MutedInk,
                 TextAlignmentOptions.MidlineRight, new Vector2(480f, 267f), new Vector2(340f, 38f), false);
             EnsureDropdown(context, page, "AchievementFilter",
                 new[] { "Show: All", "Show: Unlocked", "Show: In progress" }, 0,
@@ -644,17 +644,17 @@ namespace Words.UiMockups.Editor
             Transform page = context.challengesRoot;
             Transform panel = EnsurePanel(context, page, "ChallengesMockupPage", context.libraryDetailPane,
                 Vector2.zero, new Vector2(900f, 400f));
-            EnsureText(context, panel, "ChallengesMockupTitle", "CHALLENGE LEVELS", 30f, Ink,
+            EnsureText(context, panel, "ChallengesMockupTitle", "CHALLENGE LEVELS", 32f, Ink,
                 TextAlignmentOptions.Center, new Vector2(0f, 95f), new Vector2(780f, 54f), true);
             EnsureText(context, panel, "ChallengesMockupNote",
                 "Challenge selection stays in the existing Levels screen.\nThis isolated preview focuses on your word library, community lists and achievements.",
-                18f, MutedInk, TextAlignmentOptions.Center,
+                20f, MutedInk, TextAlignmentOptions.Center,
                 new Vector2(0f, 5f), new Vector2(780f, 100f), false);
             EnsureButton(context, panel, "ChallengesDailyButton", "Open Word List", 220f, 48f,
                 AccentDark, new Vector2(0f, -96f), 16f, true);
             EnsureButton(context, panel, "ChallengesWeeklyButton", "Weekly challenge", 220f, 48f,
                 PaperAlt, new Vector2(0f, -156f), 16f, false);
-            EnsureText(context, panel, "ChallengesStatus", string.Empty, 15f, MutedInk,
+            EnsureText(context, panel, "ChallengesStatus", string.Empty, 17f, MutedInk,
                 TextAlignmentOptions.Center, new Vector2(0f, -190f), new Vector2(780f, 24f), false);
         }
 
@@ -663,7 +663,7 @@ namespace Words.UiMockups.Editor
             Transform root = context.modalRoot;
             Transform panel = EnsurePanel(context, root, "DialogPanel", context.libraryDetailPane,
                 Vector2.zero, new Vector2(780f, 730f));
-            EnsureText(context, panel, "DialogTitle", "Word List Hub", 24f, Ink,
+            EnsureText(context, panel, "DialogTitle", "Word List Hub", 26f, Ink,
                 TextAlignmentOptions.MidlineLeft, new Vector2(0f, 325f), new Vector2(680f, 42f), true);
 
             BuildForm(context, panel, "NewListForm", true);
@@ -679,35 +679,35 @@ namespace Words.UiMockups.Editor
         private static void BuildForm(Context context, Transform panel, string name, bool isNew)
         {
             Transform root = EnsureRectChild(panel, name, new Vector2(0f, -15f), new Vector2(700f, 600f));
-            EnsureText(context, root, name + "NameLabel", "List name", 15f, MutedInk,
+            EnsureText(context, root, name + "NameLabel", "List name", 17f, MutedInk,
                 TextAlignmentOptions.MidlineLeft, new Vector2(0f, 263f), new Vector2(640f, 24f), true);
             EnsureInput(context, root, isNew ? "NewListTitleInput" : "EditTitleInput", "New word list",
                 new Vector2(0f, 221f), new Vector2(640f, 42f), TMP_InputField.LineType.SingleLine);
-            EnsureText(context, root, name + "DescriptionLabel", "Description (optional)", 15f, MutedInk,
+            EnsureText(context, root, name + "DescriptionLabel", "Description (optional)", 17f, MutedInk,
                 TextAlignmentOptions.MidlineLeft, new Vector2(0f, 183f), new Vector2(640f, 24f), true);
             EnsureInput(context, root, isNew ? "NewListDescriptionInput" : "EditDescriptionInput",
                 "Add a short description…", new Vector2(0f, 140f), new Vector2(640f, 48f),
                 TMP_InputField.LineType.MultiLineNewline);
-            EnsureText(context, root, name + "TagsLabel", "Tags, comma-separated (optional)", 15f, MutedInk,
+            EnsureText(context, root, name + "TagsLabel", "Tags, comma-separated (optional)", 17f, MutedInk,
                 TextAlignmentOptions.MidlineLeft, new Vector2(0f, 98f), new Vector2(640f, 24f), true);
             EnsureInput(context, root, isNew ? "NewListTagsInput" : "EditTagsInput",
                 "travel, beginner, daily", new Vector2(0f, 62f), new Vector2(640f, 40f), TMP_InputField.LineType.SingleLine);
-            EnsureText(context, root, name + "LanguageLabel", "Language", 15f, MutedInk,
+            EnsureText(context, root, name + "LanguageLabel", "Language", 17f, MutedInk,
                 TextAlignmentOptions.MidlineLeft, new Vector2(-205f, 19f), new Vector2(230f, 22f), true);
             EnsureDropdown(context, root, isNew ? "NewListLanguage" : "EditLanguage",
                 new[] { "English", "Chinese", "Mixed" }, 0,
                 new Vector2(160f, 19f), new Vector2(220f, 38f));
             EnsureText(context, root, isNew ? "NewListWordsLabel" : "EditWordsLabel",
                 isNew ? "Words (one per line; at least one required)" : "Words (one per line)",
-                15f, MutedInk, TextAlignmentOptions.MidlineLeft,
+                17f, MutedInk, TextAlignmentOptions.MidlineLeft,
                 new Vector2(0f, -25f), new Vector2(640f, 24f), true);
             EnsureInput(context, root, isNew ? "NewListWordsInput" : "EditWordsInput",
                 "Type or paste one word per line…", new Vector2(0f, -134f), new Vector2(640f, 180f),
                 TMP_InputField.LineType.MultiLineNewline);
             EnsureText(context, root, isNew ? "NewListFormValidation" : "EditValidation",
-                string.Empty, 14f, AccentDark, TextAlignmentOptions.MidlineLeft,
+                string.Empty, 16f, AccentDark, TextAlignmentOptions.MidlineLeft,
                 new Vector2(0f, -246f), new Vector2(640f, 24f), false);
-            EnsureText(context, root, "EditSaveHint", string.Empty, 12f, MutedInk,
+            EnsureText(context, root, "EditSaveHint", string.Empty, 14f, MutedInk,
                 TextAlignmentOptions.MidlineLeft, new Vector2(0f, -273f), new Vector2(640f, 22f), false);
             EnsureButton(context, root, isNew ? "NewListCancel" : "EditListCancel", "Cancel",
                 140f, 42f, PaperAlt, new Vector2(-105f, -306f), 15f, false);
@@ -726,7 +726,7 @@ namespace Words.UiMockups.Editor
             string cancelLabel)
         {
             Transform root = EnsureRectChild(panel, name, new Vector2(0f, -20f), new Vector2(700f, 360f));
-            EnsureText(context, root, name + "Message", message, 18f, MutedInk,
+            EnsureText(context, root, name + "Message", message, 20f, MutedInk,
                 TextAlignmentOptions.Center, new Vector2(0f, 45f), new Vector2(620f, 120f), false);
             EnsureButton(context, root, name + "Cancel", cancelLabel, 170f, 44f,
                 PaperAlt, new Vector2(-110f, -95f), 15f, false);
@@ -949,14 +949,14 @@ namespace Words.UiMockups.Editor
             clone.name = "CommunityRowTemplate";
             clone.SetActive(false);
             RectTransform rect = RequireComponent<RectTransform>(clone);
-            SetCenteredRect(rect, Vector2.zero, new Vector2(520f, 76f));
+            SetCenteredRect(rect, Vector2.zero, new Vector2(520f, 84f));
             LayoutElement layout = clone.GetComponent<LayoutElement>();
             if (layout != null)
             {
                 layout.minWidth = 520f;
                 layout.preferredWidth = 520f;
-                layout.minHeight = 76f;
-                layout.preferredHeight = 76f;
+                layout.minHeight = 84f;
+                layout.preferredHeight = 84f;
             }
 
             TMP_Text favorite = FindText(clone.transform, "FavoriteMark");
@@ -965,13 +965,13 @@ namespace Words.UiMockups.Editor
             Transform badgeRoot = clone.transform.Find("ListBadge");
             TMP_Text summary = badgeRoot != null ? badgeRoot.GetComponent<TMP_Text>() : null;
             if (summary == null)
-                summary = CreateText(context, clone.transform, "DiscoverySummary", string.Empty, 13f, MutedInk,
+                summary = CreateText(context, clone.transform, "DiscoverySummary", string.Empty, 15f, MutedInk,
                     TextAlignmentOptions.MidlineLeft, new Vector2(0f, -26f), new Vector2(480f, 16f), false);
             else
             {
                 summary.gameObject.name = "DiscoverySummary";
                 SetCenteredRect(summary.rectTransform, new Vector2(0f, -26f), new Vector2(480f, 16f));
-                summary.fontSize = 13f;
+                summary.fontSize = 15f;
                 summary.alignment = TextAlignmentOptions.MidlineLeft;
             }
             summary.textWrappingMode = TextWrappingModes.NoWrap;
@@ -990,7 +990,7 @@ namespace Words.UiMockups.Editor
             {
                 favorite.gameObject.name = "DiscoveryStatus";
                 SetCenteredRect(favorite.rectTransform, new Vector2(185f, 17f), new Vector2(110f, 18f));
-                favorite.fontSize = 13f;
+                favorite.fontSize = 15f;
                 favorite.alignment = TextAlignmentOptions.MidlineRight;
             }
             if (badgeRoot != null && badgeRoot != summary.transform)
@@ -1015,10 +1015,26 @@ namespace Words.UiMockups.Editor
             if (view == null)
                 return;
 
-            ConfigureCommunityRowLabel(view.title, new Vector2(-55f, 22f), new Vector2(340f, 30f));
-            ConfigureCommunityRowLabel(view.metadata, new Vector2(-55f, -5f), new Vector2(340f, 24f));
-            ConfigureCommunityRowLabel(view.summary, new Vector2(-55f, -27f), new Vector2(340f, 20f));
-            ConfigureCommunityRowLabel(view.status, new Vector2(185f, 0f), new Vector2(110f, 20f));
+            RectTransform rowRect = view.transform as RectTransform;
+            if (rowRect != null)
+                rowRect.sizeDelta = new Vector2(rowRect.sizeDelta.x, 84f);
+            LayoutElement rowLayout = view.GetComponent<LayoutElement>();
+            if (rowLayout != null)
+            {
+                rowLayout.minHeight = 84f;
+                rowLayout.preferredHeight = 84f;
+            }
+
+            ConfigureCommunityRowLabel(view.title, new Vector2(-55f, 15.5f), new Vector2(340f, 32f));
+            ConfigureCommunityRowLabel(view.metadata, new Vector2(-55f, -18f), new Vector2(340f, 27f));
+            ConfigureCommunityRowLabel(view.summary, new Vector2(-55f, -30f), new Vector2(340f, 22f));
+            ConfigureCommunityRowLabel(view.status, new Vector2(185f, 0f), new Vector2(110f, 22f));
+            if (view.summary != null)
+                view.summary.gameObject.SetActive(false);
+            if (view.title != null) view.title.fontSize = 22f;
+            if (view.metadata != null) view.metadata.fontSize = 18f;
+            if (view.summary != null) view.summary.fontSize = 15f;
+            if (view.status != null) view.status.fontSize = 15f;
             if (view.status != null)
                 view.status.alignment = TextAlignmentOptions.MidlineRight;
         }
@@ -1066,13 +1082,13 @@ namespace Words.UiMockups.Editor
                 icon.color = new Color(0.72f, 0.72f, 0.72f, 1f);
                 icon.raycastTarget = false;
 
-                CreateText(context, root, "AchievementState", "LOCKED", 12f, AccentDark,
+                CreateText(context, root, "AchievementState", "LOCKED", 14f, AccentDark,
                     TextAlignmentOptions.MidlineLeft, new Vector2(62f, 115f), new Vector2(296f, 24f), true);
-                CreateText(context, root, "AchievementTitle", "Achievement title", 20f, Ink,
+                CreateText(context, root, "AchievementTitle", "Achievement title", 22f, Ink,
                     TextAlignmentOptions.TopLeft, new Vector2(64f, 68f), new Vector2(296f, 54f), true);
-                CreateText(context, root, "AchievementDescription", "Achievement description", 16f, MutedInk,
+                CreateText(context, root, "AchievementDescription", "Achievement description", 18f, MutedInk,
                     TextAlignmentOptions.TopLeft, new Vector2(64f, -8f), new Vector2(296f, 88f), false);
-                CreateText(context, root, "AchievementProgress", "Progress", 18f, AccentDark,
+                CreateText(context, root, "AchievementProgress", "Progress", 20f, AccentDark,
                     TextAlignmentOptions.MidlineLeft, new Vector2(64f, -126f), new Vector2(296f, 32f), true);
             }
 
@@ -1261,7 +1277,7 @@ namespace Words.UiMockups.Editor
                     existingRect.anchorMax = new Vector2(0.5f, 0.5f);
                     existingRect.pivot = new Vector2(0.5f, 0.5f);
                     existingRect.anchoredPosition = new Vector2(-255f, 0f);
-                    existingRect.sizeDelta = new Vector2(72f, 26f);
+                    existingRect.sizeDelta = new Vector2(72f, 28f);
                 }
                 existing.textWrappingMode = TextWrappingModes.NoWrap;
                 existing.overflowMode = TextOverflowModes.Ellipsis;
@@ -1283,7 +1299,7 @@ namespace Words.UiMockups.Editor
             rect.anchorMax = new Vector2(0.5f, 0.5f);
             rect.pivot = new Vector2(0.5f, 0.5f);
             rect.anchoredPosition = new Vector2(-255f, 0f);
-            rect.sizeDelta = new Vector2(72f, 26f);
+            rect.sizeDelta = new Vector2(72f, 28f);
 
             TextMeshProUGUI label = labelObject.GetComponent<TextMeshProUGUI>();
             label.font = styleSource.font;
@@ -2044,9 +2060,14 @@ namespace Words.UiMockups.Editor
             input.lineType = lineType;
             input.contentType = TMP_InputField.ContentType.Standard;
             input.characterLimit = 0;
+            if (input.textComponent != null)
+                input.textComponent.fontSize = 20f;
             input.SetTextWithoutNotify(string.Empty);
             if (input.placeholder is TMP_Text placeholderText)
+            {
                 placeholderText.text = placeholder;
+                placeholderText.fontSize = 18f;
+            }
             SetSliced(clone.transform);
             return input;
         }

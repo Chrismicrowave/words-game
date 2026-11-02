@@ -88,11 +88,64 @@ namespace Words.UiMockups.WordListHub.Tests
         }
 
         [Test]
+        public void CommunityRowsShowOnlyCenteredTitleAndMetadata()
+        {
+            WordListHubSceneBindings.CommunityPageBinding community = harness.Bindings.community;
+            WordListHubDiscoveryRowView template = community.rowTemplate;
+            RectTransform titleRect = template.title.rectTransform;
+            RectTransform metadataRect = template.metadata.rectTransform;
+
+            Assert.That(template.summary.gameObject.activeSelf, Is.False,
+                "The selectable Community row should not show a description line.");
+            AssertVector2(titleRect.anchoredPosition, new Vector2(-55f, 15.5f),
+                "Community title position");
+            AssertVector2(metadataRect.anchoredPosition, new Vector2(-55f, -18f),
+                "Community metadata position");
+            Assert.That(titleRect.sizeDelta.y, Is.EqualTo(32f).Within(0.001f));
+            Assert.That(metadataRect.sizeDelta.y, Is.EqualTo(27f).Within(0.001f));
+
+            float titleTop = titleRect.anchoredPosition.y + titleRect.rect.height * 0.5f;
+            float titleBottom = titleRect.anchoredPosition.y - titleRect.rect.height * 0.5f;
+            float metadataTop = metadataRect.anchoredPosition.y + metadataRect.rect.height * 0.5f;
+            float metadataBottom = metadataRect.anchoredPosition.y - metadataRect.rect.height * 0.5f;
+            Assert.That((titleTop + metadataBottom) * 0.5f, Is.EqualTo(0f).Within(0.001f),
+                "The two visible text lines should be centered as a group in the row.");
+            Assert.That(titleBottom - metadataTop, Is.EqualTo(4f).Within(0.001f));
+            Assert.That(template.status.gameObject.activeSelf, Is.True);
+            Assert.That(template.status.rectTransform.anchoredPosition.y,
+                Is.EqualTo(0f).Within(0.001f), "Keep the right-side status centered.");
+
+            WordListHubDiscoveryRowView dynamicClone = UnityEngine.Object.Instantiate(
+                template, community.listContent, false);
+            try
+            {
+                Assert.That(dynamicClone.summary.gameObject.activeSelf, Is.False,
+                    "Runtime Community rows should inherit the hidden description line.");
+                Assert.That(dynamicClone.title.rectTransform.anchoredPosition.y,
+                    Is.EqualTo(15.5f).Within(0.001f));
+                Assert.That(dynamicClone.metadata.rectTransform.anchoredPosition.y,
+                    Is.EqualTo(-18f).Within(0.001f));
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(dynamicClone.gameObject);
+            }
+        }
+
+        [Test]
         public void StackedWordViewsAlignRubyCellsWrapEnglishAndKeepDetailRegionsFixed()
         {
+            SerializedProperty previewScaleProperty = new SerializedObject(harness.Controller)
+                .FindProperty("wordPreviewFontScale");
+            Assert.That(previewScaleProperty, Is.Not.Null,
+                "The preview scale must be editable on the existing controller component.");
+            Assert.That(previewScaleProperty.floatValue, Is.EqualTo(2f).Within(0.001f));
+            float previewFontScale = previewScaleProperty.floatValue;
+
             TMP_Text libraryText = harness.Bindings.library.detailWords;
             libraryText.text = "legacy detail text remains available";
-            MockupRubyWordsView libraryView = MockupRubyWordsView.CreateLibrary(libraryText);
+            MockupRubyWordsView libraryView = MockupRubyWordsView.CreateLibrary(
+                libraryText, previewFontScale);
             libraryView.SetWords(new[]
             {
                 "apple — 苹果 | ping guo",
@@ -114,6 +167,16 @@ namespace Words.UiMockups.WordListHub.Tests
             TMP_Text englishGlyph = firstEntryText.Single(text => text.text == "apple — ");
             TMP_Text pinyin = firstEntryText.Single(text => text.text == "ping");
             TMP_Text hanGlyph = firstEntryText.Single(text => text.text == "苹");
+            Assert.That(englishGlyph.fontSize, Is.EqualTo(36f).Within(0.001f));
+            Assert.That(hanGlyph.fontSize, Is.EqualTo(36f).Within(0.001f));
+            Assert.That(pinyin.fontSize, Is.EqualTo(27.04f).Within(0.001f));
+            Assert.That(pinyin.preferredHeight,
+                Is.LessThanOrEqualTo(pinyin.rectTransform.rect.height + 0.1f));
+            Assert.That(hanGlyph.preferredHeight,
+                Is.LessThanOrEqualTo(hanGlyph.rectTransform.rect.height + 0.1f));
+            Assert.That(((RectTransform)pinyin.transform.parent).rect.height,
+                Is.GreaterThanOrEqualTo(pinyin.rectTransform.rect.height + hanGlyph.rectTransform.rect.height),
+                "Ruby cells must grow to fit the larger body and pinyin fonts.");
             TMP_Text[] legacyEntryText = libraryView.LayoutRoot.GetChild(2).GetComponentsInChildren<TMP_Text>(true);
             TMP_Text[] legacyUnknown = legacyEntryText.Where(text => text.text == "?").ToArray();
             Assert.That(legacyUnknown, Has.Length.EqualTo(2),
@@ -163,21 +226,101 @@ namespace Words.UiMockups.WordListHub.Tests
             RectTransform communityRect = communityText.rectTransform;
             Vector2 communitySize = communityRect.sizeDelta;
             Vector2 communityPosition = communityRect.anchoredPosition;
-            MockupRubyWordsView communityView = MockupRubyWordsView.CreateCommunity(communityText);
+            Scrollbar libraryScrollbar = libraryView.ScrollRect.verticalScrollbar;
+            Assert.That(libraryScrollbar, Is.Not.Null,
+                "The authored Library detail ScrollRect must provide the shared scrollbar style.");
+            harness.Bindings.pages.Single(binding => binding.page == WordListHubPage.Community)
+                .root.SetActive(true);
+            MockupRubyWordsView communityView = MockupRubyWordsView.CreateCommunity(
+                communityText, libraryScrollbar, previewFontScale);
             communityView.SetWords(Enumerable.Repeat("苹果 | ping guo", 8).ToArray());
             Canvas.ForceUpdateCanvases();
             LayoutRebuilder.ForceRebuildLayoutImmediate(communityView.LayoutRoot);
+            Canvas.ForceUpdateCanvases();
+            TMP_Text[] communityEntryText = communityView.LayoutRoot.GetChild(0).GetComponentsInChildren<TMP_Text>(true);
+            TMP_Text communityGlyph = communityEntryText.Single(text => text.text == "苹");
+            TMP_Text communityPinyin = communityEntryText.Single(text => text.text == "ping");
+            Assert.That(communityGlyph.fontSize, Is.EqualTo(36f).Within(0.001f));
+            Assert.That(communityPinyin.fontSize, Is.EqualTo(27.04f).Within(0.001f));
+            Assert.That(communityGlyph.preferredHeight,
+                Is.LessThanOrEqualTo(communityGlyph.rectTransform.rect.height + 0.1f));
+            Assert.That(communityPinyin.preferredHeight,
+                Is.LessThanOrEqualTo(communityPinyin.rectTransform.rect.height + 0.1f));
+            Assert.That(((RectTransform)communityGlyph.transform.parent).rect.height,
+                Is.GreaterThanOrEqualTo(communityGlyph.rectTransform.rect.height
+                    + communityPinyin.rectTransform.rect.height),
+                "Community ruby cells must grow to fit the doubled glyph and pinyin fonts.");
 
             Assert.That(communityView.ScrollRect, Is.Not.Null);
+            Scrollbar communityScrollbar = communityView.ScrollRect.verticalScrollbar;
+            Assert.That(communityScrollbar, Is.Not.Null,
+                "The Community detail preview must have a visible vertical scrollbar.");
+            Assert.That(communityScrollbar, Is.Not.SameAs(libraryScrollbar));
+            Assert.That(communityScrollbar.transform.parent, Is.EqualTo(communityRect));
+            Assert.That(communityScrollbar.handleRect, Is.Not.Null);
+            Assert.That(communityScrollbar.handleRect.IsChildOf(communityScrollbar.transform), Is.True);
+            Assert.That(communityScrollbar.targetGraphic, Is.Not.Null);
+            Assert.That(communityScrollbar.targetGraphic.transform.IsChildOf(communityScrollbar.transform), Is.True);
+            Assert.That(communityScrollbar.gameObject.activeInHierarchy, Is.True,
+                string.Format(
+                    "Scrollbar visibility: activeSelf={0}, regionActive={1}, contentHeight={2}, "
+                    + "viewportHeight={3}, entries={4}, scale={5}.",
+                    communityScrollbar.gameObject.activeSelf,
+                    communityRect.gameObject.activeInHierarchy,
+                    communityView.ScrollRect.content.rect.height,
+                    communityView.ScrollRect.viewport.rect.height,
+                    communityView.LayoutRoot.childCount,
+                    previewFontScale));
+            RectTransform scrollbarRect = communityScrollbar.transform as RectTransform;
+            RectTransform sourceScrollbarRect = libraryScrollbar.transform as RectTransform;
+            Assert.That(scrollbarRect.anchorMin.x, Is.EqualTo(1f).Within(0.001f));
+            Assert.That(scrollbarRect.anchorMax.x, Is.EqualTo(1f).Within(0.001f));
+            Assert.That(scrollbarRect.sizeDelta.x, Is.EqualTo(sourceScrollbarRect.sizeDelta.x).Within(0.1f));
+            Assert.That(communityView.ScrollRect.verticalScrollbarVisibility,
+                Is.EqualTo(ScrollRect.ScrollbarVisibility.AutoHide));
             Assert.That(communityView.ScrollRect.viewport.parent, Is.EqualTo(communityRect));
             Assert.That(communityView.ScrollRect.viewport.rect.width,
                 Is.EqualTo(communityRect.rect.width).Within(0.1f));
             Assert.That(communityView.ScrollRect.viewport.rect.height,
                 Is.EqualTo(communityRect.rect.height).Within(0.1f));
             Assert.That(communityView.ScrollRect.content, Is.EqualTo(communityView.LayoutRoot));
+            Assert.That(communityView.LayoutRoot.rect.width,
+                Is.EqualTo(communityView.ScrollRect.viewport.rect.width
+                    - scrollbarRect.rect.width - 2f).Within(0.1f),
+                "The Community content width must reserve room for the scrollbar.");
             Assert.That(communityView.LayoutRoot.rect.height, Is.GreaterThan(communityRect.rect.height));
+
+            float topPosition = communityView.ScrollRect.verticalNormalizedPosition;
+            communityScrollbar.value = 0f;
+            Canvas.ForceUpdateCanvases();
+            Assert.That(communityView.ScrollRect.verticalNormalizedPosition,
+                Is.LessThan(topPosition),
+                "Dragging the Community scrollbar must move the stacked preview content.");
             Assert.That(communityRect.sizeDelta, Is.EqualTo(communitySize));
             Assert.That(communityRect.anchoredPosition, Is.EqualTo(communityPosition));
+
+            const float customPreviewScale = 1.5f;
+            MockupRubyWordsView customLibraryView = MockupRubyWordsView.CreateLibrary(
+                libraryText, customPreviewScale);
+            customLibraryView.SetWords(new[] { "苹果 | ping guo" });
+            Canvas.ForceUpdateCanvases();
+            TMP_Text[] customLibraryText = customLibraryView.LayoutRoot.GetChild(0)
+                .GetComponentsInChildren<TMP_Text>(true);
+            Assert.That(customLibraryText.Single(text => text.text == "苹").fontSize,
+                Is.EqualTo(27f).Within(0.001f));
+            Assert.That(customLibraryText.Single(text => text.text == "ping").fontSize,
+                Is.EqualTo(20.28f).Within(0.001f));
+
+            MockupRubyWordsView customCommunityView = MockupRubyWordsView.CreateCommunity(
+                communityText, libraryScrollbar, customPreviewScale);
+            customCommunityView.SetWords(new[] { "苹果 | ping guo" });
+            Canvas.ForceUpdateCanvases();
+            TMP_Text[] customCommunityText = customCommunityView.LayoutRoot.GetChild(0)
+                .GetComponentsInChildren<TMP_Text>(true);
+            Assert.That(customCommunityText.Single(text => text.text == "苹").fontSize,
+                Is.EqualTo(27f).Within(0.001f));
+            Assert.That(customCommunityText.Single(text => text.text == "ping").fontSize,
+                Is.EqualTo(20.28f).Within(0.001f));
         }
 
         [Test]
@@ -1080,7 +1223,7 @@ namespace Words.UiMockups.WordListHub.Tests
                 Assert.That(row.favoriteMark, Is.Not.Null);
                 Assert.That(row.bestTime, Is.Not.Null);
                 Assert.That(row.bestTime.raycastTarget, Is.False);
-                Assert.That(row.bestTime.rectTransform.rect.height, Is.EqualTo(26f).Within(0.001f));
+                Assert.That(row.bestTime.rectTransform.rect.height, Is.EqualTo(28f).Within(0.001f));
                 Assert.That(row.bestTime.textWrappingMode, Is.EqualTo(TextWrappingModes.NoWrap));
                 AssertTextRendersWithin(row.bestTime, "Authored Library row " + row.listId + ".bestTime");
                 Assert.That(row.title, Is.Not.Null);
@@ -1102,6 +1245,8 @@ namespace Words.UiMockups.WordListHub.Tests
                 Assert.That(row.title, Is.Not.Null);
                 Assert.That(row.metadata, Is.Not.Null);
                 Assert.That(row.summary, Is.Not.Null);
+                Assert.That(row.summary.gameObject.activeSelf, Is.False,
+                    "Authored Community selection rows should hide the description line.");
                 Assert.That(row.status, Is.Not.Null);
             }
         }
@@ -1159,6 +1304,8 @@ namespace Words.UiMockups.WordListHub.Tests
             Assert.That(template.title, Is.Not.Null);
             Assert.That(template.metadata, Is.Not.Null);
             Assert.That(template.summary, Is.Not.Null);
+            Assert.That(template.summary.gameObject.activeSelf, Is.False,
+                "Community selection rows should hide the description line.");
             Assert.That(template.status, Is.Not.Null);
             AssertReferenceWithin(template.transform, template.button.transform, "Community row button");
             AssertReferenceWithin(template.transform, template.title.transform, "Community title text");
@@ -1272,6 +1419,8 @@ namespace Words.UiMockups.WordListHub.Tests
                 AssertTextStyleMatches(community.rowTemplate.metadata, row.metadata, row.name + ".metadata");
                 AssertTextStyleMatches(community.rowTemplate.summary, row.summary, row.name + ".summary");
                 AssertTextStyleMatches(community.rowTemplate.status, row.status, row.name + ".status");
+                Assert.That(row.summary.gameObject.activeSelf, Is.False,
+                    row.name + " must not display the Community description line.");
 
                 RectTransform rowRect = row.transform as RectTransform;
                 AssertRectContained(row.title.rectTransform, rowRect, row.name + ".title");
@@ -1280,16 +1429,13 @@ namespace Words.UiMockups.WordListHub.Tests
                 AssertRectContained(row.status.rectTransform, rowRect, row.name + ".status");
                 AssertTextRendersWithin(row.title, row.name + ".title");
                 AssertTextRendersWithin(row.metadata, row.name + ".metadata");
-                AssertTextRendersWithin(row.summary, row.name + ".summary");
                 AssertTextRendersWithin(row.status, row.name + ".status");
                 AssertNoRectOverlap(row.title.rectTransform, row.metadata.rectTransform,
                     row.name + " title and metadata");
                 AssertNoRectOverlap(row.title.rectTransform, row.status.rectTransform,
                     row.name + " title and status");
-                AssertNoRectOverlap(row.metadata.rectTransform, row.summary.rectTransform,
-                    row.name + " metadata and summary");
-                AssertNoRectOverlap(row.summary.rectTransform, row.status.rectTransform,
-                    row.name + " summary and status");
+                AssertNoRectOverlap(row.metadata.rectTransform, row.status.rectTransform,
+                    row.name + " metadata and status");
             }
         }
 
@@ -1471,11 +1617,10 @@ namespace Words.UiMockups.WordListHub.Tests
 
         private static void AssertCommunityVisualAlignment(WordListHubSceneBindings bindings)
         {
-            RectTransform libraryRow = bindings.library.rowTemplate.GetComponent<RectTransform>();
             RectTransform communityRow = bindings.community.rowTemplate.GetComponent<RectTransform>();
             LayoutElement communityRowLayout = bindings.community.rowTemplate.GetComponent<LayoutElement>();
-            Assert.That(communityRow.rect.height, Is.EqualTo(libraryRow.rect.height).Within(0.001f));
-            Assert.That(communityRowLayout.preferredHeight, Is.EqualTo(libraryRow.rect.height).Within(0.001f));
+            Assert.That(communityRow.rect.height, Is.EqualTo(84f).Within(0.001f));
+            Assert.That(communityRowLayout.preferredHeight, Is.EqualTo(84f).Within(0.001f));
             Assert.That(communityRowLayout.preferredWidth, Is.EqualTo(communityRow.rect.width).Within(0.001f));
             Assert.That(communityRow.rect.width,
                 Is.LessThan(bindings.community.listScroll.viewport.rect.width));
@@ -1483,18 +1628,22 @@ namespace Words.UiMockups.WordListHub.Tests
                 Is.EqualTo(bindings.library.rowTemplate.title.fontSize).Within(0.001f));
             Assert.That(bindings.community.rowTemplate.metadata.fontSize,
                 Is.EqualTo(bindings.library.rowTemplate.metadata.fontSize).Within(0.001f));
+            Assert.That(bindings.community.rowTemplate.title.fontSize, Is.EqualTo(22f).Within(0.001f));
+            Assert.That(bindings.community.rowTemplate.metadata.fontSize, Is.EqualTo(18f).Within(0.001f));
+            Assert.That(bindings.community.rowTemplate.summary.fontSize, Is.EqualTo(15f).Within(0.001f));
+            Assert.That(bindings.community.rowTemplate.status.fontSize, Is.EqualTo(15f).Within(0.001f));
             Assert.That(bindings.community.rowTemplate.summary.textWrappingMode,
                 Is.EqualTo(TextWrappingModes.NoWrap));
             Assert.That(bindings.community.rowTemplate.summary.overflowMode,
                 Is.EqualTo(TextOverflowModes.Ellipsis));
             AssertCommunityLabelLayout(bindings.community.rowTemplate.title,
-                new Vector2(-55f, 22f), new Vector2(340f, 30f), "Community row title");
+                new Vector2(-55f, 15.5f), new Vector2(340f, 32f), "Community row title");
             AssertCommunityLabelLayout(bindings.community.rowTemplate.metadata,
-                new Vector2(-55f, -5f), new Vector2(340f, 24f), "Community row metadata");
+                new Vector2(-55f, -18f), new Vector2(340f, 27f), "Community row metadata");
             AssertCommunityLabelLayout(bindings.community.rowTemplate.summary,
-                new Vector2(-55f, -27f), new Vector2(340f, 20f), "Community row summary");
+                new Vector2(-55f, -30f), new Vector2(340f, 22f), "Community row summary");
             AssertCommunityLabelLayout(bindings.community.rowTemplate.status,
-                new Vector2(185f, 0f), new Vector2(110f, 20f), "Community row status");
+                new Vector2(185f, 0f), new Vector2(110f, 22f), "Community row status");
             Assert.That(bindings.community.rowTemplate.status.alignment,
                 Is.EqualTo(TextAlignmentOptions.MidlineRight));
 
