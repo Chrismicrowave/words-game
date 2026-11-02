@@ -88,6 +88,99 @@ namespace Words.UiMockups.WordListHub.Tests
         }
 
         [Test]
+        public void StackedWordViewsAlignRubyCellsWrapEnglishAndKeepDetailRegionsFixed()
+        {
+            TMP_Text libraryText = harness.Bindings.library.detailWords;
+            libraryText.text = "legacy detail text remains available";
+            MockupRubyWordsView libraryView = MockupRubyWordsView.CreateLibrary(libraryText);
+            libraryView.SetWords(new[]
+            {
+                "apple — 苹果 | ping guo",
+                "before 你，好! after 苹果 | ni hao ping guo",
+                "苹果",
+                new string('a', 80)
+            }.Concat(Enumerable.Repeat("apple — 苹果 | ping guo", 8)).ToArray());
+
+            Canvas.ForceUpdateCanvases();
+            libraryView.RefreshLayoutIfNeeded();
+            Canvas.ForceUpdateCanvases();
+
+            Assert.That(libraryText.enabled, Is.False);
+            Assert.That(libraryText.text, Is.EqualTo("legacy detail text remains available"));
+            Assert.That(libraryText.GetComponent<LayoutElement>().ignoreLayout, Is.True);
+            Assert.That(libraryView.LayoutRoot.parent, Is.EqualTo(libraryText.transform.parent));
+
+            TMP_Text[] firstEntryText = libraryView.LayoutRoot.GetChild(0).GetComponentsInChildren<TMP_Text>(true);
+            TMP_Text englishGlyph = firstEntryText.Single(text => text.text == "apple — ");
+            TMP_Text pinyin = firstEntryText.Single(text => text.text == "ping");
+            TMP_Text hanGlyph = firstEntryText.Single(text => text.text == "苹");
+            TMP_Text[] legacyEntryText = libraryView.LayoutRoot.GetChild(2).GetComponentsInChildren<TMP_Text>(true);
+            TMP_Text[] legacyUnknown = legacyEntryText.Where(text => text.text == "?").ToArray();
+            Assert.That(legacyUnknown, Has.Length.EqualTo(2),
+                "Each unannotated Han character should get an explicit unknown reading marker.");
+            Assert.That(legacyUnknown.All(text =>
+                    text.transform.parent.GetComponent<RectTransform>().name == "HanCell"), Is.True);
+
+            RectTransform pinyinRect = pinyin.rectTransform;
+            RectTransform hanRect = hanGlyph.rectTransform;
+            Vector3 pinyinCenter = pinyinRect.TransformPoint(pinyinRect.rect.center);
+            Vector3 hanCenter = hanRect.TransformPoint(hanRect.rect.center);
+            Assert.That(pinyinCenter.y, Is.GreaterThan(hanCenter.y));
+            Assert.That(pinyinCenter.x, Is.EqualTo(hanCenter.x).Within(0.1f));
+            Assert.That(englishGlyph.rectTransform.TransformPoint(englishGlyph.rectTransform.rect.center).y,
+                Is.EqualTo(hanCenter.y).Within(0.1f));
+            float measuredCellWidth = Mathf.Max(
+                pinyin.GetPreferredValues(pinyin.text, 10000f, 10000f).x,
+                hanGlyph.GetPreferredValues(hanGlyph.text, 10000f, 10000f).x);
+            Assert.That(pinyin.transform.parent.GetComponent<RectTransform>().rect.width,
+                Is.GreaterThanOrEqualTo(measuredCellWidth + 5f));
+
+            RectTransform longEnglishEntry = libraryView.LayoutRoot.GetChild(3) as RectTransform;
+            Assert.That(longEnglishEntry.childCount, Is.GreaterThan(30),
+                "A long English token should split at text-element boundaries instead of overflowing.");
+            RectTransform firstEnglishCell = longEnglishEntry.GetChild(0) as RectTransform;
+            RectTransform secondEnglishCell = longEnglishEntry.GetChild(1) as RectTransform;
+            Assert.That(secondEnglishCell.anchoredPosition.x - firstEnglishCell.rect.width,
+                Is.EqualTo(firstEnglishCell.anchoredPosition.x).Within(0.1f),
+                "A wrapped English word should keep normal letter spacing without per-letter cell gaps.");
+            float firstRowY = longEnglishEntry.GetChild(0).GetComponent<RectTransform>().anchoredPosition.y;
+            float lastRowY = longEnglishEntry.GetChild(longEnglishEntry.childCount - 1)
+                .GetComponent<RectTransform>().anchoredPosition.y;
+            Assert.That(lastRowY, Is.LessThan(firstRowY));
+            VerticalLayoutGroup libraryLayout = libraryView.LayoutRoot.GetComponent<VerticalLayoutGroup>();
+            float expectedLibraryHeight = Enumerable.Range(0, libraryView.LayoutRoot.childCount)
+                .Sum(index => ((RectTransform)libraryView.LayoutRoot.GetChild(index)).rect.height)
+                + Mathf.Max(0, libraryView.LayoutRoot.childCount - 1) * libraryLayout.spacing
+                + libraryLayout.padding.vertical;
+            Assert.That(libraryView.LayoutRoot.rect.width, Is.GreaterThan(1f));
+            Assert.That(libraryView.LayoutRoot.rect.height, Is.EqualTo(expectedLibraryHeight).Within(0.1f),
+                "The Library runtime root needs an explicit height because its parent does not control child height.");
+            Assert.That(libraryView.ScrollRect.content.rect.height,
+                Is.GreaterThan(libraryView.ScrollRect.viewport.rect.height),
+                "The Library detail content must grow enough to scroll through all word entries.");
+
+            TMP_Text communityText = harness.Bindings.community.detailSummary;
+            RectTransform communityRect = communityText.rectTransform;
+            Vector2 communitySize = communityRect.sizeDelta;
+            Vector2 communityPosition = communityRect.anchoredPosition;
+            MockupRubyWordsView communityView = MockupRubyWordsView.CreateCommunity(communityText);
+            communityView.SetWords(Enumerable.Repeat("苹果 | ping guo", 8).ToArray());
+            Canvas.ForceUpdateCanvases();
+            LayoutRebuilder.ForceRebuildLayoutImmediate(communityView.LayoutRoot);
+
+            Assert.That(communityView.ScrollRect, Is.Not.Null);
+            Assert.That(communityView.ScrollRect.viewport.parent, Is.EqualTo(communityRect));
+            Assert.That(communityView.ScrollRect.viewport.rect.width,
+                Is.EqualTo(communityRect.rect.width).Within(0.1f));
+            Assert.That(communityView.ScrollRect.viewport.rect.height,
+                Is.EqualTo(communityRect.rect.height).Within(0.1f));
+            Assert.That(communityView.ScrollRect.content, Is.EqualTo(communityView.LayoutRoot));
+            Assert.That(communityView.LayoutRoot.rect.height, Is.GreaterThan(communityRect.rect.height));
+            Assert.That(communityRect.sizeDelta, Is.EqualTo(communitySize));
+            Assert.That(communityRect.anchoredPosition, Is.EqualTo(communityPosition));
+        }
+
+        [Test]
         public void NavigationDetailsAndFilters_PreserveFixedLayoutAndDispatchFavoriteOnce()
         {
             WordListHubMockupController controller = harness.Controller;

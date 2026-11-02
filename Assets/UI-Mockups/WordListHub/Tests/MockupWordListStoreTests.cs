@@ -558,6 +558,30 @@ namespace Words.UiMockups.WordListHub.Tests
             Assert.That(MockupWordContent.FormatForDetail("苹果"), Is.EqualTo("苹果 (pinyin not set)"));
         }
 
+        [Test]
+        public void StackedPresentationPartsPreserveMixedOrderAndMarkLegacyReadingsUnknown()
+        {
+            MockupWordContent.GetPresentationParts(
+                "before 你，好! after 苹果 | ni hao ping guo",
+                out string displayText,
+                out string[] pinyin,
+                out bool hasUnannotatedHan);
+
+            Assert.That(displayText, Is.EqualTo("before 你，好! after 苹果"));
+            Assert.That(pinyin, Is.EqualTo(new[] { "ni", "hao", "ping", "guo" }));
+            Assert.That(hasUnannotatedHan, Is.False);
+
+            MockupWordContent.GetPresentationParts("苹果", out displayText, out pinyin, out hasUnannotatedHan);
+            Assert.That(displayText, Is.EqualTo("苹果"));
+            Assert.That(pinyin, Is.Empty);
+            Assert.That(hasUnannotatedHan, Is.True);
+
+            MockupWordContent.GetPresentationParts("A|B", out displayText, out pinyin, out hasUnannotatedHan);
+            Assert.That(displayText, Is.EqualTo("A|B"));
+            Assert.That(pinyin, Is.Empty);
+            Assert.That(hasUnannotatedHan, Is.False);
+        }
+
         [TestCase("苹果 | ping", "Line 1: expected 2 pinyin syllable(s)")]
         [TestCase("苹果 | PING guo", "Line 1: pinyin must use lowercase a-z")]
         [TestCase("苹果 | pǐng guǒ", "Line 1: pinyin must use lowercase a-z")]

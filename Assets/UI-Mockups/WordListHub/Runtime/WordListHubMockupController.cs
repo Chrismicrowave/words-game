@@ -1,7 +1,9 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
+using System.Text;
 using TMPro;
 using UnityEngine;
 using UnityEngine.Events;
@@ -92,6 +94,8 @@ namespace Words.UiMockups.WordListHub
         private TMP_Text editSaveHintText;
         private Button editSaveButton;
         private Coroutine libraryScrollRoutine;
+        private MockupRubyWordsView libraryRubyWordsView;
+        private MockupRubyWordsView communityRubyWordsView;
         private string pendingDeleteListId;
         private int pendingDeleteVisibleIndex = -1;
         private MockupLanguage newListLanguage = MockupLanguage.English;
@@ -117,6 +121,7 @@ namespace Words.UiMockups.WordListHub
         {
             EnsureStore();
             BindAuthoredScene();
+            InitializeRubyWordsViews();
             CacheNavigationColors();
             BindSceneEvents();
             SetFiltersMenuOpen(false);
@@ -132,6 +137,22 @@ namespace Words.UiMockups.WordListHub
 
             if (openFilterMenu != null && Input.GetKeyDown(KeyCode.Escape))
                 SetFilterMenuOpen(openFilterMenu, false);
+        }
+
+        private void LateUpdate()
+        {
+            if (libraryRubyWordsView != null)
+                libraryRubyWordsView.RefreshLayoutIfNeeded();
+            if (communityRubyWordsView != null)
+                communityRubyWordsView.RefreshLayoutIfNeeded();
+        }
+
+        private void InitializeRubyWordsViews()
+        {
+            if (sceneBindings.library.detailWords != null && libraryRubyWordsView == null)
+                libraryRubyWordsView = MockupRubyWordsView.CreateLibrary(sceneBindings.library.detailWords);
+            if (sceneBindings.community.detailSummary != null && communityRubyWordsView == null)
+                communityRubyWordsView = MockupRubyWordsView.CreateCommunity(sceneBindings.community.detailSummary);
         }
 
         private void BindAuthoredScene()
@@ -1273,6 +1294,8 @@ namespace Words.UiMockups.WordListHub
                 SetText(library.recordTime, string.Empty);
                 SetText(library.detailWordsLabel, "WORDS  ·  0");
                 SetText(library.detailWords, string.Empty);
+                if (libraryRubyWordsView != null)
+                    libraryRubyWordsView.SetWords(new[] { "Choose a list to see its details." });
                 SetText(library.detailStatus, lastActionMessage);
                 SetLibraryAction(library.delete, string.Empty, false, null);
                 SetLibraryAction(library.play, string.Empty, false, null);
@@ -1297,6 +1320,9 @@ namespace Words.UiMockups.WordListHub
             SetText(library.detailWordsLabel, "WORDS  ·  " + item.WordCount);
             SetText(library.detailWords, item.Words == null || item.Words.Count == 0
                 ? "No words in this list." : string.Join("\n", item.Words.Select(MockupWordContent.FormatForDetail)));
+            if (libraryRubyWordsView != null)
+                libraryRubyWordsView.SetWords(item.Words == null || item.Words.Count == 0
+                    ? new[] { "No words in this list." } : item.Words);
 
             bool hasPublishedBinding = item.HasPublishedBinding;
             bool publicationIsActive = item.IsPubliclyVisible
@@ -1705,6 +1731,8 @@ namespace Words.UiMockups.WordListHub
                 SetText(community.detailTitle, "Choose a list to see its details.");
                 SetText(community.detailAuthor, string.Empty);
                 SetText(community.detailSummary, string.Empty);
+                if (communityRubyWordsView != null)
+                    communityRubyWordsView.SetWords(Array.Empty<string>());
                 SetText(community.detailDescription, string.Empty);
                 SetText(community.detailMetadata, string.Empty);
                 SetText(community.detailTrustNote, string.Empty);
@@ -1720,8 +1748,12 @@ namespace Words.UiMockups.WordListHub
             SetText(community.detailDescription, item.Description);
             SetText(community.detailMetadata, "SAMPLE CONTENT  ·  " + LanguageLabel(item.Language)
                 + "  ·  " + item.WordCount + " words");
-            SetText(community.detailSummary, item.Words == null || item.Words.Count == 0
-                ? string.Empty : string.Join("    ", item.Words.Take(8).Select(MockupWordContent.FormatForDetail)));
+            List<string> previewWords = item.Words == null
+                ? new List<string>() : item.Words.Take(8).ToList();
+            SetText(community.detailSummary, previewWords.Count == 0
+                ? string.Empty : string.Join("    ", previewWords.Select(MockupWordContent.FormatForDetail)));
+            if (communityRubyWordsView != null)
+                communityRubyWordsView.SetWords(previewWords);
             SetText(community.detailTrustNote,
                 "Downloads are read-only and appear in Community Downloads. Likes are separate.");
             SetCommunityAction(community.like,
@@ -2317,10 +2349,514 @@ namespace Words.UiMockups.WordListHub
             return !string.IsNullOrEmpty(value)
                 && value.IndexOf(term, StringComparison.OrdinalIgnoreCase) >= 0;
         }
+    }
 
+    /// <summary>
+    /// Runtime-only stacked word view for the mockup's existing detail text regions.
+    /// It keeps the authored TMP components as data/accessibility fallbacks and creates
+    /// per-character UI cells without depending on production gameplay assemblies.
+    /// </summary>
+    public sealed class MockupRubyWordsView
+    {
+        private const string LibraryRootName = "RuntimeRubyWords";
+        private const string CommunityViewportName = "RuntimeRubyWordsViewport";
+        private const string CommunityContentName = "RuntimeRubyWordsContent";
+        private const float HorizontalInset = 2f;
+        private const float CellGap = 3f;
+        private const float WrapGap = 2f;
+        private const float EntryGap = 7f;
 
+        private readonly TMP_Text sourceText;
+        private readonly RectTransform layoutRoot;
+        private readonly ScrollRect scrollRect;
+        private readonly VerticalLayoutGroup verticalLayout;
+        private readonly List<string> words = new List<string>();
+        private float bodyFontSize;
+        private float pinyinFontSize;
+        private float pinyinBandHeight;
+        private float glyphBandHeight;
+        private float cellHeight;
+        private float lastWidth = -1f;
 
+        public RectTransform LayoutRoot => layoutRoot;
+        public ScrollRect ScrollRect => scrollRect;
+        public TMP_Text LegacyText => sourceText;
 
+        private MockupRubyWordsView(
+            TMP_Text text,
+            RectTransform root,
+            ScrollRect scroll,
+            VerticalLayoutGroup layout)
+        {
+            sourceText = text;
+            layoutRoot = root;
+            scrollRect = scroll;
+            verticalLayout = layout;
+            bodyFontSize = Mathf.Max(12f, text.fontSize);
+            pinyinFontSize = Mathf.Clamp(bodyFontSize * 0.72f, 11f, 12f);
+            pinyinBandHeight = Mathf.Ceil(Mathf.Max(15f, pinyinFontSize * 1.35f)) + 2f;
+            glyphBandHeight = Mathf.Ceil(Mathf.Max(18f, bodyFontSize * 1.35f)) + 2f;
+            cellHeight = pinyinBandHeight + glyphBandHeight;
+        }
 
+        public static MockupRubyWordsView CreateLibrary(TMP_Text legacyText)
+        {
+            if (legacyText == null || legacyText.transform.parent == null)
+                return null;
+
+            LayoutElement ignoredTextLayout = legacyText.GetComponent<LayoutElement>();
+            if (ignoredTextLayout == null)
+                ignoredTextLayout = legacyText.gameObject.AddComponent<LayoutElement>();
+            ignoredTextLayout.ignoreLayout = true;
+            ContentSizeFitter legacyFitter = legacyText.GetComponent<ContentSizeFitter>();
+            if (legacyFitter != null)
+                legacyFitter.enabled = false;
+            legacyText.enabled = false;
+
+            Transform contentParent = legacyText.transform.parent;
+            RectTransform root = contentParent.Find(LibraryRootName) as RectTransform;
+            if (root == null)
+                root = CreateRectTransform(LibraryRootName, contentParent);
+            ConfigureTopStretch(root);
+
+            VerticalLayoutGroup layout = root.GetComponent<VerticalLayoutGroup>();
+            if (layout == null)
+                layout = root.gameObject.AddComponent<VerticalLayoutGroup>();
+            ConfigureVerticalLayout(layout, EntryGap);
+
+            LayoutElement rootElement = root.GetComponent<LayoutElement>();
+            if (rootElement == null)
+                rootElement = root.gameObject.AddComponent<LayoutElement>();
+            rootElement.minWidth = 0f;
+            rootElement.flexibleWidth = 1f;
+
+            ScrollRect existingScroll = legacyText.GetComponentInParent<ScrollRect>(true);
+            return new MockupRubyWordsView(legacyText, root, existingScroll, layout);
+        }
+
+        public static MockupRubyWordsView CreateCommunity(TMP_Text legacyText)
+        {
+            if (legacyText == null)
+                return null;
+
+            RectTransform viewportRegion = legacyText.rectTransform;
+            RectTransform viewport = viewportRegion.Find(CommunityViewportName) as RectTransform;
+            if (viewport == null)
+                viewport = CreateRectTransform(CommunityViewportName, viewportRegion);
+            ConfigureFullStretch(viewport);
+
+            Image inputGraphic = viewport.GetComponent<Image>();
+            if (inputGraphic == null)
+            {
+                inputGraphic = viewport.gameObject.AddComponent<Image>();
+                inputGraphic.color = new Color(1f, 1f, 1f, 0f);
+            }
+            inputGraphic.raycastTarget = true;
+
+            RectMask2D mask = viewport.GetComponent<RectMask2D>();
+            if (mask == null)
+                viewport.gameObject.AddComponent<RectMask2D>();
+
+            ScrollRect scroll = viewport.GetComponent<ScrollRect>();
+            if (scroll == null)
+                scroll = viewport.gameObject.AddComponent<ScrollRect>();
+
+            RectTransform content = viewport.Find(CommunityContentName) as RectTransform;
+            if (content == null)
+                content = CreateRectTransform(CommunityContentName, viewport);
+            ConfigureTopStretch(content);
+
+            VerticalLayoutGroup layout = content.GetComponent<VerticalLayoutGroup>();
+            if (layout == null)
+                layout = content.gameObject.AddComponent<VerticalLayoutGroup>();
+            ConfigureVerticalLayout(layout, EntryGap);
+
+            ContentSizeFitter fitter = content.GetComponent<ContentSizeFitter>();
+            if (fitter == null)
+                fitter = content.gameObject.AddComponent<ContentSizeFitter>();
+            fitter.horizontalFit = ContentSizeFitter.FitMode.Unconstrained;
+            fitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+
+            LayoutElement contentElement = content.GetComponent<LayoutElement>();
+            if (contentElement == null)
+                contentElement = content.gameObject.AddComponent<LayoutElement>();
+            contentElement.minWidth = 0f;
+            contentElement.flexibleWidth = 1f;
+
+            scroll.viewport = viewport;
+            scroll.content = content;
+            scroll.horizontal = false;
+            scroll.vertical = true;
+            scroll.movementType = ScrollRect.MovementType.Clamped;
+            scroll.inertia = false;
+            scroll.scrollSensitivity = 24f;
+            scroll.horizontalScrollbar = null;
+            scroll.verticalScrollbar = null;
+
+            legacyText.enabled = false;
+            return new MockupRubyWordsView(legacyText, content, scroll, layout);
+        }
+
+        public void SetWords(IReadOnlyList<string> nextWords)
+        {
+            if (WordsEqual(words, nextWords))
+            {
+                RefreshLayoutIfNeeded();
+                return;
+            }
+
+            words.Clear();
+            if (nextWords != null)
+            {
+                for (int i = 0; i < nextWords.Count; i++)
+                    words.Add(nextWords[i] ?? string.Empty);
+            }
+
+            RebuildEntries();
+        }
+
+        public void RefreshLayoutIfNeeded()
+        {
+            float width = AvailableWidth();
+            if (Mathf.Abs(width - lastWidth) > 0.5f)
+                RebuildEntries();
+        }
+
+        private void RebuildEntries()
+        {
+            float width = AvailableWidth();
+            ClearChildren(layoutRoot);
+            float entriesHeight = 0f;
+            int entryCount = 0;
+            for (int wordIndex = 0; wordIndex < words.Count; wordIndex++)
+            {
+                if (words[wordIndex].Length == 0)
+                    continue;
+
+                RectTransform entryRoot = CreateRectTransform("WordEntry", layoutRoot);
+                entryRoot.anchorMin = new Vector2(0f, 1f);
+                entryRoot.anchorMax = new Vector2(1f, 1f);
+                entryRoot.pivot = new Vector2(0f, 1f);
+                LayoutElement entryElement = entryRoot.gameObject.AddComponent<LayoutElement>();
+                entryElement.minHeight = cellHeight;
+                entryElement.flexibleHeight = 0f;
+
+                List<TokenData> tokens = BuildTokens(words[wordIndex]);
+                var cells = new List<CellView>();
+                foreach (TokenData token in tokens)
+                {
+                    if (!token.IsHan && MeasureWidth(token.Text) > width)
+                    {
+                        foreach (string textElement in SplitTextElements(token.Text))
+                            cells.Add(CreateCell(entryRoot, new TokenData(textElement, string.Empty, false, true)));
+                    }
+                    else
+                    {
+                        cells.Add(CreateCell(entryRoot, token));
+                    }
+                }
+
+                entriesHeight += LayoutEntry(entryRoot, entryElement, cells, width);
+                entryCount++;
+            }
+
+            float rootHeight = entriesHeight
+                + Mathf.Max(0, entryCount - 1) * verticalLayout.spacing
+                + verticalLayout.padding.vertical;
+            LayoutElement rootElement = layoutRoot.GetComponent<LayoutElement>();
+            if (rootElement != null)
+                rootElement.preferredHeight = rootHeight;
+            if (scrollRect == null || scrollRect.content != layoutRoot)
+                layoutRoot.sizeDelta = new Vector2(layoutRoot.sizeDelta.x, rootHeight);
+
+            lastWidth = width;
+            LayoutRebuilder.MarkLayoutForRebuild(layoutRoot);
+            if (layoutRoot.gameObject.activeInHierarchy)
+                LayoutRebuilder.ForceRebuildLayoutImmediate(layoutRoot);
+            RectTransform layoutParent = layoutRoot.parent as RectTransform;
+            if (layoutParent != null && layoutParent.gameObject.activeInHierarchy)
+                LayoutRebuilder.ForceRebuildLayoutImmediate(layoutParent);
+            if (scrollRect != null)
+            {
+                if (scrollRect.content != null && scrollRect.content.gameObject.activeInHierarchy)
+                    LayoutRebuilder.ForceRebuildLayoutImmediate(scrollRect.content);
+                scrollRect.verticalNormalizedPosition = 1f;
+            }
+        }
+
+        private float LayoutEntry(
+            RectTransform entryRoot,
+            LayoutElement entryElement,
+            List<CellView> cells,
+            float availableWidth)
+        {
+            float cursorX = 0f;
+            float cursorY = 0f;
+            int rowCount = 1;
+            foreach (CellView cell in cells)
+            {
+                float cellWidth = Mathf.Min(cell.Width, availableWidth);
+                if (cursorX > 0f && cursorX + cellWidth > availableWidth)
+                {
+                    cursorX = 0f;
+                    cursorY += cellHeight + WrapGap;
+                    rowCount++;
+                }
+
+                cell.Root.sizeDelta = new Vector2(cellWidth, cellHeight);
+                cell.Root.anchoredPosition = new Vector2(cursorX, -cursorY);
+                cursorX += cellWidth + cell.GapAfter;
+            }
+
+            float height = rowCount * cellHeight + (rowCount - 1) * WrapGap;
+            entryRoot.sizeDelta = new Vector2(0f, height);
+            entryElement.preferredHeight = height;
+            return height;
+        }
+
+        private CellView CreateCell(RectTransform parent, TokenData token)
+        {
+            RectTransform cellRoot = CreateRectTransform(token.IsHan ? "HanCell" : "TextCell", parent);
+            cellRoot.anchorMin = new Vector2(0f, 1f);
+            cellRoot.anchorMax = new Vector2(0f, 1f);
+            cellRoot.pivot = new Vector2(0f, 1f);
+
+            TMP_Text pinyinLabel = CreateLabel(cellRoot, "Pinyin", true);
+            pinyinLabel.text = token.IsHan ? token.Pinyin : string.Empty;
+            pinyinLabel.fontSize = pinyinFontSize;
+            pinyinLabel.fontStyle = FontStyles.Bold;
+
+            TMP_Text glyphLabel = CreateLabel(cellRoot, "Glyph", false);
+            glyphLabel.text = token.Text;
+            glyphLabel.fontSize = bodyFontSize;
+
+            RectTransform pinyinRect = pinyinLabel.rectTransform;
+            pinyinRect.anchorMin = new Vector2(0f, 1f);
+            pinyinRect.anchorMax = new Vector2(1f, 1f);
+            pinyinRect.pivot = new Vector2(0.5f, 1f);
+            pinyinRect.sizeDelta = new Vector2(0f, pinyinBandHeight);
+            pinyinRect.anchoredPosition = Vector2.zero;
+
+            RectTransform glyphRect = glyphLabel.rectTransform;
+            glyphRect.anchorMin = new Vector2(0f, 0f);
+            glyphRect.anchorMax = new Vector2(1f, 0f);
+            glyphRect.pivot = new Vector2(0.5f, 0f);
+            glyphRect.sizeDelta = new Vector2(0f, glyphBandHeight);
+            glyphRect.anchoredPosition = Vector2.zero;
+
+            float glyphWidth = token.IsHan
+                ? MeasureLabelWidth(glyphLabel, token.Text)
+                : MeasureTextRunWidth(glyphLabel, token.Text);
+            float pinyinWidth = token.IsHan ? MeasureLabelWidth(pinyinLabel, token.Pinyin) : 0f;
+            float width = Mathf.Max(glyphWidth, pinyinWidth);
+            width += token.IsHan ? 6f : token.IsBreakCluster ? 0f : 2f;
+            if (!token.IsHan && string.IsNullOrWhiteSpace(token.Text))
+                width = Mathf.Max(width, bodyFontSize * 0.3f);
+
+            return new CellView(cellRoot, width, token.IsHan ? CellGap : 0f);
+        }
+
+        private TMP_Text CreateLabel(RectTransform parent, string name, bool pinyin)
+        {
+            var textObject = new GameObject(name,
+                typeof(RectTransform), typeof(CanvasRenderer), typeof(TextMeshProUGUI));
+            textObject.transform.SetParent(parent, false);
+            TMP_Text label = textObject.GetComponent<TMP_Text>();
+            label.font = sourceText.font;
+            if (sourceText.fontSharedMaterial != null)
+                label.fontSharedMaterial = sourceText.fontSharedMaterial;
+            label.color = sourceText.color;
+            label.alignment = TextAlignmentOptions.Center;
+            label.richText = false;
+            label.enableAutoSizing = false;
+            label.textWrappingMode = TextWrappingModes.NoWrap;
+            label.overflowMode = TextOverflowModes.Overflow;
+            label.raycastTarget = false;
+            label.margin = Vector4.zero;
+            if (!pinyin)
+                label.fontStyle = FontStyles.Normal;
+            return label;
+        }
+
+        private List<TokenData> BuildTokens(string word)
+        {
+            MockupWordContent.GetPresentationParts(
+                word, out string displayText, out string[] pinyinSyllables, out bool hasUnannotatedHan);
+            var tokens = new List<TokenData>();
+            var nonHanRun = new StringBuilder();
+            int pinyinIndex = 0;
+
+            Action flushRun = () =>
+            {
+                if (nonHanRun.Length == 0)
+                    return;
+                tokens.Add(new TokenData(nonHanRun.ToString(), string.Empty, false));
+                nonHanRun.Length = 0;
+            };
+
+            foreach (char character in displayText)
+            {
+                if (!MockupWordContent.IsHanCharacter(character))
+                {
+                    nonHanRun.Append(character);
+                    continue;
+                }
+
+                flushRun();
+                string pinyin = pinyinIndex < pinyinSyllables.Length
+                    ? pinyinSyllables[pinyinIndex]
+                    : hasUnannotatedHan ? "?" : string.Empty;
+                tokens.Add(new TokenData(character.ToString(), pinyin, true));
+                pinyinIndex++;
+            }
+
+            flushRun();
+            return tokens;
+        }
+
+        private float AvailableWidth()
+        {
+            float width = layoutRoot.rect.width;
+            if (width <= 1f)
+                width = sourceText.rectTransform.rect.width;
+            if (width <= 1f && layoutRoot.parent is RectTransform parentRect)
+                width = parentRect.rect.width;
+            return Mathf.Max(1f, width - verticalLayout.padding.horizontal - HorizontalInset * 2f);
+        }
+
+        private float MeasureWidth(string value)
+        {
+            if (string.IsNullOrEmpty(value))
+                return 0f;
+            return MeasureTextRunWidth(sourceText, value);
+        }
+
+        private float MeasureTextRunWidth(TMP_Text text, string value)
+        {
+            int trailingSpaces = 0;
+            for (int i = value.Length - 1; i >= 0 && char.IsWhiteSpace(value[i]); i--)
+                trailingSpaces++;
+
+            string visibleText = trailingSpaces == 0 ? value : value.Substring(0, value.Length - trailingSpaces);
+            float width = string.IsNullOrEmpty(visibleText)
+                ? 0f : text.GetPreferredValues(visibleText, 100000f, 100000f).x;
+            if (trailingSpaces > 0)
+            {
+                float measuredSpace = text.GetPreferredValues(" ", 100000f, 100000f).x;
+                float spaceAdvance = Mathf.Max(measuredSpace, bodyFontSize * 0.28f);
+                width += trailingSpaces * spaceAdvance;
+            }
+            return width;
+        }
+
+        private static float MeasureLabelWidth(TMP_Text label, string value)
+        {
+            if (string.IsNullOrEmpty(value))
+                return 0f;
+            return label.GetPreferredValues(value, 100000f, 100000f).x;
+        }
+
+        private static List<string> SplitTextElements(string value)
+        {
+            var elements = new List<string>();
+            TextElementEnumerator enumerator = StringInfo.GetTextElementEnumerator(value);
+            while (enumerator.MoveNext())
+                elements.Add(enumerator.GetTextElement());
+            return elements;
+        }
+
+        private static RectTransform CreateRectTransform(string name, Transform parent)
+        {
+            var gameObject = new GameObject(name, typeof(RectTransform));
+            var rect = (RectTransform)gameObject.transform;
+            rect.SetParent(parent, false);
+            return rect;
+        }
+
+        private static void ConfigureTopStretch(RectTransform rect)
+        {
+            rect.anchorMin = new Vector2(0f, 1f);
+            rect.anchorMax = new Vector2(1f, 1f);
+            rect.pivot = new Vector2(0.5f, 1f);
+            rect.anchoredPosition = Vector2.zero;
+            rect.sizeDelta = new Vector2(0f, 0f);
+        }
+
+        private static void ConfigureFullStretch(RectTransform rect)
+        {
+            rect.anchorMin = Vector2.zero;
+            rect.anchorMax = Vector2.one;
+            rect.pivot = new Vector2(0.5f, 0.5f);
+            rect.anchoredPosition = Vector2.zero;
+            rect.sizeDelta = Vector2.zero;
+        }
+
+        private static void ConfigureVerticalLayout(VerticalLayoutGroup layout, float spacing)
+        {
+            layout.padding = new RectOffset(2, 2, 2, 2);
+            layout.spacing = spacing;
+            layout.childAlignment = TextAnchor.UpperLeft;
+            layout.childControlWidth = true;
+            layout.childControlHeight = true;
+            layout.childForceExpandWidth = true;
+            layout.childForceExpandHeight = false;
+        }
+
+        private static bool WordsEqual(IReadOnlyList<string> left, IReadOnlyList<string> right)
+        {
+            int rightCount = right == null ? 0 : right.Count;
+            if (left.Count != rightCount)
+                return false;
+            for (int i = 0; i < left.Count; i++)
+            {
+                string rightWord = right[i] ?? string.Empty;
+                if (!string.Equals(left[i], rightWord, StringComparison.Ordinal))
+                    return false;
+            }
+            return true;
+        }
+
+        private static void ClearChildren(RectTransform parent)
+        {
+            for (int i = parent.childCount - 1; i >= 0; i--)
+            {
+                GameObject child = parent.GetChild(i).gameObject;
+                child.SetActive(false);
+                if (Application.isPlaying)
+                    UnityEngine.Object.Destroy(child);
+                else
+                    UnityEngine.Object.DestroyImmediate(child);
+            }
+        }
+
+        private sealed class TokenData
+        {
+            public readonly string Text;
+            public readonly string Pinyin;
+            public readonly bool IsHan;
+            public readonly bool IsBreakCluster;
+
+            public TokenData(string text, string pinyin, bool isHan, bool isBreakCluster = false)
+            {
+                Text = text;
+                Pinyin = pinyin;
+                IsHan = isHan;
+                IsBreakCluster = isBreakCluster;
+            }
+        }
+
+        private sealed class CellView
+        {
+            public readonly RectTransform Root;
+            public readonly float Width;
+            public readonly float GapAfter;
+
+            public CellView(RectTransform root, float width, float gapAfter)
+            {
+                Root = root;
+                Width = width;
+                GapAfter = gapAfter;
+            }
+        }
     }
 }

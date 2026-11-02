@@ -421,6 +421,30 @@ namespace Words.UiMockups.WordListHub
             return formatted.ToString();
         }
 
+        /// <summary>
+        /// Returns display text and source-order pinyin for a stacked UI renderer.
+        /// The stored word remains unchanged; invalid or legacy annotations stay visible
+        /// as source text and do not acquire an inferred reading.
+        /// </summary>
+        public static void GetPresentationParts(
+            string word,
+            out string displayText,
+            out string[] pinyinSyllables,
+            out bool hasUnannotatedHan)
+        {
+            string value = word ?? string.Empty;
+            if (TryParsePinyinAnnotation(value, out displayText, out pinyinSyllables))
+            {
+                hasUnannotatedHan = false;
+                return;
+            }
+
+            displayText = value;
+            pinyinSyllables = Array.Empty<string>();
+            hasUnannotatedHan = CountHanCharacters(value) > 0
+                && value.IndexOf(PinyinSeparator) < 0;
+        }
+
         private static bool TryParsePinyinAnnotation(string value, out string display, out string[] syllables)
         {
             display = null;
@@ -486,7 +510,7 @@ namespace Words.UiMockups.WordListHub
             return count;
         }
 
-        private static bool IsHanCharacter(char character)
+        internal static bool IsHanCharacter(char character)
         {
             // Match the production PinyinLookup.IsChinese range.
             return character >= '\u4e00' && character <= '\u9fff';
