@@ -1061,8 +1061,10 @@ namespace Words.UiMockups.Editor
             Transform root = context.templateRoot.Find("AchievementCardTemplate");
             if (root == null)
             {
-                GameObject go = UnityEngine.Object.Instantiate(context.libraryDetailPane.Find("DetailRecordPanel").gameObject,
-                    context.templateRoot, false);
+                // DetailRecordPanel is retired, so use a neutral image root for this unrelated template.
+                GameObject go = new GameObject("AchievementCardTemplate",
+                    typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+                go.transform.SetParent(context.templateRoot, false);
                 go.name = "AchievementCardTemplate";
                 ClearChildren(go.transform);
                 root = go.transform;
@@ -1180,17 +1182,15 @@ namespace Words.UiMockups.Editor
                 FindText(RequireChild(RequireChild(detail, "DetailHeaderPanel"), "DetailDescription")), "library.detailDescription");
             library.detailMetadata = Assign(library.detailMetadata,
                 FindText(RequireChild(RequireChild(detail, "DetailHeaderPanel"), "DetailMetadata")), "library.detailMetadata");
-            library.recordStars = Assign(library.recordStars,
-                FindText(RequireChild(RequireChild(detail, "DetailRecordPanel"), "RecordStars")), "library.recordStars");
-            library.recordTime = Assign(library.recordTime,
-                FindText(RequireChild(RequireChild(detail, "DetailRecordPanel"), "RecordTime")), "library.recordTime");
+            // DetailRecordPanel is retired; do not recreate, require, or bind its record labels.
+            // library.recordStars = Assign(library.recordStars,
+            //     FindText(RequireChild(RequireChild(detail, "DetailRecordPanel"), "RecordStars")), "library.recordStars");
+            // library.recordTime = Assign(library.recordTime,
+            //     FindText(RequireChild(RequireChild(detail, "DetailRecordPanel"), "RecordTime")), "library.recordTime");
             Transform detailFavorite = detail.Find("Action_Favorite");
             if (detailFavorite != null)
                 detailFavorite.gameObject.SetActive(false);
-            Transform detailRecordPanel = detail.Find("DetailRecordPanel");
-            Transform recordNote = detailRecordPanel != null ? detailRecordPanel.Find("RecordNote") : null;
-            if (recordNote != null)
-                recordNote.gameObject.SetActive(false);
+            // The retired DetailRecordPanel is left entirely under scene ownership.
             Transform wordsPanel = RequireChild(detail, "DetailWordsPanel");
             library.detailWordsLabel = Assign(library.detailWordsLabel,
                 FindText(RequireChild(wordsPanel, "DetailWordsLabel")), "library.detailWordsLabel");

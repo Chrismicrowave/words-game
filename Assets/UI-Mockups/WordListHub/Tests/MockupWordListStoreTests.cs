@@ -252,10 +252,10 @@ namespace Words.UiMockups.WordListHub.Tests
                 ids(new MockupDiscoveryQuery { SortDirection = MockupSortDirection.Descending }));
 
             CollectionAssert.AreEqual(
-                new[] { "mock-ugc-airport-mix", "mock-ugc-cafe-abroad", "mock-ugc-weekend-garden", "mock-ugc-night-market" },
+                new[] { "mock-ugc-airport-mix", "mock-ugc-night-market", "mock-ugc-cafe-abroad", "mock-ugc-weekend-garden" },
                 ids(new MockupDiscoveryQuery { SortMode = MockupDiscoverySortMode.Name }));
             CollectionAssert.AreEqual(
-                new[] { "mock-ugc-night-market", "mock-ugc-cafe-abroad", "mock-ugc-weekend-garden", "mock-ugc-airport-mix" },
+                new[] { "mock-ugc-cafe-abroad", "mock-ugc-weekend-garden", "mock-ugc-night-market", "mock-ugc-airport-mix" },
                 ids(new MockupDiscoveryQuery
                 {
                     SortMode = MockupDiscoverySortMode.Name,

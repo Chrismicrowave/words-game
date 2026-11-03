@@ -87,6 +87,7 @@ namespace Words.UiMockups.WordListHub
         private Transform communityDetailPane;
         private TMP_Text footerText;
         private MockupWordListEdit editDraft;
+        private MockupWordListEditSession editWordSession;
         private string editingListId;
         private TMP_InputField editTitleInput;
         private TMP_InputField editDescriptionInput;
@@ -96,6 +97,7 @@ namespace Words.UiMockups.WordListHub
         private TMP_InputField newListTagsInput;
         private TMP_InputField editWordsInput;
         private TMP_InputField editTagsInput;
+        private MockupWordListEditorView editWordEditorView;
         private TMP_Text dialogValidationText;
         private TMP_Text editSaveHintText;
         private Button editSaveButton;
@@ -111,6 +113,17 @@ namespace Words.UiMockups.WordListHub
         private Coroutine communityScrollRoutine;
         private bool filtersMenuOpen;
         private WordListHubSceneBindings.FilterMenuBinding openFilterMenu;
+        private float lastLibraryTileViewportWidth = -1f;
+        private float lastCommunityTileViewportWidth = -1f;
+
+        private static readonly Color ListTileBackground =
+            new Color(0.6117647f, 0.6117647f, 0.6117647f, 1f);
+        private static readonly Color ListTileSelected =
+            new Color(0.72156864f, 0.46666667f, 0.3529412f, 1f);
+        private static readonly Color ListTileText =
+            new Color(0.97f, 0.96f, 0.94f, 1f);
+        private static readonly Color ListTileFavorite =
+            new Color(1f, 0.82f, 0.38f, 1f);
 
         /// <summary>
         /// Retained for source compatibility with any stale Editor menu. Rebuilding
@@ -125,6 +138,12 @@ namespace Words.UiMockups.WordListHub
 
         private void Awake()
         {
+            InitializeController();
+            RefreshCurrentPage();
+        }
+
+        private void InitializeController()
+        {
             EnsureStore();
             BindAuthoredScene();
             InitializeRubyWordsViews();
@@ -132,8 +151,51 @@ namespace Words.UiMockups.WordListHub
             BindSceneEvents();
             SetFiltersMenuOpen(false);
             SetPageActive(currentPage);
-            RefreshCurrentPage();
         }
+
+#if UNITY_EDITOR
+        /// <summary>
+        /// Explicitly synchronizes the saved Scene preview with the same fixture data,
+        /// row configuration, and runtime layout methods used by Play Mode.
+        /// </summary>
+        public void SynchronizeStaticPreview()
+        {
+            if (Application.isPlaying)
+                throw new InvalidOperationException("Static preview synchronization is only available in Edit Mode.");
+
+            store = MockupWordListStore.CreateWithFixtures();
+            query = new MockupLibraryQuery();
+            communityQuery = new MockupDiscoveryQuery();
+            achievementFilter = AchievementFilter.All;
+            currentPage = Page.Library;
+            selectedListId = null;
+            selectedDiscoveryId = null;
+            librarySearchText = string.Empty;
+            collapsedGroups.Clear();
+            ClearActionFeedback();
+            InitializeController();
+
+            RefreshLibraryPage(true);
+            currentPage = Page.Community;
+            SetPageActive(currentPage);
+            RefreshCommunityPage();
+            currentPage = Page.Achievements;
+            SetPageActive(currentPage);
+            RefreshAchievementsPage();
+            currentPage = Page.Challenges;
+            SetPageActive(currentPage);
+            RefreshChallengesPage();
+
+            currentPage = Page.Library;
+            SetPageActive(currentPage);
+            OpenEditDialog("mock-list-travel-copy");
+            CloseDialog();
+            MockupWordListEditorView.EnsureAuthoredInputStyle(sceneBindings.modal.editList);
+            SetPageActive(Page.Library);
+            RefreshLibraryPage(true);
+            Canvas.ForceUpdateCanvases();
+        }
+#endif
 
         private void Update()
         {
@@ -143,6 +205,39 @@ namespace Words.UiMockups.WordListHub
 
             if (openFilterMenu != null && Input.GetKeyDown(KeyCode.Escape))
                 SetFilterMenuOpen(openFilterMenu, false);
+
+            RefreshTilesAfterViewportResize();
+        }
+
+        private void RefreshTilesAfterViewportResize()
+        {
+            if (sceneBindings == null)
+                return;
+
+            if (currentPage == Page.Library && sceneBindings.library != null
+                && sceneBindings.library.listScroll != null
+                && sceneBindings.library.listScroll.viewport != null)
+            {
+                float width = GetTileViewportWidth(
+                    sceneBindings.library.listScroll, sceneBindings.library.listContent);
+                if (width > 0f && lastLibraryTileViewportWidth > 0f
+                    && Mathf.Abs(width - lastLibraryTileViewportWidth) > 0.5f)
+                {
+                    RefreshLibraryPage();
+                }
+                return;
+            }
+
+            if (currentPage == Page.Community && sceneBindings.community != null
+                && sceneBindings.community.listScroll != null
+                && sceneBindings.community.listScroll.viewport != null)
+            {
+                float width = GetTileViewportWidth(
+                    sceneBindings.community.listScroll, sceneBindings.community.listContent);
+                if (width > 0f && lastCommunityTileViewportWidth > 0f
+                    && Mathf.Abs(width - lastCommunityTileViewportWidth) > 0.5f)
+                    RefreshCommunityPage();
+            }
         }
 
         private void LateUpdate()
@@ -157,14 +252,16 @@ namespace Words.UiMockups.WordListHub
         {
             if (sceneBindings.library.detailWords != null && libraryRubyWordsView == null)
                 libraryRubyWordsView = MockupRubyWordsView.CreateLibrary(
-                    sceneBindings.library.detailWords, wordPreviewFontScale);
+                    sceneBindings.library.detailWords, wordPreviewFontScale,
+                    sceneBindings.libraryRubyWords);
             if (sceneBindings.community.detailSummary != null && communityRubyWordsView == null)
                 communityRubyWordsView = MockupRubyWordsView.CreateCommunity(
                     sceneBindings.community.detailSummary,
                     libraryRubyWordsView == null || libraryRubyWordsView.ScrollRect == null
                         ? null
                         : libraryRubyWordsView.ScrollRect.verticalScrollbar,
-                    wordPreviewFontScale);
+                    wordPreviewFontScale,
+                    sceneBindings.communityRubyWords);
         }
 
         private void BindAuthoredScene()
@@ -1058,6 +1155,248 @@ namespace Words.UiMockups.WordListHub
                 Enum.GetValues(typeof(AchievementFilter)).Length - 1));
         }
 
+        private static float GetTileViewportWidth(ScrollRect scroll, Transform content)
+        {
+            float width = content is RectTransform contentRect
+                ? contentRect.rect.width : 0f;
+            if (width <= 0f && scroll != null && scroll.viewport != null)
+                width = scroll.viewport.rect.width;
+            return width > 0f ? width : WordListHubTileGridMetrics.PreferredTileSize;
+        }
+
+        private static void PrepareManualTileContent(Transform content)
+        {
+            if (content == null)
+                return;
+
+            VerticalLayoutGroup verticalLayout = content.GetComponent<VerticalLayoutGroup>();
+            if (verticalLayout != null)
+                verticalLayout.enabled = false;
+            ContentSizeFitter contentSizeFitter = content.GetComponent<ContentSizeFitter>();
+            if (contentSizeFitter != null)
+                contentSizeFitter.enabled = false;
+
+            RectTransform rect = content as RectTransform;
+            if (rect == null)
+                return;
+            rect.anchorMin = new Vector2(0f, 1f);
+            rect.anchorMax = new Vector2(1f, 1f);
+            rect.pivot = new Vector2(0.5f, 1f);
+            rect.anchoredPosition = new Vector2(0f, rect.anchoredPosition.y);
+            rect.sizeDelta = new Vector2(0f, rect.sizeDelta.y);
+        }
+
+        private static float HeaderHeight(WordListHubSceneBindings.GroupBinding binding)
+        {
+            if (binding == null || binding.button == null)
+                return 0f;
+            LayoutElement layout = binding.button.GetComponent<LayoutElement>();
+            if (layout != null && layout.preferredHeight > 0f)
+                return layout.preferredHeight;
+            RectTransform rect = binding.button.transform as RectTransform;
+            if (rect == null)
+                return 40f;
+            if (rect.rect.height > 0f)
+                return rect.rect.height;
+            return rect.sizeDelta.y > 0f ? rect.sizeDelta.y : 40f;
+        }
+
+        private static void SetTopLeftRect(RectTransform rect, float left, float top, float width, float height)
+        {
+            if (rect == null)
+                return;
+            rect.anchorMin = new Vector2(0f, 1f);
+            rect.anchorMax = new Vector2(0f, 1f);
+            rect.pivot = new Vector2(0f, 1f);
+            rect.anchoredPosition = new Vector2(left, -top);
+            rect.sizeDelta = new Vector2(width, height);
+        }
+
+        private static void SetTileChildRect(RectTransform rect, float top, float width, float height)
+        {
+            if (rect == null)
+                return;
+            rect.anchorMin = new Vector2(0.5f, 1f);
+            rect.anchorMax = new Vector2(0.5f, 1f);
+            rect.pivot = new Vector2(0.5f, 1f);
+            rect.anchoredPosition = new Vector2(0f, -top);
+            rect.sizeDelta = new Vector2(width, height);
+        }
+
+        private static void SetTileText(
+            TMP_Text text,
+            float top,
+            float width,
+            float height,
+            float fontSize,
+            TextAlignmentOptions alignment,
+            bool wrap)
+        {
+            if (text == null)
+                return;
+            RectTransform rect = text.rectTransform;
+            SetTileChildRect(rect, top, width, height);
+            text.fontSize = fontSize;
+            text.color = ListTileText;
+            text.alignment = alignment;
+            text.textWrappingMode = wrap ? TextWrappingModes.Normal : TextWrappingModes.NoWrap;
+            text.overflowMode = TextOverflowModes.Ellipsis;
+            text.raycastTarget = false;
+        }
+
+        private static void ConfigureTileBackground(Button button, GameObject selectedVisual)
+        {
+            Image background = button != null ? button.targetGraphic as Image : null;
+            if (background != null)
+            {
+                background.color = ListTileBackground;
+                ColorBlock colors = button.colors;
+                colors.normalColor = ListTileBackground;
+                colors.highlightedColor = ListTileBackground;
+                colors.pressedColor = ListTileBackground;
+                colors.selectedColor = ListTileBackground;
+                colors.disabledColor = ListTileBackground;
+                colors.colorMultiplier = 1f;
+                button.colors = colors;
+            }
+
+            if (selectedVisual == null)
+                return;
+            RectTransform selectedRect = selectedVisual.transform as RectTransform;
+            if (selectedRect != null)
+            {
+                selectedRect.anchorMin = Vector2.zero;
+                selectedRect.anchorMax = Vector2.one;
+                selectedRect.pivot = new Vector2(0.5f, 0.5f);
+                selectedRect.offsetMin = Vector2.zero;
+                selectedRect.offsetMax = Vector2.zero;
+            }
+            Image selectedImage = selectedVisual.GetComponent<Image>();
+            if (selectedImage == null)
+                selectedImage = selectedVisual.GetComponentInChildren<Image>(true);
+            if (selectedImage != null)
+            {
+                selectedImage.color = ListTileSelected;
+                selectedImage.raycastTarget = false;
+            }
+        }
+
+        private static void ConfigureLibraryTile(
+            GameObject root,
+            Button button,
+            GameObject selectedVisual,
+            Button favoriteButton,
+            TMP_Text favoriteMark,
+            TMP_Text bestTime,
+            TMP_Text title,
+            TMP_Text metadata,
+            GameObject badgeRoot,
+            TMP_Text badge)
+        {
+            RectTransform rootRect = root != null ? root.transform as RectTransform : null;
+            if (rootRect != null)
+                SetTileRootSize(rootRect);
+            ConfigureTileBackground(button, selectedVisual);
+
+            SetTileText(title, 43f, 230f, 64f, 22f, TextAlignmentOptions.Center, true);
+            SetTileText(metadata, 116f, 230f, 54f, 18f, TextAlignmentOptions.Center, true);
+            SetTileText(bestTime, 184f, 230f, 28f, 18f, TextAlignmentOptions.Center, false);
+            SetTileText(badge, 230f, 205f, 24f, 15f, TextAlignmentOptions.Center, false);
+
+            if (badgeRoot != null && badgeRoot.transform is RectTransform badgeRect
+                && (badge == null || badge.rectTransform != badgeRect))
+                SetTileChildRect(badgeRect, 230f, 205f, 24f);
+
+            if (favoriteButton != null)
+            {
+                RectTransform favoriteRect = favoriteButton.transform as RectTransform;
+                if (favoriteRect != null)
+                {
+                    favoriteRect.anchorMin = new Vector2(1f, 1f);
+                    favoriteRect.anchorMax = new Vector2(1f, 1f);
+                    favoriteRect.pivot = new Vector2(1f, 1f);
+                    favoriteRect.anchoredPosition = new Vector2(-10f, -10f);
+                    favoriteRect.sizeDelta = new Vector2(34f, 34f);
+                }
+            }
+            if (favoriteMark != null)
+            {
+                SetTileText(favoriteMark, 0f, 34f, 34f, 28f,
+                    TextAlignmentOptions.Center, false);
+                favoriteMark.color = ListTileFavorite;
+            }
+        }
+
+        private static void ConfigureCommunityTile(
+            GameObject root,
+            Button button,
+            GameObject selectedVisual,
+            TMP_Text title,
+            TMP_Text metadata,
+            TMP_Text summary,
+            TMP_Text status)
+        {
+            RectTransform rootRect = root != null ? root.transform as RectTransform : null;
+            if (rootRect != null)
+                SetTileRootSize(rootRect);
+            ConfigureTileBackground(button, selectedVisual);
+            SetTileText(title, 72f, 230f, 64f, 22f, TextAlignmentOptions.Center, true);
+            SetTileText(metadata, 144f, 230f, 54f, 18f, TextAlignmentOptions.Center, true);
+            SetTileText(status, 230f, 205f, 24f, 15f, TextAlignmentOptions.Center, false);
+            if (summary != null && summary.gameObject.activeSelf)
+                summary.gameObject.SetActive(false);
+        }
+
+        private static void SetTileRootSize(RectTransform root)
+        {
+            float tileSize = WordListHubTileGridMetrics.PreferredTileSize;
+            root.sizeDelta = new Vector2(tileSize, tileSize);
+            LayoutElement layout = root.GetComponent<LayoutElement>();
+            if (layout != null)
+            {
+                layout.minWidth = tileSize;
+                layout.preferredWidth = tileSize;
+                layout.minHeight = tileSize;
+                layout.preferredHeight = tileSize;
+            }
+        }
+
+        private static float LayoutTileGrid(
+            IReadOnlyList<RectTransform> tiles,
+            float availableWidth,
+            float topOffset)
+        {
+            int count = tiles != null ? tiles.Count : 0;
+            WordListHubTileGridMetrics metrics = WordListHubTileGridMetrics.Calculate(availableWidth, count);
+            if (tiles == null || metrics.RowCount == 0)
+                return metrics.ContentHeight;
+
+            for (int i = 0; i < tiles.Count; i++)
+            {
+                int row = i / metrics.ColumnCount;
+                int column = i % metrics.ColumnCount;
+                float left = metrics.GetRowStartX(row)
+                    + column * (metrics.TileSize + WordListHubTileGridMetrics.Gap);
+                float top = topOffset + row * (metrics.RowHeight + WordListHubTileGridMetrics.Gap);
+                SetTopLeftRect(tiles[i], left, top, metrics.TileSize, metrics.TileSize);
+                LayoutElement layout = tiles[i].GetComponent<LayoutElement>();
+                if (layout != null)
+                {
+                    layout.minWidth = metrics.TileSize;
+                    layout.preferredWidth = metrics.TileSize;
+                    layout.minHeight = metrics.TileSize;
+                    layout.preferredHeight = metrics.TileSize;
+                }
+            }
+            return metrics.ContentHeight;
+        }
+
+        private static void SetContentHeight(Transform content, float height)
+        {
+            if (content is RectTransform rect)
+                rect.sizeDelta = new Vector2(0f, Mathf.Max(0f, height));
+        }
+
         private void RefreshLibraryPage(bool moveScrollToTop = false, bool revealSelectedItem = false)
         {
             if (currentPage != Page.Library)
@@ -1065,6 +1404,7 @@ namespace Words.UiMockups.WordListHub
             if (sceneBindings == null || libraryListContent == null || libraryDetailPane == null)
                 throw new InvalidOperationException("Library Scene bindings are missing.");
 
+            Canvas.ForceUpdateCanvases();
             float savedScrollY = libraryScrollRect != null && libraryScrollRect.content != null
                 ? libraryScrollRect.content.anchoredPosition.y
                 : 0f;
@@ -1073,6 +1413,16 @@ namespace Words.UiMockups.WordListHub
             IReadOnlyList<MockupWordList> queried = store.QueryLibrary(query);
             List<MockupWordList> items = queried.ToList();
             WordListHubSceneBindings.LibraryPageBinding library = sceneBindings.library;
+            PrepareManualTileContent(library.listContent);
+            float availableWidth = GetTileViewportWidth(library.listScroll, library.listContent);
+            lastLibraryTileViewportWidth = availableWidth;
+            if (library.rowTemplate != null)
+            {
+                WordListHubLibraryRowView template = library.rowTemplate;
+                ConfigureLibraryTile(template.gameObject, template.button, template.selectedVisual,
+                    template.favoriteButton, template.favoriteMark, template.bestTime, template.title,
+                    template.metadata, template.badgeRoot, template.badge);
+            }
             SyncLibraryControlValues(library);
             DestroyOwnedRuntimeChildren(library.listContent);
 
@@ -1111,6 +1461,7 @@ namespace Words.UiMockups.WordListHub
             }
 
             int siblingIndex = 0;
+            float cursorY = 0f;
             foreach (MockupLibraryGroup group in Enum.GetValues(typeof(MockupLibraryGroup)))
             {
                 List<MockupWordList> groupItems = items.Where(item => item.Group == group).ToList();
@@ -1124,12 +1475,17 @@ namespace Words.UiMockups.WordListHub
                         header.button.gameObject.SetActive(true);
                         BindButton(header.button, () => ToggleGroup(group));
                         header.button.transform.SetSiblingIndex(siblingIndex++);
+                        float headerHeight = HeaderHeight(header);
+                        if (header.button.transform is RectTransform headerRect)
+                            SetTopLeftRect(headerRect, 0f, cursorY, availableWidth, headerHeight);
+                        cursorY += headerHeight + WordListHubTileGridMetrics.Gap;
                     }
                 }
 
                 if (collapsedGroups.Contains(group))
                     continue;
 
+                var groupTiles = new List<RectTransform>();
                 foreach (MockupWordList item in groupItems)
                 {
                     if (authoredById.TryGetValue(item.Id, out WordListHubSceneBindings.LibraryRowBinding authored))
@@ -1138,15 +1494,24 @@ namespace Words.UiMockups.WordListHub
                         {
                             authored.root.SetActive(true);
                             authored.root.transform.SetSiblingIndex(siblingIndex++);
+                            if (authored.root.transform is RectTransform authoredRect)
+                                groupTiles.Add(authoredRect);
                         }
                     }
                     else if (dynamicById.TryGetValue(item.Id, out WordListHubLibraryRowView dynamicView))
                     {
                         dynamicView.gameObject.SetActive(true);
                         dynamicView.transform.SetSiblingIndex(siblingIndex++);
+                        if (dynamicView.transform is RectTransform dynamicRect)
+                            groupTiles.Add(dynamicRect);
                     }
                 }
+
+                cursorY += LayoutTileGrid(groupTiles, availableWidth, cursorY);
+                if (groupTiles.Count > 0)
+                    cursorY += WordListHubTileGridMetrics.Gap;
             }
+            SetContentHeight(library.listContent, cursorY);
 
             if (library.emptyNotice != null)
             {
@@ -1245,6 +1610,9 @@ namespace Words.UiMockups.WordListHub
                 binding.badgeRoot.SetActive(!string.IsNullOrEmpty(badge));
             BindButton(binding.button, () => SelectLibraryItem(item.Id));
             BindButton(binding.favoriteButton, () => ToggleFavorite(item.Id));
+            ConfigureLibraryTile(binding.root, binding.button, binding.selectedVisual,
+                binding.favoriteButton, binding.favoriteMark, binding.bestTime, binding.title,
+                binding.metadata, binding.badgeRoot, binding.badge);
         }
 
         private void UpdateLibraryRow(WordListHubLibraryRowView view, MockupWordList item)
@@ -1263,6 +1631,9 @@ namespace Words.UiMockups.WordListHub
                 view.badgeRoot.SetActive(!string.IsNullOrEmpty(badge));
             BindButton(view.button, () => SelectLibraryItem(item.Id));
             BindButton(view.favoriteButton, () => ToggleFavorite(item.Id));
+            ConfigureLibraryTile(view.gameObject, view.button, view.selectedVisual,
+                view.favoriteButton, view.favoriteMark, view.bestTime, view.title,
+                view.metadata, view.badgeRoot, view.badge);
         }
 
         private void UpdateLibrarySelectionVisuals(
@@ -1302,8 +1673,9 @@ namespace Words.UiMockups.WordListHub
                 SetText(library.detailTitle, "Choose a list to see its details.");
                 SetText(library.detailDescription, string.Empty);
                 SetText(library.detailMetadata, string.Empty);
-                SetText(library.recordStars, string.Empty);
-                SetText(library.recordTime, string.Empty);
+                // DetailRecordPanel is retired; leave personal record data in the model and list tiles.
+                // SetText(library.recordStars, string.Empty);
+                // SetText(library.recordTime, string.Empty);
                 SetText(library.detailWordsLabel, "WORDS  ·  0");
                 SetText(library.detailWords, string.Empty);
                 if (libraryRubyWordsView != null)
@@ -1325,10 +1697,11 @@ namespace Words.UiMockups.WordListHub
                 ? (string.IsNullOrEmpty(item.RemoteAuthor) ? "COMMUNITY MEMBER" : item.RemoteAuthor)
                 : "YOU";
             SetText(library.detailMetadata, "BY " + author);
-            int earnedStars = Mathf.Clamp(item.PersonalStars ?? 0, 0, 5);
-            SetText(library.recordStars, new string('★', earnedStars) + new string('☆', 5 - earnedStars));
-            SetText(library.recordTime, item.BestTimeSeconds.HasValue
-                ? item.BestTimeSeconds.Value.ToString("0.0") + " s" : "No run yet");
+            // DetailRecordPanel is retired; keep personal records available to the list tiles and model.
+            // int earnedStars = Mathf.Clamp(item.PersonalStars ?? 0, 0, 5);
+            // SetText(library.recordStars, new string('★', earnedStars) + new string('☆', 5 - earnedStars));
+            // SetText(library.recordTime, item.BestTimeSeconds.HasValue
+            //     ? item.BestTimeSeconds.Value.ToString("0.0") + " s" : "No run yet");
             SetText(library.detailWordsLabel, "WORDS  ·  " + item.WordCount);
             SetText(library.detailWords, item.Words == null || item.Words.Count == 0
                 ? "No words in this list." : string.Join("\n", item.Words.Select(MockupWordContent.FormatForDetail)));
@@ -1564,7 +1937,17 @@ namespace Words.UiMockups.WordListHub
             if (sceneBindings == null || communityListContent == null || communityDetailPane == null)
                 throw new InvalidOperationException("Community Scene bindings are missing.");
 
+            Canvas.ForceUpdateCanvases();
             WordListHubSceneBindings.CommunityPageBinding community = sceneBindings.community;
+            PrepareManualTileContent(community.listContent);
+            float availableWidth = GetTileViewportWidth(community.listScroll, community.listContent);
+            lastCommunityTileViewportWidth = availableWidth;
+            if (community.rowTemplate != null)
+            {
+                WordListHubDiscoveryRowView template = community.rowTemplate;
+                ConfigureCommunityTile(template.gameObject, template.button, template.selectedVisual,
+                    template.title, template.metadata, template.summary, template.status);
+            }
             Vector2 scrollPosition = community.listScroll != null && community.listScroll.content != null
                 ? community.listScroll.content.anchoredPosition
                 : Vector2.zero;
@@ -1617,6 +2000,7 @@ namespace Words.UiMockups.WordListHub
             }
 
             int siblingIndex = 0;
+            var communityTiles = new List<RectTransform>();
             foreach (MockupDiscoveryItem item in items)
             {
                 if (authoredById.TryGetValue(item.RemoteItemId,
@@ -1626,14 +2010,20 @@ namespace Words.UiMockups.WordListHub
                     {
                         authored.root.SetActive(true);
                         authored.root.transform.SetSiblingIndex(siblingIndex++);
+                        if (authored.root.transform is RectTransform authoredRect)
+                            communityTiles.Add(authoredRect);
                     }
                 }
                 else if (dynamicById.TryGetValue(item.RemoteItemId, out WordListHubDiscoveryRowView dynamicView))
                 {
                     dynamicView.gameObject.SetActive(true);
                     dynamicView.transform.SetSiblingIndex(siblingIndex++);
+                    if (dynamicView.transform is RectTransform dynamicRect)
+                        communityTiles.Add(dynamicRect);
                 }
             }
+            float contentHeight = LayoutTileGrid(communityTiles, availableWidth, 0f);
+            SetContentHeight(community.listContent, contentHeight);
 
             if (community.emptyNotice != null)
             {
@@ -1692,6 +2082,8 @@ namespace Words.UiMockups.WordListHub
             SetText(row.summary, item.Description);
             SetText(row.status, item.Status == MockupDiscoveryStatus.New ? "NEW" : "UPDATED");
             BindButton(row.button, () => SelectDiscoveryItem(item.RemoteItemId));
+            ConfigureCommunityTile(row.root, row.button, row.selectedVisual,
+                row.title, row.metadata, row.summary, row.status);
         }
 
         private void UpdateDiscoveryRow(WordListHubDiscoveryRowView view, MockupDiscoveryItem item)
@@ -1704,6 +2096,8 @@ namespace Words.UiMockups.WordListHub
             SetText(view.summary, item.Description);
             SetText(view.status, item.Status == MockupDiscoveryStatus.New ? "NEW" : "UPDATED");
             BindButton(view.button, () => SelectDiscoveryItem(item.RemoteItemId));
+            ConfigureCommunityTile(view.gameObject, view.button, view.selectedVisual,
+                view.title, view.metadata, view.summary, view.status);
         }
 
         private void UpdateCommunitySelectionVisuals(
@@ -1801,6 +2195,8 @@ namespace Words.UiMockups.WordListHub
             WordListHubSceneBindings.AchievementsPageBinding achievements = sceneBindings.achievements;
             if (achievements == null || achievements.cardContent == null || achievements.cardTemplate == null)
                 throw new InvalidOperationException("Achievement Scene template bindings are missing.");
+            if (achievements.cards == null)
+                achievements.cards = new List<WordListHubSceneBindings.AchievementCardBinding>();
 
             SetDropdownOptions(achievements.filter,
                 new[] { "Show: All", "Show: Unlocked", "Show: In progress" }, (int)achievementFilter);
@@ -1812,32 +2208,63 @@ namespace Words.UiMockups.WordListHub
                 kind => kind == WordListHubSceneBindings.LibraryFilterKind.AchievementStatus
                     ? (int)achievementFilter : -1,
                 "Show: " + achievementFilterLabel);
-            DestroyOwnedRuntimeChildren(achievements.cardContent);
-
             IEnumerable<MockupAchievement> filtered = store.Achievements;
             if (achievementFilter == AchievementFilter.Unlocked)
                 filtered = filtered.Where(item => item.Status == MockupAchievementStatus.Unlocked);
             else if (achievementFilter == AchievementFilter.InProgress)
                 filtered = filtered.Where(item => item.Status == MockupAchievementStatus.InProgress);
 
+            var authoredById = achievements.cards
+                .Where(card => card != null && !string.IsNullOrEmpty(card.achievementId))
+                .ToDictionary(card => card.achievementId, StringComparer.Ordinal);
+            foreach (WordListHubSceneBindings.AchievementCardBinding card in achievements.cards)
+            {
+                GameObject cardRoot = card != null && card.root != null
+                    ? card.root : card != null && card.view != null ? card.view.gameObject : null;
+                if (cardRoot != null)
+                    cardRoot.SetActive(false);
+            }
+
+            DestroyOwnedRuntimeChildren(achievements.cardContent);
             foreach (MockupAchievement achievement in filtered)
             {
-                WordListHubAchievementCardView view = Instantiate(
-                    achievements.cardTemplate, achievements.cardContent, false);
-                view.name = "AchievementCard_" + achievement.Id;
-                if (view.GetComponent<WordListHubRuntimeInstance>() == null)
-                    view.gameObject.AddComponent<WordListHubRuntimeInstance>();
-                Sprite icon = AchievementIcon(achievement);
-                if (view.icon != null && icon != null)
-                    view.icon.sprite = icon;
-                SetText(view.state, achievement.Status.ToString().Replace("InProgress", "In Progress")
-                    .ToUpperInvariant());
-                SetText(view.title, achievement.Title);
-                SetText(view.description, achievement.Description);
-                SetText(view.progress, achievement.ProgressText);
-                view.gameObject.SetActive(true);
+                if (authoredById.TryGetValue(achievement.Id,
+                    out WordListHubSceneBindings.AchievementCardBinding authored))
+                {
+                    PopulateAchievementCard(authored.view, achievement);
+                    if (authored.root == null && authored.view != null)
+                        authored.root = authored.view.gameObject;
+                    if (authored.root != null)
+                        authored.root.SetActive(true);
+                }
+                else
+                {
+                    WordListHubAchievementCardView view = Instantiate(
+                        achievements.cardTemplate, achievements.cardContent, false);
+                    view.name = "AchievementCard_" + achievement.Id;
+                    if (view.GetComponent<WordListHubRuntimeInstance>() == null)
+                        view.gameObject.AddComponent<WordListHubRuntimeInstance>();
+                    PopulateAchievementCard(view, achievement);
+                }
             }
             UpdateFooter();
+        }
+
+        private void PopulateAchievementCard(
+            WordListHubAchievementCardView view,
+            MockupAchievement achievement)
+        {
+            if (view == null || achievement == null)
+                return;
+            Sprite icon = AchievementIcon(achievement);
+            if (view.icon != null && icon != null)
+                view.icon.sprite = icon;
+            SetText(view.state, achievement.Status.ToString().Replace("InProgress", "In Progress")
+                .ToUpperInvariant());
+            SetText(view.title, achievement.Title);
+            SetText(view.description, achievement.Description);
+            SetText(view.progress, achievement.ProgressText);
+            view.gameObject.SetActive(true);
         }
 
         private void RefreshChallengesPage()
@@ -1997,6 +2424,7 @@ namespace Words.UiMockups.WordListHub
             editDraft = store.CreateEditDraft(item.Id);
             if (editDraft.Words == null)
                 editDraft.Words = item.Words == null ? new List<string>() : new List<string>(item.Words);
+            editWordSession = new MockupWordListEditSession(editDraft.Words);
             editLanguage = item.Language;
             RenderEditDialog();
         }
@@ -2005,6 +2433,8 @@ namespace Words.UiMockups.WordListHub
         {
             if (editDraft == null)
                 return;
+            if (editWordSession == null)
+                editWordSession = new MockupWordListEditSession(editDraft.Words);
 
             WordListHubSceneBindings.FormBinding form = sceneBindings.modal.editList;
             if (form == null || form.root == null)
@@ -2031,7 +2461,7 @@ namespace Words.UiMockups.WordListHub
                 editTagsInput.SetTextWithoutNotify(editDraft.Tags ?? string.Empty);
             if (editWordsInput != null)
             {
-                editWordsInput.SetTextWithoutNotify(WordsAsText(editDraft.Words));
+                editWordsInput.SetTextWithoutNotify(editWordSession.SelectedWord);
                 editWordsInput.interactable = true;
             }
             if (form.languageDropdown != null)
@@ -2039,10 +2469,15 @@ namespace Words.UiMockups.WordListHub
                 SetDropdownOptions(form.languageDropdown, new[] { "English", "Chinese", "Mixed" }, (int)editLanguage);
                 form.languageDropdown.interactable = true;
             }
-            SetText(form.wordsLabel, WordsInputHint(editLanguage));
             SetText(form.validationText, string.Empty);
             if (editSaveButton != null)
                 SetText(form.saveButtonLabel, copyEditingMode ? "Save editable copy" : "Save changes");
+            if (editWordEditorView == null)
+            {
+                editWordEditorView = new MockupWordListEditorView(
+                    form, SelectEditWord, AddEditWord, MoveEditWord, DeleteEditWord);
+            }
+            editWordEditorView.Render(editWordSession, SelectedWordPlaceholder(editLanguage), false);
             UpdateEditSaveButton();
         }
         private void SetEditLanguageFromDropdown(int value)
@@ -2058,8 +2493,67 @@ namespace Words.UiMockups.WordListHub
         private void HandleEditWordsChanged(string value)
         {
             CaptureEditInputs();
+            if (editWordEditorView != null)
+                editWordEditorView.Render(editWordSession, SelectedWordPlaceholder(editLanguage), false);
             if (dialogValidationText != null)
                 dialogValidationText.text = string.Empty;
+            UpdateEditSaveButton();
+        }
+
+        private void SelectEditWord(int index)
+        {
+            CaptureEditInputs();
+            if (editWordSession == null)
+                return;
+
+            editWordSession.Select(index);
+            ShowSelectedEditWord(true);
+        }
+
+        private void AddEditWord()
+        {
+            CaptureEditInputs();
+            if (editWordSession == null)
+                return;
+
+            editWordSession.AddAtFront();
+            ShowSelectedEditWord(true);
+        }
+
+        private void MoveEditWord(int direction)
+        {
+            CaptureEditInputs();
+            if (editWordSession == null || !editWordSession.MoveSelected(direction))
+                return;
+
+            ShowSelectedEditWord(true);
+        }
+
+        private void DeleteEditWord()
+        {
+            CaptureEditInputs();
+            if (editWordSession == null || !editWordSession.DeleteSelected())
+                return;
+
+            ShowSelectedEditWord(true);
+        }
+
+        private void ShowSelectedEditWord(bool activateInput)
+        {
+            if (editWordEditorView != null)
+                editWordEditorView.Render(editWordSession, SelectedWordPlaceholder(editLanguage), false);
+
+            if (editWordsInput != null)
+            {
+                string selectedWord = editWordSession != null
+                    ? editWordSession.SelectedWord : string.Empty;
+                editWordsInput.SetTextWithoutNotify(selectedWord);
+                editWordsInput.caretPosition = selectedWord.Length;
+                if (activateInput && editWordSession != null && editWordSession.HasSelection)
+                    editWordsInput.ActivateInputField();
+            }
+
+            CaptureEditInputs();
             UpdateEditSaveButton();
         }
 
@@ -2091,7 +2585,12 @@ namespace Words.UiMockups.WordListHub
             if (editTagsInput != null)
                 editDraft.Tags = editTagsInput.text;
             if (editWordsInput != null)
-                editDraft.Words = ParseWords(editWordsInput.text);
+            {
+                if (editWordSession == null)
+                    editWordSession = new MockupWordListEditSession(editDraft.Words);
+                editWordSession.SetSelectedWord(editWordsInput.text);
+                editDraft.Words = editWordSession.ToList();
+            }
             editDraft.Language = editLanguage;
             editDraft.WordCount = editDraft.Words != null ? editDraft.Words.Count : 0;
         }
@@ -2100,7 +2599,15 @@ namespace Words.UiMockups.WordListHub
         {
             MockupWordList current = store.FindById(editingListId);
             return current != null && (current.Language != editLanguage
-                || !WordsEqual(current.Words, editDraft != null ? editDraft.Words : null));
+                || !WordsEqualAfterTrim(current.Words, editDraft != null ? editDraft.Words : null));
+        }
+
+        private static bool WordsEqualAfterTrim(IEnumerable<string> left, IEnumerable<string> right)
+        {
+            return (left ?? Enumerable.Empty<string>()).Select(word => (word ?? string.Empty).Trim())
+                .SequenceEqual(
+                    (right ?? Enumerable.Empty<string>()).Select(word => (word ?? string.Empty).Trim()),
+                    StringComparer.Ordinal);
         }
 
         private void SaveEditClicked()
@@ -2113,9 +2620,9 @@ namespace Words.UiMockups.WordListHub
             editDraft.Description = editDescriptionInput != null ? editDescriptionInput.text : editDraft.Description;
             editDraft.Tags = editTagsInput != null ? editTagsInput.text.Trim() : editDraft.Tags;
             editDraft.Language = editLanguage;
-            string wordText = editWordsInput != null ? editWordsInput.text : string.Empty;
-            if (editWordsInput != null)
-                editDraft.Words = ParseWords(wordText);
+            if (editWordSession == null)
+                editWordSession = new MockupWordListEditSession(editDraft.Words);
+            editDraft.Words = editWordSession.ToList();
             editDraft.WordCount = editDraft.Words != null ? editDraft.Words.Count : 0;
 
             if (string.IsNullOrWhiteSpace(editDraft.Title))
@@ -2125,9 +2632,25 @@ namespace Words.UiMockups.WordListHub
             }
             if (editDraft.Words == null || editDraft.Words.Count == 0)
             {
-                SetDialogValidation("Enter at least one word. Blank lines are ignored.");
+                SetDialogValidation("Add at least one word.");
                 return;
             }
+            int blankWordIndex = editDraft.Words.FindIndex(string.IsNullOrWhiteSpace);
+            if (blankWordIndex >= 0)
+            {
+                SetDialogValidation("Word " + (blankWordIndex + 1)
+                    + " is blank. Enter a word or delete that entry.");
+                return;
+            }
+            int multilineWordIndex = editDraft.Words.FindIndex(word =>
+                word.IndexOf('\n') >= 0 || word.IndexOf('\r') >= 0);
+            if (multilineWordIndex >= 0)
+            {
+                SetDialogValidation("Word " + (multilineWordIndex + 1)
+                    + " must stay on one line.");
+                return;
+            }
+            string wordText = string.Join("\n", editDraft.Words);
             IEnumerable<string> unchangedLegacyWords = null;
             MockupWordList original = store.FindById(editingListId);
             unchangedLegacyWords = original != null ? original.Words : null;
@@ -2256,6 +2779,19 @@ namespace Words.UiMockups.WordListHub
             }
         }
 
+        private static string SelectedWordPlaceholder(MockupLanguage language)
+        {
+            switch (language)
+            {
+                case MockupLanguage.Chinese:
+                    return "苹果 | ping guo";
+                case MockupLanguage.Mixed:
+                    return "English word or 汉字 | pinyin";
+                default:
+                    return "Enter one word";
+            }
+        }
+
         private static bool WordsEqual(IEnumerable<string> left, IEnumerable<string> right)
         {
             return (left ?? Enumerable.Empty<string>()).SequenceEqual(
@@ -2264,6 +2800,11 @@ namespace Words.UiMockups.WordListHub
 
         private void CloseDialog()
         {
+            if (editWordEditorView != null)
+            {
+                editWordEditorView.Dispose();
+                editWordEditorView = null;
+            }
             if (sceneBindings != null && sceneBindings.modal != null && sceneBindings.modal.root != null)
             {
                 sceneBindings.modal.root.SetActive(false);
@@ -2271,6 +2812,7 @@ namespace Words.UiMockups.WordListHub
             }
             dialogContentRoot = null;
             editDraft = null;
+            editWordSession = null;
         }
         private void RefreshLibraryAfterDialog()
         {
@@ -2363,561 +2905,4 @@ namespace Words.UiMockups.WordListHub
         }
     }
 
-    /// <summary>
-    /// Runtime-only stacked word view for the mockup's existing detail text regions.
-    /// It keeps the authored TMP components as data/accessibility fallbacks and creates
-    /// per-character UI cells without depending on production gameplay assemblies.
-    /// </summary>
-    public sealed class MockupRubyWordsView
-    {
-        private const string LibraryRootName = "RuntimeRubyWords";
-        private const string CommunityViewportName = "RuntimeRubyWordsViewport";
-        private const string CommunityContentName = "RuntimeRubyWordsContent";
-        private const string CommunityScrollbarName = "RuntimeRubyWordsScrollbar";
-        private const float HorizontalInset = 2f;
-        private const float CellGap = 3f;
-        private const float WrapGap = 2f;
-        private const float EntryGap = 7f;
-        private const float ContentFontSizeIncrease = 2f;
-        private const float PinyinFontRatio = 0.72f;
-        private const float TextBandHeightRatio = 1.5f;
-        private const float CommunityScrollbarGap = 2f;
-
-        private readonly TMP_Text sourceText;
-        private readonly RectTransform layoutRoot;
-        private readonly ScrollRect scrollRect;
-        private readonly VerticalLayoutGroup verticalLayout;
-        private readonly List<string> words = new List<string>();
-        private float bodyFontSize;
-        private float pinyinFontSize;
-        private float pinyinBandHeight;
-        private float glyphBandHeight;
-        private float cellHeight;
-        private float lastWidth = -1f;
-
-        public RectTransform LayoutRoot => layoutRoot;
-        public ScrollRect ScrollRect => scrollRect;
-        public TMP_Text LegacyText => sourceText;
-
-        private MockupRubyWordsView(
-            TMP_Text text,
-            RectTransform root,
-            ScrollRect scroll,
-            VerticalLayoutGroup layout,
-            float previewFontScale)
-        {
-            sourceText = text;
-            layoutRoot = root;
-            scrollRect = scroll;
-            verticalLayout = layout;
-            float baseBodyFontSize = Mathf.Max(12f, text.fontSize);
-            float basePinyinFontSize = Mathf.Clamp(
-                (baseBodyFontSize - ContentFontSizeIncrease) * PinyinFontRatio, 11f, 12f)
-                + ContentFontSizeIncrease;
-            float safePreviewFontScale = Mathf.Max(0.1f, previewFontScale);
-            bodyFontSize = baseBodyFontSize * safePreviewFontScale;
-            pinyinFontSize = basePinyinFontSize * safePreviewFontScale;
-            pinyinBandHeight = Mathf.Ceil(Mathf.Max(15f, pinyinFontSize * TextBandHeightRatio)) + 2f;
-            glyphBandHeight = Mathf.Ceil(Mathf.Max(18f, bodyFontSize * TextBandHeightRatio)) + 2f;
-            cellHeight = pinyinBandHeight + glyphBandHeight;
-        }
-
-        public static MockupRubyWordsView CreateLibrary(TMP_Text legacyText, float previewFontScale)
-        {
-            if (legacyText == null || legacyText.transform.parent == null)
-                return null;
-
-            LayoutElement ignoredTextLayout = legacyText.GetComponent<LayoutElement>();
-            if (ignoredTextLayout == null)
-                ignoredTextLayout = legacyText.gameObject.AddComponent<LayoutElement>();
-            ignoredTextLayout.ignoreLayout = true;
-            ContentSizeFitter legacyFitter = legacyText.GetComponent<ContentSizeFitter>();
-            if (legacyFitter != null)
-                legacyFitter.enabled = false;
-            legacyText.enabled = false;
-
-            Transform contentParent = legacyText.transform.parent;
-            RectTransform root = contentParent.Find(LibraryRootName) as RectTransform;
-            if (root == null)
-                root = CreateRectTransform(LibraryRootName, contentParent);
-            ConfigureTopStretch(root);
-
-            VerticalLayoutGroup layout = root.GetComponent<VerticalLayoutGroup>();
-            if (layout == null)
-                layout = root.gameObject.AddComponent<VerticalLayoutGroup>();
-            ConfigureVerticalLayout(layout, EntryGap);
-
-            LayoutElement rootElement = root.GetComponent<LayoutElement>();
-            if (rootElement == null)
-                rootElement = root.gameObject.AddComponent<LayoutElement>();
-            rootElement.minWidth = 0f;
-            rootElement.flexibleWidth = 1f;
-
-            ScrollRect existingScroll = legacyText.GetComponentInParent<ScrollRect>(true);
-            return new MockupRubyWordsView(legacyText, root, existingScroll, layout, previewFontScale);
-        }
-
-        public static MockupRubyWordsView CreateCommunity(
-            TMP_Text legacyText,
-            Scrollbar scrollbarTemplate,
-            float previewFontScale)
-        {
-            if (legacyText == null)
-                return null;
-            if (scrollbarTemplate == null)
-                throw new InvalidOperationException(
-                    "Community stacked word previews require the Library detail scrollbar template.");
-
-            RectTransform viewportRegion = legacyText.rectTransform;
-            RectTransform viewport = viewportRegion.Find(CommunityViewportName) as RectTransform;
-            if (viewport == null)
-                viewport = CreateRectTransform(CommunityViewportName, viewportRegion);
-            ConfigureFullStretch(viewport);
-
-            Image inputGraphic = viewport.GetComponent<Image>();
-            if (inputGraphic == null)
-            {
-                inputGraphic = viewport.gameObject.AddComponent<Image>();
-                inputGraphic.color = new Color(1f, 1f, 1f, 0f);
-            }
-            inputGraphic.raycastTarget = true;
-
-            RectMask2D mask = viewport.GetComponent<RectMask2D>();
-            if (mask == null)
-                viewport.gameObject.AddComponent<RectMask2D>();
-
-            ScrollRect scroll = viewport.GetComponent<ScrollRect>();
-            if (scroll == null)
-                scroll = viewport.gameObject.AddComponent<ScrollRect>();
-
-            RectTransform content = viewport.Find(CommunityContentName) as RectTransform;
-            if (content == null)
-                content = CreateRectTransform(CommunityContentName, viewport);
-            ConfigureTopStretch(content);
-
-            VerticalLayoutGroup layout = content.GetComponent<VerticalLayoutGroup>();
-            if (layout == null)
-                layout = content.gameObject.AddComponent<VerticalLayoutGroup>();
-            ConfigureVerticalLayout(layout, EntryGap);
-
-            ContentSizeFitter fitter = content.GetComponent<ContentSizeFitter>();
-            if (fitter == null)
-                fitter = content.gameObject.AddComponent<ContentSizeFitter>();
-            fitter.horizontalFit = ContentSizeFitter.FitMode.Unconstrained;
-            fitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
-
-            Scrollbar communityScrollbar = CreateCommunityScrollbar(viewportRegion, scrollbarTemplate);
-            RectTransform scrollbarRect = communityScrollbar.transform as RectTransform;
-            RectTransform templateScrollbarRect = scrollbarTemplate.transform as RectTransform;
-            float scrollbarWidth = Mathf.Max(templateScrollbarRect.rect.width, templateScrollbarRect.sizeDelta.x);
-            scrollbarRect.anchorMin = new Vector2(1f, 0f);
-            scrollbarRect.anchorMax = Vector2.one;
-            scrollbarRect.pivot = new Vector2(1f, 1f);
-            scrollbarRect.anchoredPosition = Vector2.zero;
-            scrollbarRect.sizeDelta = new Vector2(scrollbarWidth, 0f);
-            content.sizeDelta = new Vector2(-(scrollbarWidth + CommunityScrollbarGap), content.sizeDelta.y);
-
-            LayoutElement contentElement = content.GetComponent<LayoutElement>();
-            if (contentElement == null)
-                contentElement = content.gameObject.AddComponent<LayoutElement>();
-            contentElement.minWidth = 0f;
-            contentElement.flexibleWidth = 1f;
-
-            scroll.viewport = viewport;
-            scroll.content = content;
-            scroll.horizontal = false;
-            scroll.vertical = true;
-            scroll.movementType = ScrollRect.MovementType.Clamped;
-            scroll.inertia = false;
-            scroll.scrollSensitivity = 40f;
-            scroll.horizontalScrollbar = null;
-            scroll.verticalScrollbar = communityScrollbar;
-            scroll.verticalScrollbarVisibility = ScrollRect.ScrollbarVisibility.AutoHide;
-            scroll.verticalScrollbarSpacing = 0f;
-
-            legacyText.enabled = false;
-            return new MockupRubyWordsView(legacyText, content, scroll, layout, previewFontScale);
-        }
-
-        private static Scrollbar CreateCommunityScrollbar(RectTransform communityRegion, Scrollbar template)
-        {
-            Transform existing = communityRegion.Find(CommunityScrollbarName);
-            Scrollbar scrollbar = existing == null ? null : existing.GetComponent<Scrollbar>();
-            if (scrollbar != null)
-                return scrollbar;
-
-            GameObject clone = UnityEngine.Object.Instantiate(template.gameObject, communityRegion, false);
-            clone.name = CommunityScrollbarName;
-            clone.SetActive(true);
-            scrollbar = clone.GetComponent<Scrollbar>();
-            if (scrollbar == null)
-                throw new InvalidOperationException("The Library detail scrollbar template has no Scrollbar component.");
-
-            scrollbar.onValueChanged.RemoveAllListeners();
-            scrollbar.direction = template.direction;
-            return scrollbar;
-        }
-
-        public void SetWords(IReadOnlyList<string> nextWords)
-        {
-            if (WordsEqual(words, nextWords))
-            {
-                RefreshLayoutIfNeeded();
-                return;
-            }
-
-            words.Clear();
-            if (nextWords != null)
-            {
-                for (int i = 0; i < nextWords.Count; i++)
-                    words.Add(nextWords[i] ?? string.Empty);
-            }
-
-            RebuildEntries();
-        }
-
-        public void RefreshLayoutIfNeeded()
-        {
-            float width = AvailableWidth();
-            if (Mathf.Abs(width - lastWidth) > 0.5f)
-                RebuildEntries();
-        }
-
-        private void RebuildEntries()
-        {
-            float width = AvailableWidth();
-            ClearChildren(layoutRoot);
-            float entriesHeight = 0f;
-            int entryCount = 0;
-            for (int wordIndex = 0; wordIndex < words.Count; wordIndex++)
-            {
-                if (words[wordIndex].Length == 0)
-                    continue;
-
-                RectTransform entryRoot = CreateRectTransform("WordEntry", layoutRoot);
-                entryRoot.anchorMin = new Vector2(0f, 1f);
-                entryRoot.anchorMax = new Vector2(1f, 1f);
-                entryRoot.pivot = new Vector2(0f, 1f);
-                LayoutElement entryElement = entryRoot.gameObject.AddComponent<LayoutElement>();
-                entryElement.minHeight = cellHeight;
-                entryElement.flexibleHeight = 0f;
-
-                List<TokenData> tokens = BuildTokens(words[wordIndex]);
-                var cells = new List<CellView>();
-                foreach (TokenData token in tokens)
-                {
-                    if (!token.IsHan && MeasureWidth(token.Text) > width)
-                    {
-                        foreach (string textElement in SplitTextElements(token.Text))
-                            cells.Add(CreateCell(entryRoot, new TokenData(textElement, string.Empty, false, true)));
-                    }
-                    else
-                    {
-                        cells.Add(CreateCell(entryRoot, token));
-                    }
-                }
-
-                entriesHeight += LayoutEntry(entryRoot, entryElement, cells, width);
-                entryCount++;
-            }
-
-            float rootHeight = entriesHeight
-                + Mathf.Max(0, entryCount - 1) * verticalLayout.spacing
-                + verticalLayout.padding.vertical;
-            LayoutElement rootElement = layoutRoot.GetComponent<LayoutElement>();
-            if (rootElement != null)
-                rootElement.preferredHeight = rootHeight;
-            if (scrollRect == null || scrollRect.content != layoutRoot)
-                layoutRoot.sizeDelta = new Vector2(layoutRoot.sizeDelta.x, rootHeight);
-
-            lastWidth = width;
-            LayoutRebuilder.MarkLayoutForRebuild(layoutRoot);
-            if (layoutRoot.gameObject.activeInHierarchy)
-                LayoutRebuilder.ForceRebuildLayoutImmediate(layoutRoot);
-            RectTransform layoutParent = layoutRoot.parent as RectTransform;
-            if (layoutParent != null && layoutParent.gameObject.activeInHierarchy)
-                LayoutRebuilder.ForceRebuildLayoutImmediate(layoutParent);
-            if (scrollRect != null)
-            {
-                if (scrollRect.content != null && scrollRect.content.gameObject.activeInHierarchy)
-                    LayoutRebuilder.ForceRebuildLayoutImmediate(scrollRect.content);
-                scrollRect.verticalNormalizedPosition = 1f;
-            }
-        }
-
-        private float LayoutEntry(
-            RectTransform entryRoot,
-            LayoutElement entryElement,
-            List<CellView> cells,
-            float availableWidth)
-        {
-            float cursorX = 0f;
-            float cursorY = 0f;
-            int rowCount = 1;
-            foreach (CellView cell in cells)
-            {
-                float cellWidth = Mathf.Min(cell.Width, availableWidth);
-                if (cursorX > 0f && cursorX + cellWidth > availableWidth)
-                {
-                    cursorX = 0f;
-                    cursorY += cellHeight + WrapGap;
-                    rowCount++;
-                }
-
-                cell.Root.sizeDelta = new Vector2(cellWidth, cellHeight);
-                cell.Root.anchoredPosition = new Vector2(cursorX, -cursorY);
-                cursorX += cellWidth + cell.GapAfter;
-            }
-
-            float height = rowCount * cellHeight + (rowCount - 1) * WrapGap;
-            entryRoot.sizeDelta = new Vector2(0f, height);
-            entryElement.preferredHeight = height;
-            return height;
-        }
-
-        private CellView CreateCell(RectTransform parent, TokenData token)
-        {
-            RectTransform cellRoot = CreateRectTransform(token.IsHan ? "HanCell" : "TextCell", parent);
-            cellRoot.anchorMin = new Vector2(0f, 1f);
-            cellRoot.anchorMax = new Vector2(0f, 1f);
-            cellRoot.pivot = new Vector2(0f, 1f);
-
-            TMP_Text pinyinLabel = CreateLabel(cellRoot, "Pinyin", true);
-            pinyinLabel.text = token.IsHan ? token.Pinyin : string.Empty;
-            pinyinLabel.fontSize = pinyinFontSize;
-            pinyinLabel.fontStyle = FontStyles.Bold;
-
-            TMP_Text glyphLabel = CreateLabel(cellRoot, "Glyph", false);
-            glyphLabel.text = token.Text;
-            glyphLabel.fontSize = bodyFontSize;
-
-            RectTransform pinyinRect = pinyinLabel.rectTransform;
-            pinyinRect.anchorMin = new Vector2(0f, 1f);
-            pinyinRect.anchorMax = new Vector2(1f, 1f);
-            pinyinRect.pivot = new Vector2(0.5f, 1f);
-            pinyinRect.sizeDelta = new Vector2(0f, pinyinBandHeight);
-            pinyinRect.anchoredPosition = Vector2.zero;
-
-            RectTransform glyphRect = glyphLabel.rectTransform;
-            glyphRect.anchorMin = new Vector2(0f, 0f);
-            glyphRect.anchorMax = new Vector2(1f, 0f);
-            glyphRect.pivot = new Vector2(0.5f, 0f);
-            glyphRect.sizeDelta = new Vector2(0f, glyphBandHeight);
-            glyphRect.anchoredPosition = Vector2.zero;
-
-            float glyphWidth = token.IsHan
-                ? MeasureLabelWidth(glyphLabel, token.Text)
-                : MeasureTextRunWidth(glyphLabel, token.Text);
-            float pinyinWidth = token.IsHan ? MeasureLabelWidth(pinyinLabel, token.Pinyin) : 0f;
-            float width = Mathf.Max(glyphWidth, pinyinWidth);
-            width += token.IsHan ? 6f : token.IsBreakCluster ? 0f : 2f;
-            if (!token.IsHan && string.IsNullOrWhiteSpace(token.Text))
-                width = Mathf.Max(width, bodyFontSize * 0.3f);
-
-            return new CellView(cellRoot, width, token.IsHan ? CellGap : 0f);
-        }
-
-        private TMP_Text CreateLabel(RectTransform parent, string name, bool pinyin)
-        {
-            var textObject = new GameObject(name,
-                typeof(RectTransform), typeof(CanvasRenderer), typeof(TextMeshProUGUI));
-            textObject.transform.SetParent(parent, false);
-            TMP_Text label = textObject.GetComponent<TMP_Text>();
-            label.font = sourceText.font;
-            if (sourceText.fontSharedMaterial != null)
-                label.fontSharedMaterial = sourceText.fontSharedMaterial;
-            label.color = sourceText.color;
-            label.alignment = TextAlignmentOptions.Center;
-            label.richText = false;
-            label.enableAutoSizing = false;
-            label.textWrappingMode = TextWrappingModes.NoWrap;
-            label.overflowMode = TextOverflowModes.Overflow;
-            label.raycastTarget = false;
-            label.margin = Vector4.zero;
-            if (!pinyin)
-                label.fontStyle = FontStyles.Normal;
-            return label;
-        }
-
-        private List<TokenData> BuildTokens(string word)
-        {
-            MockupWordContent.GetPresentationParts(
-                word, out string displayText, out string[] pinyinSyllables, out bool hasUnannotatedHan);
-            var tokens = new List<TokenData>();
-            var nonHanRun = new StringBuilder();
-            int pinyinIndex = 0;
-
-            Action flushRun = () =>
-            {
-                if (nonHanRun.Length == 0)
-                    return;
-                tokens.Add(new TokenData(nonHanRun.ToString(), string.Empty, false));
-                nonHanRun.Length = 0;
-            };
-
-            foreach (char character in displayText)
-            {
-                if (!MockupWordContent.IsHanCharacter(character))
-                {
-                    nonHanRun.Append(character);
-                    continue;
-                }
-
-                flushRun();
-                string pinyin = pinyinIndex < pinyinSyllables.Length
-                    ? pinyinSyllables[pinyinIndex]
-                    : hasUnannotatedHan ? "?" : string.Empty;
-                tokens.Add(new TokenData(character.ToString(), pinyin, true));
-                pinyinIndex++;
-            }
-
-            flushRun();
-            return tokens;
-        }
-
-        private float AvailableWidth()
-        {
-            float width = layoutRoot.rect.width;
-            if (width <= 1f)
-                width = sourceText.rectTransform.rect.width;
-            if (width <= 1f && layoutRoot.parent is RectTransform parentRect)
-                width = parentRect.rect.width;
-            return Mathf.Max(1f, width - verticalLayout.padding.horizontal - HorizontalInset * 2f);
-        }
-
-        private float MeasureWidth(string value)
-        {
-            if (string.IsNullOrEmpty(value))
-                return 0f;
-            return MeasureTextRunWidth(sourceText, value);
-        }
-
-        private float MeasureTextRunWidth(TMP_Text text, string value)
-        {
-            int trailingSpaces = 0;
-            for (int i = value.Length - 1; i >= 0 && char.IsWhiteSpace(value[i]); i--)
-                trailingSpaces++;
-
-            string visibleText = trailingSpaces == 0 ? value : value.Substring(0, value.Length - trailingSpaces);
-            float width = string.IsNullOrEmpty(visibleText)
-                ? 0f : text.GetPreferredValues(visibleText, 100000f, 100000f).x;
-            if (trailingSpaces > 0)
-            {
-                float measuredSpace = text.GetPreferredValues(" ", 100000f, 100000f).x;
-                float spaceAdvance = Mathf.Max(measuredSpace, bodyFontSize * 0.28f);
-                width += trailingSpaces * spaceAdvance;
-            }
-            return width;
-        }
-
-        private static float MeasureLabelWidth(TMP_Text label, string value)
-        {
-            if (string.IsNullOrEmpty(value))
-                return 0f;
-            return label.GetPreferredValues(value, 100000f, 100000f).x;
-        }
-
-        private static List<string> SplitTextElements(string value)
-        {
-            var elements = new List<string>();
-            TextElementEnumerator enumerator = StringInfo.GetTextElementEnumerator(value);
-            while (enumerator.MoveNext())
-                elements.Add(enumerator.GetTextElement());
-            return elements;
-        }
-
-        private static RectTransform CreateRectTransform(string name, Transform parent)
-        {
-            var gameObject = new GameObject(name, typeof(RectTransform));
-            var rect = (RectTransform)gameObject.transform;
-            rect.SetParent(parent, false);
-            return rect;
-        }
-
-        private static void ConfigureTopStretch(RectTransform rect)
-        {
-            rect.anchorMin = new Vector2(0f, 1f);
-            rect.anchorMax = new Vector2(1f, 1f);
-            rect.pivot = new Vector2(0.5f, 1f);
-            rect.anchoredPosition = Vector2.zero;
-            rect.sizeDelta = new Vector2(0f, 0f);
-        }
-
-        private static void ConfigureFullStretch(RectTransform rect)
-        {
-            rect.anchorMin = Vector2.zero;
-            rect.anchorMax = Vector2.one;
-            rect.pivot = new Vector2(0.5f, 0.5f);
-            rect.anchoredPosition = Vector2.zero;
-            rect.sizeDelta = Vector2.zero;
-        }
-
-        private static void ConfigureVerticalLayout(VerticalLayoutGroup layout, float spacing)
-        {
-            layout.padding = new RectOffset(2, 2, 2, 2);
-            layout.spacing = spacing;
-            layout.childAlignment = TextAnchor.UpperLeft;
-            layout.childControlWidth = true;
-            layout.childControlHeight = true;
-            layout.childForceExpandWidth = true;
-            layout.childForceExpandHeight = false;
-        }
-
-        private static bool WordsEqual(IReadOnlyList<string> left, IReadOnlyList<string> right)
-        {
-            int rightCount = right == null ? 0 : right.Count;
-            if (left.Count != rightCount)
-                return false;
-            for (int i = 0; i < left.Count; i++)
-            {
-                string rightWord = right[i] ?? string.Empty;
-                if (!string.Equals(left[i], rightWord, StringComparison.Ordinal))
-                    return false;
-            }
-            return true;
-        }
-
-        private static void ClearChildren(RectTransform parent)
-        {
-            for (int i = parent.childCount - 1; i >= 0; i--)
-            {
-                GameObject child = parent.GetChild(i).gameObject;
-                child.SetActive(false);
-                if (Application.isPlaying)
-                    UnityEngine.Object.Destroy(child);
-                else
-                    UnityEngine.Object.DestroyImmediate(child);
-            }
-        }
-
-        private sealed class TokenData
-        {
-            public readonly string Text;
-            public readonly string Pinyin;
-            public readonly bool IsHan;
-            public readonly bool IsBreakCluster;
-
-            public TokenData(string text, string pinyin, bool isHan, bool isBreakCluster = false)
-            {
-                Text = text;
-                Pinyin = pinyin;
-                IsHan = isHan;
-                IsBreakCluster = isBreakCluster;
-            }
-        }
-
-        private sealed class CellView
-        {
-            public readonly RectTransform Root;
-            public readonly float Width;
-            public readonly float GapAfter;
-
-            public CellView(RectTransform root, float width, float gapAfter)
-            {
-                Root = root;
-                Width = width;
-                GapAfter = gapAfter;
-            }
-        }
-    }
 }

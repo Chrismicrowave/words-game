@@ -88,6 +88,186 @@ namespace Words.UiMockups.WordListHub.Tests
         }
 
         [Test]
+        public void RuntimeTilesAndEditWordControlsPreserveGroupsAndUncommittedPinyin()
+        {
+            WordListHubMockupController controller = harness.Controller;
+            WordListHubSceneBindings bindings = harness.Bindings;
+            InvokeAwake(controller);
+
+            MockupWordListStore store = GetStore(controller);
+            for (int index = 0; index < 8; index++)
+                store.CreateList("Grid fixture " + index, MockupLanguage.English, new[] { "apple" });
+            InvokeRefreshLibraryPage(controller);
+            Canvas.ForceUpdateCanvases();
+
+            WordListHubSceneBindings.LibraryPageBinding library = bindings.library;
+            RectTransform libraryContent = library.listContent as RectTransform;
+            Assert.That(library.listContent.GetComponent<VerticalLayoutGroup>().enabled, Is.False);
+            Assert.That(library.listContent.GetComponent<ContentSizeFitter>().enabled, Is.False);
+            Assert.That(libraryContent.rect.height, Is.GreaterThan(library.listScroll.viewport.rect.height));
+            Assert.That(GetVisibleLibraryRowIds(library).Count,
+                Is.EqualTo(store.QueryLibrary(new MockupLibraryQuery()).Count));
+            foreach (WordListHubSceneBindings.LibraryRowBinding row in library.authoredRows
+                .Where(row => row != null && row.root != null && row.root.activeInHierarchy))
+            {
+                RectTransform tile = row.root.transform as RectTransform;
+                Assert.That(tile.rect.width, Is.EqualTo(270f).Within(0.1f));
+                Assert.That(tile.rect.height, Is.EqualTo(270f).Within(0.1f));
+            }
+
+            WordListHubSceneBindings.GroupBinding myListsHeader = library.groups
+                .Single(group => group.groupKey == MockupLibraryGroup.MyLists.ToString());
+            int myListsCount = store.QueryLibrary(new MockupLibraryQuery())
+                .Count(item => item.Group == MockupLibraryGroup.MyLists);
+            int expandedRows = GetVisibleLibraryRowIds(library).Count;
+            float expandedHeight = libraryContent.rect.height;
+            Press(myListsHeader.button);
+            Assert.That(myListsHeader.label.text, Does.Contain(myListsCount.ToString()));
+            Assert.That(myListsHeader.label.text, Does.Contain(">"));
+            Assert.That(GetVisibleLibraryRowIds(library).Count, Is.LessThan(expandedRows));
+            Assert.That(libraryContent.rect.height, Is.LessThan(expandedHeight));
+            Press(myListsHeader.button);
+            Assert.That(libraryContent.rect.height, Is.EqualTo(expandedHeight).Within(1f));
+
+            Press(bindings.navCommunity.button);
+            Canvas.ForceUpdateCanvases();
+            Assert.That(bindings.community.searchInput, Is.Not.Null);
+            Assert.That(bindings.community.connectionMenu, Is.Not.Null);
+            RectTransform communityContent = bindings.community.listContent as RectTransform;
+            List<RectTransform> visibleCommunityTiles = Enumerable.Range(0, communityContent.childCount)
+                .Select(index => communityContent.GetChild(index))
+                .Where(child => child.gameObject.activeSelf && child.GetComponent<Button>() != null)
+                .Select(child => child as RectTransform)
+                .ToList();
+            Assert.That(visibleCommunityTiles, Is.Not.Empty);
+            Assert.That(visibleCommunityTiles.All(tile =>
+                Mathf.Abs(tile.rect.width - 270f) < 0.1f && Mathf.Abs(tile.rect.height - 270f) < 0.1f), Is.True);
+            Assert.That(bindings.community.authoredRows.Where(row => row != null && row.root.activeInHierarchy)
+                .All(row => row.summary == null || !row.summary.gameObject.activeSelf), Is.True);
+
+            Press(bindings.navLibrary.button);
+            MockupWordList editable = store.FindById("mock-list-travel-copy");
+            string[] originalWords = editable.Words.ToArray();
+            string originalTitle = editable.Title;
+            Press(FindLibraryButton(library, editable.Id));
+            Press(library.edit.button);
+            WordListHubSceneBindings.FormBinding edit = bindings.modal.editList;
+            Assert.That(edit.wordsInput.lineType, Is.EqualTo(TMP_InputField.LineType.SingleLine));
+            Transform editorRoot = edit.wordEditorLayout.root.transform;
+            Assert.That(editorRoot, Is.Not.Null, "The serialized editor layout should be reused in Play Mode.");
+            Transform rowsContent = editorRoot.Find("WordRowsViewport/WordRowsContent");
+            Button[] wordRows = rowsContent.GetComponentsInChildren<Button>(true)
+                .Where(button => button.name == "WordRow").ToArray();
+            Assert.That(wordRows.Length, Is.EqualTo(originalWords.Length));
+            Button moveUp = editorRoot.Find("MoveWordUp").GetComponent<Button>();
+            Button moveDown = editorRoot.Find("MoveWordDown").GetComponent<Button>();
+            Button addWord = editorRoot.Find("AddWord").GetComponent<Button>();
+            Button deleteWord = editorRoot.Find("DeleteWord").GetComponent<Button>();
+            FieldInfo sessionField = typeof(WordListHubMockupController).GetField(
+                "editWordSession", BindingFlags.Instance | BindingFlags.NonPublic);
+            MockupWordListEditSession session = (MockupWordListEditSession)sessionField.GetValue(controller);
+
+            Press(wordRows[1]);
+            Assert.That(edit.wordsInput.text, Is.EqualTo(originalWords[1]));
+            Assert.That(originalWords[1], Does.Contain("|"), "The selected fixture includes canonical pinyin.");
+            Press(moveUp);
+            Assert.That(session.Words[0], Is.EqualTo(originalWords[1]));
+            Press(moveDown);
+            CollectionAssert.AreEqual(originalWords, session.Words);
+
+            SetInputValue(edit.wordsInput, "unsaved edit");
+            Assert.That(edit.wordsInput.text, Is.EqualTo("unsaved edit"), "The field should hold the typed draft.");
+            Assert.That(session.SelectedWord, Is.EqualTo("unsaved edit"),
+                "Typing should update the selected draft entry before another action.");
+            string[] beforeAdd = session.ToList().ToArray();
+            Press(addWord);
+            Assert.That(session.Words[0], Is.Empty);
+            CollectionAssert.AreEqual(beforeAdd, session.Words.Skip(1),
+                "Adding a row should first capture the pending edit and preserve the remaining order.");
+            Press(deleteWord);
+            CollectionAssert.AreEqual(beforeAdd, session.Words,
+                "Deleting the new row should restore the edited draft order.");
+            Assert.That(editable.Words, Is.EqualTo(originalWords),
+                "The stored words should remain unchanged until Save.");
+
+            SetInputValueWithoutNotify(edit.titleInput, "Unsaved title draft");
+            Press(edit.cancelButton);
+            Assert.That(editable.Words, Is.EqualTo(originalWords));
+            Assert.That(editable.Title, Is.EqualTo(originalTitle));
+            Assert.That(edit.wordsInput.lineType, Is.EqualTo(TMP_InputField.LineType.SingleLine));
+        }
+
+        [Test]
+        public void StaticPreviewSynchronizationIsIdempotentAndMatchesControllerInitialization()
+        {
+            WordListHubSceneBindings bindings = harness.Bindings;
+            WordListHubMockupController controller = harness.Controller;
+            MockupWordListStore fixtures = MockupWordListStore.CreateWithFixtures();
+            AddAuthoredCommunityPreviewRows(bindings.community, fixtures);
+            AddAuthoredAchievementPreviewCards(bindings.achievements, fixtures);
+            MockupWordList editExample = fixtures.FindById("mock-list-travel-copy");
+            MockupWordListEditorView.EnsureAuthoredLayout(bindings.modal.editList, editExample.Words);
+
+            controller.SynchronizeStaticPreview();
+            Canvas.ForceUpdateCanvases();
+            int firstObjectCount = CountHierarchyObjects(harness.Root.transform);
+            int firstLibraryChildCount = bindings.library.listContent.childCount;
+            int firstCommunityChildCount = bindings.community.listContent.childCount;
+            int firstAchievementChildCount = bindings.achievements.cardContent.childCount;
+            Assert.That(bindings.community.authoredRows.Count, Is.EqualTo(fixtures.VisibleDiscoveryItems.Count));
+            Assert.That(bindings.achievements.cards.Count, Is.EqualTo(fixtures.Achievements.Count));
+            Assert.That(bindings.library.authoredRows.Where(row => row != null && row.root != null)
+                .All(row => IsSquareTile(row.root.transform as RectTransform)), Is.True);
+            Assert.That(bindings.community.authoredRows.Where(row => row != null && row.root != null)
+                .All(row => IsSquareTile(row.root.transform as RectTransform)), Is.True);
+
+            WordListHubSceneBindings.WordEditorLayoutBinding editor = bindings.modal.editList.wordEditorLayout;
+            Assert.That(editor.root, Is.Not.Null);
+            Assert.That(editor.scrollRect, Is.Not.Null);
+            Assert.That(editor.authoredRows.Count, Is.EqualTo(editExample.Words.Count));
+            Assert.That(bindings.modal.editList.wordsInput.lineType, Is.EqualTo(TMP_InputField.LineType.SingleLine));
+            float configuredPreviewFontScale = new SerializedObject(controller)
+                .FindProperty("wordPreviewFontScale").floatValue;
+            Assert.That(bindings.libraryRubyWords.root, Is.Not.Null);
+            Assert.That(bindings.libraryRubyWords.content, Is.Not.Null);
+            Assert.That(bindings.libraryRubyWords.previewFontScale,
+                Is.EqualTo(configuredPreviewFontScale).Within(0.001f));
+            Assert.That(bindings.communityRubyWords.viewport, Is.Not.Null);
+            Assert.That(bindings.communityRubyWords.scrollbar, Is.Not.Null);
+
+            controller.SynchronizeStaticPreview();
+            Canvas.ForceUpdateCanvases();
+            Assert.That(CountHierarchyObjects(harness.Root.transform), Is.EqualTo(firstObjectCount),
+                "A second static synchronization should reuse authored tile, card, ruby and editor views.");
+            Assert.That(bindings.library.listContent.childCount, Is.EqualTo(firstLibraryChildCount));
+            Assert.That(bindings.community.listContent.childCount, Is.EqualTo(firstCommunityChildCount));
+            Assert.That(bindings.achievements.cardContent.childCount, Is.EqualTo(firstAchievementChildCount));
+
+            TMP_Text communityDetailTitle = bindings.community.detailTitle;
+            TMP_Text libraryDetailTitle = bindings.library.detailTitle;
+            string communityDetailTitleText = communityDetailTitle.text;
+            string libraryDetailTitleText = libraryDetailTitle.text;
+            float communityDetailTitleSize = communityDetailTitle.fontSize;
+            float libraryDetailTitleSize = libraryDetailTitle.fontSize;
+            var communityDetailTitleStyle = new TextStyleState(communityDetailTitle, false);
+            var libraryDetailTitleStyle = new TextStyleState(libraryDetailTitle, false);
+            InvokeAwake(controller);
+            Canvas.ForceUpdateCanvases();
+            Assert.That(CountHierarchyObjects(harness.Root.transform), Is.EqualTo(firstObjectCount),
+                "Controller initialization should bind the baked UI instead of generating duplicates.");
+            Assert.That(bindings.library.authoredRows.Where(row => row != null && row.root != null)
+                .All(row => IsSquareTile(row.root.transform as RectTransform)), Is.True);
+            Assert.That(bindings.community.authoredRows.Where(row => row != null && row.root != null)
+                .All(row => IsSquareTile(row.root.transform as RectTransform)), Is.True);
+            Assert.That(bindings.modal.editList.wordEditorLayout.root, Is.SameAs(editor.root));
+            communityDetailTitleStyle.AssertUnchanged("controller initialization Community detail title");
+            libraryDetailTitleStyle.AssertUnchanged("controller initialization Library detail title");
+            if (communityDetailTitle.text == communityDetailTitleText)
+                Assert.That(communityDetailTitle.fontSize, Is.EqualTo(communityDetailTitleSize).Within(0.001f));
+            if (libraryDetailTitle.text == libraryDetailTitleText)
+                Assert.That(libraryDetailTitle.fontSize, Is.EqualTo(libraryDetailTitleSize).Within(0.001f));
+        }
+        [Test]
         public void CommunityRowsShowOnlyCenteredTitleAndMetadata()
         {
             WordListHubSceneBindings.CommunityPageBinding community = harness.Bindings.community;
@@ -97,23 +277,21 @@ namespace Words.UiMockups.WordListHub.Tests
 
             Assert.That(template.summary.gameObject.activeSelf, Is.False,
                 "The selectable Community row should not show a description line.");
-            AssertVector2(titleRect.anchoredPosition, new Vector2(-55f, 15.5f),
+            AssertVector2(titleRect.anchoredPosition, new Vector2(0f, -72f),
                 "Community title position");
-            AssertVector2(metadataRect.anchoredPosition, new Vector2(-55f, -18f),
+            AssertVector2(metadataRect.anchoredPosition, new Vector2(0f, -144f),
                 "Community metadata position");
-            Assert.That(titleRect.sizeDelta.y, Is.EqualTo(32f).Within(0.001f));
-            Assert.That(metadataRect.sizeDelta.y, Is.EqualTo(27f).Within(0.001f));
+            Assert.That(titleRect.sizeDelta, Is.EqualTo(new Vector2(230f, 64f)));
+            Assert.That(metadataRect.sizeDelta, Is.EqualTo(new Vector2(230f, 54f)));
 
-            float titleTop = titleRect.anchoredPosition.y + titleRect.rect.height * 0.5f;
-            float titleBottom = titleRect.anchoredPosition.y - titleRect.rect.height * 0.5f;
-            float metadataTop = metadataRect.anchoredPosition.y + metadataRect.rect.height * 0.5f;
-            float metadataBottom = metadataRect.anchoredPosition.y - metadataRect.rect.height * 0.5f;
-            Assert.That((titleTop + metadataBottom) * 0.5f, Is.EqualTo(0f).Within(0.001f),
-                "The two visible text lines should be centered as a group in the row.");
-            Assert.That(titleBottom - metadataTop, Is.EqualTo(4f).Within(0.001f));
+            float titleTop = 72f;
+            float metadataBottom = 144f + metadataRect.rect.height;
+            Assert.That((titleTop + metadataBottom) * 0.5f,
+                Is.EqualTo(template.transform.GetComponent<RectTransform>().rect.height * 0.5f).Within(0.001f),
+                "The title and metadata block should be vertically centered in its tile.");
             Assert.That(template.status.gameObject.activeSelf, Is.True);
             Assert.That(template.status.rectTransform.anchoredPosition.y,
-                Is.EqualTo(0f).Within(0.001f), "Keep the right-side status centered.");
+                Is.EqualTo(-230f).Within(0.001f), "Keep the status in the lower tile band.");
 
             WordListHubDiscoveryRowView dynamicClone = UnityEngine.Object.Instantiate(
                 template, community.listContent, false);
@@ -122,9 +300,9 @@ namespace Words.UiMockups.WordListHub.Tests
                 Assert.That(dynamicClone.summary.gameObject.activeSelf, Is.False,
                     "Runtime Community rows should inherit the hidden description line.");
                 Assert.That(dynamicClone.title.rectTransform.anchoredPosition.y,
-                    Is.EqualTo(15.5f).Within(0.001f));
+                    Is.EqualTo(-72f).Within(0.001f));
                 Assert.That(dynamicClone.metadata.rectTransform.anchoredPosition.y,
-                    Is.EqualTo(-18f).Within(0.001f));
+                    Is.EqualTo(-144f).Within(0.001f));
             }
             finally
             {
@@ -139,10 +317,11 @@ namespace Words.UiMockups.WordListHub.Tests
                 .FindProperty("wordPreviewFontScale");
             Assert.That(previewScaleProperty, Is.Not.Null,
                 "The preview scale must be editable on the existing controller component.");
-            Assert.That(previewScaleProperty.floatValue, Is.EqualTo(2f).Within(0.001f));
-            float previewFontScale = previewScaleProperty.floatValue;
+            Assert.That(previewScaleProperty.floatValue, Is.EqualTo(1.5f).Within(0.001f));
+            const float previewFontScale = 2f;
 
-            TMP_Text libraryText = harness.Bindings.library.detailWords;
+            TMP_Text libraryText = CreateIsolatedRubyTestText(
+                harness.Bindings.library.detailWords, "LibraryRubyGeometryTest");
             libraryText.text = "legacy detail text remains available";
             MockupRubyWordsView libraryView = MockupRubyWordsView.CreateLibrary(
                 libraryText, previewFontScale);
@@ -211,9 +390,14 @@ namespace Words.UiMockups.WordListHub.Tests
                 .GetComponent<RectTransform>().anchoredPosition.y;
             Assert.That(lastRowY, Is.LessThan(firstRowY));
             VerticalLayoutGroup libraryLayout = libraryView.LayoutRoot.GetComponent<VerticalLayoutGroup>();
-            float expectedLibraryHeight = Enumerable.Range(0, libraryView.LayoutRoot.childCount)
-                .Sum(index => ((RectTransform)libraryView.LayoutRoot.GetChild(index)).rect.height)
-                + Mathf.Max(0, libraryView.LayoutRoot.childCount - 1) * libraryLayout.spacing
+            RectTransform[] activeLibraryEntries = Enumerable.Range(0, libraryView.LayoutRoot.childCount)
+                .Select(index => libraryView.LayoutRoot.GetChild(index) as RectTransform)
+                .Where(entry => entry.gameObject.activeSelf)
+                .ToArray();
+            Assert.That(activeLibraryEntries, Has.Length.EqualTo(12));
+            float expectedLibraryHeight = activeLibraryEntries
+                .Sum(entry => entry.rect.height)
+                + Mathf.Max(0, activeLibraryEntries.Length - 1) * libraryLayout.spacing
                 + libraryLayout.padding.vertical;
             Assert.That(libraryView.LayoutRoot.rect.width, Is.GreaterThan(1f));
             Assert.That(libraryView.LayoutRoot.rect.height, Is.EqualTo(expectedLibraryHeight).Within(0.1f),
@@ -222,7 +406,8 @@ namespace Words.UiMockups.WordListHub.Tests
                 Is.GreaterThan(libraryView.ScrollRect.viewport.rect.height),
                 "The Library detail content must grow enough to scroll through all word entries.");
 
-            TMP_Text communityText = harness.Bindings.community.detailSummary;
+            TMP_Text communityText = CreateIsolatedRubyTestText(
+                harness.Bindings.community.detailSummary, "CommunityRubyGeometryTest");
             RectTransform communityRect = communityText.rectTransform;
             Vector2 communitySize = communityRect.sizeDelta;
             Vector2 communityPosition = communityRect.anchoredPosition;
@@ -291,6 +476,7 @@ namespace Words.UiMockups.WordListHub.Tests
             Assert.That(communityView.LayoutRoot.rect.height, Is.GreaterThan(communityRect.rect.height));
 
             float topPosition = communityView.ScrollRect.verticalNormalizedPosition;
+            communityScrollbar.value = 1f;
             communityScrollbar.value = 0f;
             Canvas.ForceUpdateCanvases();
             Assert.That(communityView.ScrollRect.verticalNormalizedPosition,
@@ -346,7 +532,8 @@ namespace Words.UiMockups.WordListHub.Tests
             AssertPageActive(bindings, WordListHubPage.Community);
             AssertNavigationVisuals(bindings, WordListHubPage.Community,
                 activeNavigationStyle, inactiveNavigationStyle);
-            EventSystem.current.SetSelectedGameObject(bindings.navAchievements.button.gameObject);
+            Assert.That(harness.TestEventSystem, Is.Not.Null);
+            harness.TestEventSystem.SetSelectedGameObject(bindings.navAchievements.button.gameObject);
             AssertNavigationVisuals(bindings, WordListHubPage.Community,
                 activeNavigationStyle, inactiveNavigationStyle);
             Assert.That(bindings.community.rowTemplate.gameObject.activeInHierarchy, Is.False,
@@ -729,7 +916,7 @@ namespace Words.UiMockups.WordListHub.Tests
             scroll.horizontalNormalizedPosition = 0.5f;
             Canvas.ForceUpdateCanvases();
             float beforeWheel = contentRect.anchoredPosition.x;
-            scroll.OnScroll(new PointerEventData(EventSystem.current)
+            scroll.OnScroll(new PointerEventData(harness.TestEventSystem)
             {
                 scrollDelta = new Vector2(0f, 1f)
             });
@@ -739,7 +926,7 @@ namespace Words.UiMockups.WordListHub.Tests
             Assert.That(Mathf.Abs(afterWheelUp - beforeWheel), Is.EqualTo(40f).Within(1f),
                 "One wheel unit should use the authored 40-pixel sensitivity.");
 
-            scroll.OnScroll(new PointerEventData(EventSystem.current)
+            scroll.OnScroll(new PointerEventData(harness.TestEventSystem)
             {
                 scrollDelta = new Vector2(0f, -1f)
             });
@@ -1050,14 +1237,25 @@ namespace Words.UiMockups.WordListHub.Tests
         private static IEnumerable<string> GetSelectedLibraryRowTitles(
             WordListHubSceneBindings.LibraryPageBinding library)
         {
-            return library.authoredRows
+            IEnumerable<GameObject> selectedRoots = library.authoredRows
                 .Where(row => row != null && row.root != null && row.root.activeInHierarchy
-                    && row.selectedVisual != null && row.selectedVisual.activeSelf)
-                .Select(row => row.title != null ? row.title.text : string.Empty)
+                    && row.selectedVisual != null && row.selectedVisual.activeInHierarchy)
+                .Select(row => row.root)
                 .Concat(library.listContent.GetComponentsInChildren<WordListHubLibraryRowView>(true)
                     .Where(row => row.gameObject.activeInHierarchy
-                        && row.selectedVisual != null && row.selectedVisual.activeSelf)
-                    .Select(row => row.title != null ? row.title.text : string.Empty));
+                        && row.selectedVisual != null && row.selectedVisual.activeInHierarchy)
+                    .Select(row => row.gameObject))
+                .Distinct();
+
+            return selectedRoots.Select(root =>
+            {
+                WordListHubSceneBindings.LibraryRowBinding binding = library.authoredRows
+                    .FirstOrDefault(row => row != null && row.root == root);
+                WordListHubLibraryRowView view = root.GetComponent<WordListHubLibraryRowView>();
+                TMP_Text title = binding != null && binding.title != null
+                    ? binding.title : view != null ? view.title : null;
+                return title != null ? title.text : string.Empty;
+            });
         }
 
         private static void AssertExactlyOneSelectedCommunityRow(
@@ -1071,14 +1269,25 @@ namespace Words.UiMockups.WordListHub.Tests
         private static IEnumerable<string> GetSelectedCommunityRowTitles(
             WordListHubSceneBindings.CommunityPageBinding community)
         {
-            return community.authoredRows
+            IEnumerable<GameObject> selectedRoots = community.authoredRows
                 .Where(row => row != null && row.root != null && row.root.activeInHierarchy
-                    && row.selectedVisual != null && row.selectedVisual.activeSelf)
-                .Select(row => row.title != null ? row.title.text : string.Empty)
+                    && row.selectedVisual != null && row.selectedVisual.activeInHierarchy)
+                .Select(row => row.root)
                 .Concat(community.listContent.GetComponentsInChildren<WordListHubDiscoveryRowView>(true)
                     .Where(row => row.gameObject.activeInHierarchy
-                        && row.selectedVisual != null && row.selectedVisual.activeSelf)
-                    .Select(row => row.title != null ? row.title.text : string.Empty));
+                        && row.selectedVisual != null && row.selectedVisual.activeInHierarchy)
+                    .Select(row => row.gameObject))
+                .Distinct();
+
+            return selectedRoots.Select(root =>
+            {
+                WordListHubSceneBindings.DiscoveryRowBinding binding = community.authoredRows
+                    .FirstOrDefault(row => row != null && row.root == root);
+                WordListHubDiscoveryRowView view = root.GetComponent<WordListHubDiscoveryRowView>();
+                TMP_Text title = binding != null && binding.title != null
+                    ? binding.title : view != null ? view.title : null;
+                return title != null ? title.text : string.Empty;
+            });
         }
 
         private static void AssertNoSelectedCommunityRows(
@@ -1215,7 +1424,7 @@ namespace Words.UiMockups.WordListHub.Tests
                 if (row == null)
                     continue;
                 Assert.That(row.root, Is.Not.Null);
-                AssertSelectedVisual(row.selectedVisual, row.root.transform,
+                AssertSelectedVisualStructure(row.selectedVisual, row.root.transform,
                     "Authored Library row " + row.listId);
                 Assert.That(row.button, Is.Not.Null);
                 Assert.That(row.favoriteButton, Is.Not.Null);
@@ -1229,6 +1438,13 @@ namespace Words.UiMockups.WordListHub.Tests
                 Assert.That(row.title, Is.Not.Null);
                 Assert.That(row.metadata, Is.Not.Null);
             }
+
+            string expectedSelectedId = MockupWordListStore.CreateWithFixtures()
+                .QueryLibrary(new MockupLibraryQuery()).First().Id;
+            CollectionAssert.AreEqual(new[] { expectedSelectedId }, library.authoredRows
+                .Where(row => row != null && row.selectedVisual != null && row.selectedVisual.activeSelf)
+                .Select(row => row.listId),
+                "The saved Library preview should highlight the same first result selected during Play initialization.");
         }
 
         private static void AssertAuthoredCommunityRows(
@@ -1239,7 +1455,7 @@ namespace Words.UiMockups.WordListHub.Tests
                 if (row == null)
                     continue;
                 Assert.That(row.root, Is.Not.Null);
-                AssertSelectedVisual(row.selectedVisual, row.root.transform,
+                AssertSelectedVisualStructure(row.selectedVisual, row.root.transform,
                     "Authored Community row " + row.remoteItemId);
                 Assert.That(row.button, Is.Not.Null);
                 Assert.That(row.title, Is.Not.Null);
@@ -1249,6 +1465,13 @@ namespace Words.UiMockups.WordListHub.Tests
                     "Authored Community selection rows should hide the description line.");
                 Assert.That(row.status, Is.Not.Null);
             }
+
+            string expectedSelectedId = MockupWordListStore.CreateWithFixtures()
+                .QueryDiscoveryWithFilters(new MockupDiscoveryQuery()).First().RemoteItemId;
+            CollectionAssert.AreEqual(new[] { expectedSelectedId }, community.authoredRows
+                .Where(row => row != null && row.selectedVisual != null && row.selectedVisual.activeSelf)
+                .Select(row => row.remoteItemId),
+                "The saved Community preview should highlight the same first result selected during Play initialization.");
         }
 
         private static void AssertLayoutGroup(Transform content, string description)
@@ -1260,11 +1483,19 @@ namespace Words.UiMockups.WordListHub.Tests
 
         private static void AssertSelectedVisual(GameObject selectedVisual, Transform rowRoot, string description)
         {
+            AssertSelectedVisualStructure(selectedVisual, rowRoot, description);
+            Assert.That(selectedVisual.activeSelf, Is.False,
+                description + " SelectedState should be hidden on the reusable template.");
+        }
+
+        private static void AssertSelectedVisualStructure(
+            GameObject selectedVisual,
+            Transform rowRoot,
+            string description)
+        {
             Assert.That(selectedVisual, Is.Not.Null, description + " needs an authored SelectedState object.");
             Assert.That(selectedVisual.transform.parent, Is.EqualTo(rowRoot),
                 description + " SelectedState must remain under its Scene-authored row.");
-            Assert.That(selectedVisual.activeSelf, Is.False,
-                description + " SelectedState must be hidden in the saved scene.");
             Image image = selectedVisual.GetComponent<Image>();
             Assert.That(image, Is.Not.Null, description + " SelectedState needs an Image.");
             Assert.That(image.type, Is.EqualTo(Image.Type.Sliced), description + " SelectedState Image type");
@@ -1507,11 +1738,13 @@ namespace Words.UiMockups.WordListHub.Tests
             TMP_Text text,
             Vector2 position,
             Vector2 size,
-            string description)
+            string description,
+            bool wraps = false)
         {
             AssertVector2(text.rectTransform.anchoredPosition, position, description + " position");
             AssertVector2(text.rectTransform.sizeDelta, size, description + " size");
-            Assert.That(text.textWrappingMode, Is.EqualTo(TextWrappingModes.NoWrap), description + " wrapping");
+            Assert.That(text.textWrappingMode,
+                Is.EqualTo(wraps ? TextWrappingModes.Normal : TextWrappingModes.NoWrap), description + " wrapping");
             Assert.That(text.overflowMode, Is.EqualTo(TextOverflowModes.Ellipsis), description + " overflow");
         }
 
@@ -1593,6 +1826,8 @@ namespace Words.UiMockups.WordListHub.Tests
         private static HashSet<Component> NavigationVisualComponents(WordListHubSceneBindings bindings)
         {
             var components = new HashSet<Component>();
+            components.Add(bindings.community.detailTitle);
+            components.Add(bindings.library.detailTitle);
             foreach (WordListHubSceneBindings.ButtonBinding binding in new[]
             {
                 bindings.navChallenges,
@@ -1619,8 +1854,10 @@ namespace Words.UiMockups.WordListHub.Tests
         {
             RectTransform communityRow = bindings.community.rowTemplate.GetComponent<RectTransform>();
             LayoutElement communityRowLayout = bindings.community.rowTemplate.GetComponent<LayoutElement>();
-            Assert.That(communityRow.rect.height, Is.EqualTo(84f).Within(0.001f));
-            Assert.That(communityRowLayout.preferredHeight, Is.EqualTo(84f).Within(0.001f));
+            Assert.That(communityRow.rect.width, Is.EqualTo(270f).Within(0.001f));
+            Assert.That(communityRow.rect.height, Is.EqualTo(270f).Within(0.001f));
+            Assert.That(communityRowLayout.preferredWidth, Is.EqualTo(270f).Within(0.001f));
+            Assert.That(communityRowLayout.preferredHeight, Is.EqualTo(270f).Within(0.001f));
             Assert.That(communityRowLayout.preferredWidth, Is.EqualTo(communityRow.rect.width).Within(0.001f));
             Assert.That(communityRow.rect.width,
                 Is.LessThan(bindings.community.listScroll.viewport.rect.width));
@@ -1637,19 +1874,17 @@ namespace Words.UiMockups.WordListHub.Tests
             Assert.That(bindings.community.rowTemplate.summary.overflowMode,
                 Is.EqualTo(TextOverflowModes.Ellipsis));
             AssertCommunityLabelLayout(bindings.community.rowTemplate.title,
-                new Vector2(-55f, 15.5f), new Vector2(340f, 32f), "Community row title");
+                new Vector2(0f, -72f), new Vector2(230f, 64f), "Community row title", true);
             AssertCommunityLabelLayout(bindings.community.rowTemplate.metadata,
-                new Vector2(-55f, -18f), new Vector2(340f, 27f), "Community row metadata");
-            AssertCommunityLabelLayout(bindings.community.rowTemplate.summary,
-                new Vector2(-55f, -30f), new Vector2(340f, 22f), "Community row summary");
+                new Vector2(0f, -144f), new Vector2(230f, 54f), "Community row metadata", true);
             AssertCommunityLabelLayout(bindings.community.rowTemplate.status,
-                new Vector2(185f, 0f), new Vector2(110f, 22f), "Community row status");
+                new Vector2(0f, -230f), new Vector2(205f, 24f), "Community row status");
             Assert.That(bindings.community.rowTemplate.status.alignment,
-                Is.EqualTo(TextAlignmentOptions.MidlineRight));
+                Is.EqualTo(TextAlignmentOptions.Center));
 
             RectTransform communitySearch = bindings.community.searchInput.GetComponent<RectTransform>();
-            RectTransform librarySearch = bindings.library.searchInput.GetComponent<RectTransform>();
-            Assert.That(communitySearch.rect.size, Is.EqualTo(librarySearch.rect.size));
+            Assert.That(communitySearch.rect.size, Is.EqualTo(new Vector2(450f, 42f)),
+                "Preserve the authored Community search width from the saved mockup scene.");
             RectTransform communityConnection = bindings.community.connectionState.GetComponent<RectTransform>();
             RectTransform libraryLanguage = bindings.library.languageFilter.GetComponent<RectTransform>();
             Assert.That(communityConnection.rect.size, Is.EqualTo(libraryLanguage.rect.size));
@@ -1660,8 +1895,19 @@ namespace Words.UiMockups.WordListHub.Tests
                 .Find("LibraryListPane/ListPaneTitle");
             Assert.That(communityListTitle.GetComponent<TMP_Text>().fontSize,
                 Is.EqualTo(libraryListTitle.GetComponent<TMP_Text>().fontSize).Within(0.001f));
-            Assert.That(bindings.community.detailTitle.fontSize,
-                Is.EqualTo(bindings.library.detailTitle.fontSize).Within(0.001f));
+            TMP_Text communityDetailTitle = bindings.community.detailTitle;
+            TMP_Text libraryDetailTitle = bindings.library.detailTitle;
+            Assert.That(communityDetailTitle.font, Is.SameAs(libraryDetailTitle.font));
+            Assert.That(communityDetailTitle.enableAutoSizing, Is.True);
+            Assert.That(libraryDetailTitle.enableAutoSizing, Is.True);
+            Assert.That(communityDetailTitle.fontSizeMin, Is.EqualTo(23f).Within(0.001f));
+            Assert.That(communityDetailTitle.fontSizeMax, Is.EqualTo(29f).Within(0.001f));
+            Assert.That(libraryDetailTitle.fontSizeMin, Is.EqualTo(23f).Within(0.001f));
+            Assert.That(libraryDetailTitle.fontSizeMax, Is.EqualTo(29f).Within(0.001f));
+            Assert.That(communityDetailTitle.fontSize,
+                Is.InRange(communityDetailTitle.fontSizeMin, communityDetailTitle.fontSizeMax));
+            Assert.That(libraryDetailTitle.fontSize,
+                Is.InRange(libraryDetailTitle.fontSizeMin, libraryDetailTitle.fontSizeMax));
             Assert.That(bindings.community.detailAuthor.fontSize,
                 Is.EqualTo(bindings.library.detailMetadata.fontSize).Within(0.001f));
             Assert.That(bindings.community.detailDescription.fontSize,
@@ -1684,10 +1930,6 @@ namespace Words.UiMockups.WordListHub.Tests
                 bindings.community.rowTemplate.status.rectTransform,
                 "Community row title and status");
             AssertNoRectOverlap(
-                bindings.community.rowTemplate.metadata.rectTransform,
-                bindings.community.rowTemplate.summary.rectTransform,
-                "Community row metadata and summary");
-            AssertNoRectOverlap(
                 bindings.community.rowTemplate.summary.rectTransform,
                 bindings.community.rowTemplate.status.rectTransform,
                 "Community row summary and status");
@@ -1706,10 +1948,13 @@ namespace Words.UiMockups.WordListHub.Tests
             };
             for (int i = 0; i < detailFlow.Count; i++)
                 AssertVerticallyContained(detailFlow[i], detailPane, "Community detail " + detailFlow[i].name);
-            for (int i = 0; i < detailFlow.Count - 1; i++)
+            List<RectTransform> visibleDetailFlow = detailFlow
+                .Where(rect => rect != null && rect.gameObject.activeSelf)
+                .ToList();
+            for (int i = 0; i < visibleDetailFlow.Count - 1; i++)
             {
-                AssertNoRectOverlap(detailFlow[i], detailFlow[i + 1],
-                    "Community detail flow " + detailFlow[i].name + " / " + detailFlow[i + 1].name);
+                AssertNoRectOverlap(visibleDetailFlow[i], visibleDetailFlow[i + 1],
+                    "Community detail flow " + visibleDetailFlow[i].name + " / " + visibleDetailFlow[i + 1].name);
             }
             AssertNoRectOverlap(
                 bindings.community.like.button.GetComponent<RectTransform>(),
@@ -1810,10 +2055,114 @@ namespace Words.UiMockups.WordListHub.Tests
             input.SetTextWithoutNotify(value);
         }
 
+        private static TMP_Text CreateIsolatedRubyTestText(TMP_Text template, string name)
+        {
+            Assert.That(template, Is.Not.Null);
+            RectTransform templateRect = template.rectTransform;
+            GameObject regionObject = new GameObject(name + "Region", typeof(RectTransform));
+            regionObject.transform.SetParent(templateRect.parent, false);
+            RectTransform region = regionObject.GetComponent<RectTransform>();
+            region.anchorMin = templateRect.anchorMin;
+            region.anchorMax = templateRect.anchorMax;
+            region.pivot = templateRect.pivot;
+            region.anchoredPosition = templateRect.anchoredPosition;
+            region.sizeDelta = templateRect.sizeDelta;
+            region.localScale = templateRect.localScale;
+            LayoutElement regionLayout = regionObject.AddComponent<LayoutElement>();
+            regionLayout.ignoreLayout = true;
+
+            GameObject textObject = UnityEngine.Object.Instantiate(template.gameObject, region, false);
+            textObject.name = name;
+            RectTransform textRect = textObject.GetComponent<RectTransform>();
+            textRect.anchorMin = Vector2.zero;
+            textRect.anchorMax = Vector2.one;
+            textRect.pivot = new Vector2(0.5f, 0.5f);
+            textRect.offsetMin = Vector2.zero;
+            textRect.offsetMax = Vector2.zero;
+            TMP_Text testText = textObject.GetComponent<TMP_Text>();
+            LayoutElement textLayout = textObject.GetComponent<LayoutElement>();
+            if (textLayout == null)
+                textLayout = textObject.AddComponent<LayoutElement>();
+            textLayout.ignoreLayout = true;
+            testText.enabled = true;
+            return testText;
+        }
+
         private static int CountRuntimeChildren(Transform content)
         {
             return content.GetComponentsInChildren<WordListHubRuntimeInstance>(true)
                 .Count(marker => marker != null && marker.transform.parent == content);
+        }
+
+        private static int CountHierarchyObjects(Transform root)
+        {
+            return root.GetComponentsInChildren<Transform>(true).Length;
+        }
+
+        private static bool IsSquareTile(RectTransform rect)
+        {
+            return rect != null
+                && Mathf.Abs(rect.rect.width - 270f) < 0.1f
+                && Mathf.Abs(rect.rect.height - 270f) < 0.1f;
+        }
+
+        private static void AddAuthoredCommunityPreviewRows(
+            WordListHubSceneBindings.CommunityPageBinding community,
+            MockupWordListStore fixtures)
+        {
+            if (community.authoredRows == null)
+                community.authoredRows = new List<WordListHubSceneBindings.DiscoveryRowBinding>();
+            foreach (MockupDiscoveryItem item in fixtures.QueryDiscoveryWithFilters(new MockupDiscoveryQuery()))
+            {
+                WordListHubSceneBindings.DiscoveryRowBinding binding = community.authoredRows
+                    .FirstOrDefault(row => row != null && row.remoteItemId == item.RemoteItemId);
+                if (binding != null && binding.root != null)
+                    continue;
+
+                WordListHubDiscoveryRowView view = UnityEngine.Object.Instantiate(
+                    community.rowTemplate, community.listContent, false);
+                view.name = "CommunityPreview_" + item.RemoteItemId;
+                if (binding == null)
+                {
+                    binding = new WordListHubSceneBindings.DiscoveryRowBinding();
+                    community.authoredRows.Add(binding);
+                }
+                binding.remoteItemId = item.RemoteItemId;
+                binding.root = view.gameObject;
+                binding.selectedVisual = view.selectedVisual;
+                binding.button = view.button;
+                binding.title = view.title;
+                binding.metadata = view.metadata;
+                binding.summary = view.summary;
+                binding.status = view.status;
+            }
+        }
+
+        private static void AddAuthoredAchievementPreviewCards(
+            WordListHubSceneBindings.AchievementsPageBinding achievements,
+            MockupWordListStore fixtures)
+        {
+            if (achievements.cards == null)
+                achievements.cards = new List<WordListHubSceneBindings.AchievementCardBinding>();
+            foreach (MockupAchievement item in fixtures.Achievements)
+            {
+                WordListHubSceneBindings.AchievementCardBinding binding = achievements.cards
+                    .FirstOrDefault(card => card != null && card.achievementId == item.Id);
+                if (binding != null && binding.root != null && binding.view != null)
+                    continue;
+
+                WordListHubAchievementCardView view = UnityEngine.Object.Instantiate(
+                    achievements.cardTemplate, achievements.cardContent, false);
+                view.name = "AchievementPreview_" + item.Id;
+                if (binding == null)
+                {
+                    binding = new WordListHubSceneBindings.AchievementCardBinding();
+                    achievements.cards.Add(binding);
+                }
+                binding.achievementId = item.Id;
+                binding.root = view.gameObject;
+                binding.view = view;
+            }
         }
 
         private static void InvokeAwake(WordListHubMockupController controller)
@@ -1885,10 +2234,12 @@ namespace Words.UiMockups.WordListHub.Tests
             private readonly bool openedSourceScene;
             private readonly Scene isolatedScene;
             private readonly bool createdIsolatedScene;
+            private readonly GameObject testEventSystemRoot;
 
             public readonly GameObject Root;
             public readonly WordListHubMockupController Controller;
             public readonly WordListHubSceneBindings Bindings;
+            public readonly EventSystem TestEventSystem;
 
             private SceneHarness(
                 Scene previousActiveScene,
@@ -1896,6 +2247,7 @@ namespace Words.UiMockups.WordListHub.Tests
                 bool openedSourceScene,
                 Scene isolatedScene,
                 bool createdIsolatedScene,
+                GameObject testEventSystemRoot,
                 GameObject root,
                 WordListHubMockupController controller,
                 WordListHubSceneBindings bindings)
@@ -1905,9 +2257,13 @@ namespace Words.UiMockups.WordListHub.Tests
                 this.openedSourceScene = openedSourceScene;
                 this.isolatedScene = isolatedScene;
                 this.createdIsolatedScene = createdIsolatedScene;
+                this.testEventSystemRoot = testEventSystemRoot;
                 Root = root;
                 Controller = controller;
                 Bindings = bindings;
+                TestEventSystem = testEventSystemRoot != null
+                    ? testEventSystemRoot.GetComponentInChildren<EventSystem>(true)
+                    : null;
             }
 
             public static SceneHarness Open()
@@ -1933,6 +2289,7 @@ namespace Words.UiMockups.WordListHub.Tests
                 if (createdIsolatedScene)
                     isolatedScene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Additive);
                 GameObject root = null;
+                GameObject testEventSystemRoot = null;
                 try
                 {
                     WordListHubMockupController sourceController = FindController(sourceScene);
@@ -1941,6 +2298,13 @@ namespace Words.UiMockups.WordListHub.Tests
 
                     root = UnityEngine.Object.Instantiate(sourceController.transform.root.gameObject);
                     SceneManager.MoveGameObjectToScene(root, isolatedScene);
+                    GameObject sourceEventSystemRoot = sourceScene.GetRootGameObjects()
+                        .FirstOrDefault(sceneRoot =>
+                            sceneRoot.GetComponentInChildren<EventSystem>(true) != null);
+                    testEventSystemRoot = sourceEventSystemRoot != null
+                        ? UnityEngine.Object.Instantiate(sourceEventSystemRoot)
+                        : new GameObject("WordListHubTestEventSystem", typeof(EventSystem), typeof(StandaloneInputModule));
+                    SceneManager.MoveGameObjectToScene(testEventSystemRoot, isolatedScene);
                     WordListHubMockupController controller = root
                         .GetComponentsInChildren<WordListHubMockupController>(true).SingleOrDefault();
                     WordListHubSceneBindings bindings = root
@@ -1953,10 +2317,12 @@ namespace Words.UiMockups.WordListHub.Tests
                         EditorSceneManager.SetActiveScene(previousActiveScene);
 
                     return new SceneHarness(previousActiveScene, sourceScene, openedSourceScene,
-                        isolatedScene, createdIsolatedScene, root, controller, bindings);
+                        isolatedScene, createdIsolatedScene, testEventSystemRoot, root, controller, bindings);
                 }
                 catch
                 {
+                    if (testEventSystemRoot != null)
+                        UnityEngine.Object.DestroyImmediate(testEventSystemRoot);
                     if (root != null)
                         UnityEngine.Object.DestroyImmediate(root);
                     if (createdIsolatedScene && isolatedScene.IsValid() && isolatedScene.isLoaded)
@@ -1971,6 +2337,8 @@ namespace Words.UiMockups.WordListHub.Tests
 
             public void Dispose()
             {
+                if (testEventSystemRoot != null)
+                    UnityEngine.Object.DestroyImmediate(testEventSystemRoot);
                 if (Root != null)
                     UnityEngine.Object.DestroyImmediate(Root);
                 if (createdIsolatedScene && isolatedScene.IsValid() && isolatedScene.isLoaded)
@@ -2005,6 +2373,22 @@ namespace Words.UiMockups.WordListHub.Tests
                 ISet<Component> intentionallyDynamicVisuals = null)
             {
                 var snapshot = new UiSceneSnapshot();
+                WordListHubSceneBindings bindings = root.GetComponentInChildren<WordListHubSceneBindings>(true);
+                var dataDrivenRubyContent = new List<Transform>();
+                if (bindings != null)
+                {
+                    if (bindings.libraryRubyWords != null && bindings.libraryRubyWords.content != null)
+                        dataDrivenRubyContent.Add(bindings.libraryRubyWords.content);
+                    if (bindings.communityRubyWords != null && bindings.communityRubyWords.content != null)
+                        dataDrivenRubyContent.Add(bindings.communityRubyWords.content);
+                }
+
+                bool IsDataDrivenRubyTransform(Transform target)
+                {
+                    return dataDrivenRubyContent.Any(content =>
+                        target == content || target.IsChildOf(content));
+                }
+
                 foreach (Transform transform in root.GetComponentsInChildren<Transform>(true))
                     snapshot.objects.Add(new GameObjectIdentity(transform.gameObject));
                 foreach (Component component in root.GetComponentsInChildren<Component>(true))
@@ -2015,6 +2399,8 @@ namespace Words.UiMockups.WordListHub.Tests
 
                 foreach (RectTransform rect in root.GetComponentsInChildren<RectTransform>(true))
                 {
+                    if (IsDataDrivenRubyTransform(rect))
+                        continue;
                     DrivenTransformProperties drivenProperties = GetConfiguredDrivenProperties(rect);
                     foreach (ScrollRect scroll in root.GetComponentsInChildren<ScrollRect>(true))
                     {
@@ -2034,24 +2420,32 @@ namespace Words.UiMockups.WordListHub.Tests
                     .Select(selectable => selectable.targetGraphic));
                 foreach (TMP_Text text in root.GetComponentsInChildren<TMP_Text>(true))
                 {
+                    if (IsDataDrivenRubyTransform(text.transform))
+                        continue;
                     bool skipColor = selectableGraphics.Contains(text)
                         || intentionallyDynamicVisuals != null && intentionallyDynamicVisuals.Contains(text);
                     snapshot.texts.Add(new TextStyleState(text, skipColor));
                 }
                 foreach (Image image in root.GetComponentsInChildren<Image>(true))
                 {
+                    if (IsDataDrivenRubyTransform(image.transform))
+                        continue;
                     bool skipColor = selectableGraphics.Contains(image)
                         || intentionallyDynamicVisuals != null && intentionallyDynamicVisuals.Contains(image);
                     snapshot.images.Add(new ImageStyleState(image, skipColor));
                 }
                 foreach (Selectable selectable in sceneSelectables)
                 {
+                    if (IsDataDrivenRubyTransform(selectable.transform))
+                        continue;
                     if (intentionallyDynamicVisuals == null || !intentionallyDynamicVisuals.Contains(selectable))
                         snapshot.selectables.Add(new SelectableStyleState(selectable));
                 }
 
                 foreach (Component component in root.GetComponentsInChildren<Component>(true))
                 {
+                    if (IsDataDrivenRubyTransform(component.transform))
+                        continue;
                     if (component is LayoutGroup || component is LayoutElement
                         || component is ContentSizeFitter || component is AspectRatioFitter
                         || component is ScrollRect)
@@ -2307,6 +2701,9 @@ namespace Words.UiMockups.WordListHub.Tests
                 Assert.That(text.fontSharedMaterial, Is.SameAs(material), description + " material");
                 if (!enableAutoSizing)
                     Assert.That(text.fontSize, Is.EqualTo(fontSize).Within(0.001f), description + " font size");
+                else
+                    Assert.That(text.fontSize, Is.InRange(fontSizeMin, fontSizeMax),
+                        description + " auto-sized font size must stay within its authored range");
                 Assert.That(text.fontSizeMin, Is.EqualTo(fontSizeMin).Within(0.001f), description + " minimum font size");
                 Assert.That(text.fontSizeMax, Is.EqualTo(fontSizeMax).Within(0.001f), description + " maximum font size");
                 Assert.That(text.enableAutoSizing, Is.EqualTo(enableAutoSizing), description + " auto sizing");

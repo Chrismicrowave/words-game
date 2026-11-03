@@ -256,6 +256,84 @@ namespace Words.UiMockups.WordListHub
         public MockupSortDirection SortDirection { get; set; } = MockupSortDirection.Ascending;
     }
 
+    /// <summary>
+    /// Ordered, local draft state for the edit-list word picker. Empty entries are
+    /// kept while editing so Add and Delete remain explicit user actions.
+    /// </summary>
+    public sealed class MockupWordListEditSession
+    {
+        private readonly List<string> words = new List<string>();
+
+        public IReadOnlyList<string> Words => words;
+        public int SelectedIndex { get; private set; } = -1;
+        public bool HasSelection => SelectedIndex >= 0 && SelectedIndex < words.Count;
+        public string SelectedWord => HasSelection ? words[SelectedIndex] : string.Empty;
+        public bool CanMoveUp => HasSelection && SelectedIndex > 0;
+        public bool CanMoveDown => HasSelection && SelectedIndex < words.Count - 1;
+
+        public MockupWordListEditSession(IEnumerable<string> initialWords)
+        {
+            if (initialWords != null)
+            {
+                foreach (string word in initialWords)
+                    words.Add(word ?? string.Empty);
+            }
+
+            SelectedIndex = words.Count == 0 ? -1 : 0;
+        }
+
+        public List<string> ToList()
+        {
+            return new List<string>(words);
+        }
+
+        public void Select(int index)
+        {
+            SelectedIndex = words.Count == 0
+                ? -1
+                : Math.Max(0, Math.Min(index, words.Count - 1));
+        }
+
+        public void SetSelectedWord(string value)
+        {
+            if (HasSelection)
+                words[SelectedIndex] = value ?? string.Empty;
+        }
+
+        public void AddAtFront()
+        {
+            words.Insert(0, string.Empty);
+            SelectedIndex = 0;
+        }
+
+        public bool MoveSelected(int direction)
+        {
+            if (!HasSelection || direction == 0)
+                return false;
+
+            int targetIndex = SelectedIndex + Math.Sign(direction);
+            if (targetIndex < 0 || targetIndex >= words.Count)
+                return false;
+
+            string movedWord = words[SelectedIndex];
+            words[SelectedIndex] = words[targetIndex];
+            words[targetIndex] = movedWord;
+            SelectedIndex = targetIndex;
+            return true;
+        }
+
+        public bool DeleteSelected()
+        {
+            if (!HasSelection)
+                return false;
+
+            int deletedIndex = SelectedIndex;
+            words.RemoveAt(deletedIndex);
+            SelectedIndex = words.Count == 0 ? -1 : Math.Min(deletedIndex, words.Count - 1);
+            return true;
+        }
+    }
+
     public sealed class MockupWordListEdit
     {
         public string Title { get; set; }

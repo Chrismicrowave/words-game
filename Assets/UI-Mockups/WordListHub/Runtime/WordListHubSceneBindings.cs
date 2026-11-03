@@ -130,6 +130,45 @@ namespace Words.UiMockups.WordListHub
             public Button saveButton;
             public TMP_Text saveButtonLabel;
             public Button cancelButton;
+            public WordEditorLayoutBinding wordEditorLayout = new WordEditorLayoutBinding();
+        }
+
+        [Serializable]
+        public sealed class WordEditorRowBinding
+        {
+            public GameObject root;
+            public Button button;
+            public Image background;
+            public TMP_Text label;
+        }
+
+        [Serializable]
+        public sealed class WordEditorLayoutBinding
+        {
+            public GameObject root;
+            public ScrollRect scrollRect;
+            public RectTransform viewport;
+            public RectTransform content;
+            public TMP_Text emptyNotice;
+            public GameObject rowTemplate;
+            public Button moveUpButton;
+            public Button moveDownButton;
+            public Button deleteButton;
+            public Button addButton;
+            public List<WordEditorRowBinding> authoredRows = new List<WordEditorRowBinding>();
+        }
+
+        [Serializable]
+        public sealed class RubyPreviewBinding
+        {
+            public RectTransform root;
+            public RectTransform viewport;
+            public RectTransform content;
+            public ScrollRect scrollRect;
+            public Scrollbar scrollbar;
+            public float previewFontScale = -1f;
+            public List<GameObject> authoredEntries = new List<GameObject>();
+            public List<string> previewWords = new List<string>();
         }
 
         [Serializable]
@@ -167,8 +206,9 @@ namespace Words.UiMockups.WordListHub
             public TMP_Text detailTitle;
             public TMP_Text detailDescription;
             public TMP_Text detailMetadata;
-            public TMP_Text recordStars;
-            public TMP_Text recordTime;
+            // DetailRecordPanel is retired; personal records remain in MockupWordList and list tiles.
+            // public TMP_Text recordStars;
+            // public TMP_Text recordTime;
             public TMP_Text detailWordsLabel;
             public TMP_Text detailWords;
             public TMP_Text detailStatus;
@@ -213,6 +253,7 @@ namespace Words.UiMockups.WordListHub
             public FilterMenuBinding filterMenu = new FilterMenuBinding();
             public Transform cardContent;
             public WordListHubAchievementCardView cardTemplate;
+            public List<AchievementCardBinding> cards = new List<AchievementCardBinding>();
         }
 
         [Serializable]
@@ -249,6 +290,8 @@ namespace Words.UiMockups.WordListHub
         public List<PageBinding> pages = new List<PageBinding>();
         public LibraryPageBinding library = new LibraryPageBinding();
         public CommunityPageBinding community = new CommunityPageBinding();
+        public RubyPreviewBinding libraryRubyWords = new RubyPreviewBinding();
+        public RubyPreviewBinding communityRubyWords = new RubyPreviewBinding();
         public AchievementsPageBinding achievements = new AchievementsPageBinding();
         public ChallengesPageBinding challenges = new ChallengesPageBinding();
         public ModalBinding modal = new ModalBinding();
