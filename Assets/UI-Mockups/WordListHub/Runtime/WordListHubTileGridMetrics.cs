@@ -3,7 +3,7 @@ using System;
 namespace Words.UiMockups.WordListHub
 {
     /// <summary>
-    /// Pure layout metrics for a centered grid of square Word List Hub tiles.
+    /// Pure layout metrics for a left-aligned grid of square Word List Hub tiles.
     /// Recalculate when the available viewport width or item count changes.
     /// </summary>
     public readonly struct WordListHubTileGridMetrics
@@ -80,12 +80,12 @@ namespace Words.UiMockups.WordListHub
             return Math.Min(ColumnCount, remainingItems);
         }
 
-        /// <summary>Returns the row's centered left edge, measured from the viewport's left edge.</summary>
+        /// <summary>Returns the row's left edge, measured from the viewport's left edge.</summary>
         public float GetRowStartX(int rowIndex)
         {
-            int rowTileCount = GetRowTileCount(rowIndex);
-            float rowWidth = rowTileCount * TileSize + Math.Max(0, rowTileCount - 1) * Gap;
-            return (AvailableWidth - rowWidth) * 0.5f;
+            if (rowIndex < 0 || rowIndex >= RowCount)
+                throw new ArgumentOutOfRangeException(nameof(rowIndex));
+            return 0f;
         }
     }
 }
