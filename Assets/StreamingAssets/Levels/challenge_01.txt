@@ -1,0 +1,11 @@
+{
+  "name": "Wildlife",
+  "words": [
+    "duck",
+    "koala",
+    "parrot",
+    "octopus",
+    "penguin",
+    "elephant"
+  ]
+}

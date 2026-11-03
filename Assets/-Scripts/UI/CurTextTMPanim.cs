@@ -19,6 +19,8 @@ public class CurTextTMPanim : MonoBehaviour
     private TextMeshProUGUI tmp;
     private TMP_TextInfo textInfo;
 
+    private const float LandingDetectionThreshold = 0.99f;
+
     private string lastText = "";
     private bool transitioning = false;
     private bool floating = false;
@@ -128,7 +130,7 @@ public class CurTextTMPanim : MonoBehaviour
                 float t = Mathf.Clamp01((elapsed - charDelay) * transitionSpeed);
 
                 // Check if letter just landed
-                if (t >= 0.99f && !letterLanded[i] && landingSound != null)
+                if (t >= LandingDetectionThreshold && !letterLanded[i] && landingSound != null)
                 {
                     letterLanded[i] = true;
                     audioSource.pitch = Random.Range(1f / landingSoundPitchRandomization, landingSoundPitchRandomization);

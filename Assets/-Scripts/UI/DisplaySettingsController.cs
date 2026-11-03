@@ -8,6 +8,9 @@ public class DisplaySettingsController : MonoBehaviour
     [SerializeField] private Toggle crtToggle;
     [SerializeField] private TextMeshProUGUI resolutionLabel;
     [SerializeField] private Toggle screenshakeToggle;
+    [SerializeField] private Toggle showPinyinToggle;   // optional — hidden if null
+    [SerializeField] private ChineseDisplayController chineseDisplay; // optional
+    [SerializeField] private Dropdown languageDropdown;
 
     private static readonly (int w, int h)[] Resolutions =
     {
@@ -21,57 +24,56 @@ public class DisplaySettingsController : MonoBehaviour
 
     void OnEnable()
     {
-        //_initializing = true;
-
-        //bool fs = SettingsManager.Instance != null
-        //    ? SettingsManager.Instance.Fullscreen
-        //    : PlayerPrefs.GetInt(SettingsManager.KeyFullscreen, 1) == 1;
-        //bool crt = SettingsManager.Instance != null
-        //    ? SettingsManager.Instance.CRTFilter
-        //    : PlayerPrefs.GetInt(SettingsManager.KeyCRTFilter, 1) == 1;
-
-        //_resIndex = SettingsManager.Instance != null
-        //    ? SettingsManager.Instance.ResolutionIndex
-        //    : PlayerPrefs.GetInt(SettingsManager.KeyResolution, 1);
-        //if (_resIndex < 0 || _resIndex >= Resolutions.Length) _resIndex = 1;
-
-        //if (fullscreenToggle != null) fullscreenToggle.SetIsOnWithoutNotify(fs);
-        //if (crtToggle        != null) crtToggle.SetIsOnWithoutNotify(crt);
-        //RefreshResolutionLabel();
-
-        //_initializing = false; 
-        //above script - resolution and crt turning back on not working, fixed by script below by unsbuscribing
-
         _initializing = true;
 
         fullscreenToggle.onValueChanged.RemoveListener(OnFullscreenChanged);
         crtToggle.onValueChanged.RemoveListener(OnCRTChanged);
 
-        bool fs = SettingsManager.Instance != null
-            ? SettingsManager.Instance.Fullscreen
-            : PlayerPrefs.GetInt(SettingsManager.KeyFullscreen, 1) == 1;
+        bool fs = Services.Get<SettingsManager>() != null
+            ? Services.Get<SettingsManager>().Fullscreen
+            : PlayerPrefs.GetInt(SettingsManager.KeyFullscreen, 0) == 1;
 
-        bool crt = SettingsManager.Instance != null
-            ? SettingsManager.Instance.CRTFilter
+        bool crt = Services.Get<SettingsManager>() != null
+            ? Services.Get<SettingsManager>().CRTFilter
             : PlayerPrefs.GetInt(SettingsManager.KeyCRTFilter, 1) == 1;
 
-        bool ss = SettingsManager.Instance != null
-         ? SettingsManager.Instance.ScreenShake
+        bool ss = Services.Get<SettingsManager>() != null
+         ? Services.Get<SettingsManager>().ScreenShake
          : PlayerPrefs.GetInt(SettingsManager.KeyScreenShake, 1) == 1;
 
-        _resIndex = SettingsManager.Instance != null
-            ? SettingsManager.Instance.ResolutionIndex
+        _resIndex = Services.Get<SettingsManager>() != null
+            ? Services.Get<SettingsManager>().ResolutionIndex
             : PlayerPrefs.GetInt(SettingsManager.KeyResolution, 1);
 
         fullscreenToggle.isOn = fs;
         crtToggle.isOn = crt;
         screenshakeToggle.isOn = ss;
 
+        if (showPinyinToggle != null)
+        {
+            showPinyinToggle.onValueChanged.RemoveListener(OnShowPinyinChanged);
+            bool pinyin = Services.Get<SettingsManager>() != null
+                ? Services.Get<SettingsManager>().ShowPinyin
+                : PlayerPrefs.GetInt(SettingsManager.KeyShowPinyin, 1) == 1;
+            showPinyinToggle.isOn = pinyin;
+            showPinyinToggle.onValueChanged.AddListener(OnShowPinyinChanged);
+        }
+
         RefreshResolutionLabel();
 
         fullscreenToggle.onValueChanged.AddListener(OnFullscreenChanged);
         crtToggle.onValueChanged.AddListener(OnCRTChanged);
         screenshakeToggle.onValueChanged.AddListener(OnScreenShakeChanged);
+
+        if (languageDropdown != null)
+        {
+            languageDropdown.onValueChanged.RemoveListener(OnLanguageChanged);
+            string currentCode = Services.Get<SettingsManager>() != null
+                ? Services.Get<SettingsManager>().UILanguageCode
+                : PlayerPrefs.GetString(SettingsManager.KeyUILanguage, "en");
+            languageDropdown.SetValueWithoutNotify(currentCode == "zh-Hans" ? 1 : 0);
+            languageDropdown.onValueChanged.AddListener(OnLanguageChanged);
+        }
 
         _initializing = false;
     }
@@ -80,7 +82,7 @@ public class DisplaySettingsController : MonoBehaviour
     {
         if (_initializing) return;
 
-        if (SettingsManager.Instance != null) SettingsManager.Instance.Fullscreen = value;
+        if (Services.Get<SettingsManager>() != null) Services.Get<SettingsManager>().Fullscreen = value;
         else { PlayerPrefs.SetInt(SettingsManager.KeyFullscreen, value ? 1 : 0); Screen.fullScreen = value; }
 
         PlayerPrefs.Save();
@@ -90,7 +92,7 @@ public class DisplaySettingsController : MonoBehaviour
     {
         if (_initializing) return;
 
-        if (SettingsManager.Instance != null) SettingsManager.Instance.CRTFilter = value;
+        if (Services.Get<SettingsManager>() != null) Services.Get<SettingsManager>().CRTFilter = value;
         else PlayerPrefs.SetInt(SettingsManager.KeyCRTFilter, value ? 1 : 0);
         PlayerPrefs.Save();
     }
@@ -99,8 +101,19 @@ public class DisplaySettingsController : MonoBehaviour
     {
         if (_initializing) return;
 
-        if (SettingsManager.Instance != null) SettingsManager.Instance.ScreenShake = value;
-        else PlayerPrefs.SetInt(SettingsManager.KeyCRTFilter, value ? 1 : 0);
+        if (Services.Get<SettingsManager>() != null) Services.Get<SettingsManager>().ScreenShake = value;
+        else PlayerPrefs.SetInt(SettingsManager.KeyScreenShake, value ? 1 : 0);
+        PlayerPrefs.Save();
+    }
+
+    public void OnShowPinyinChanged(bool value)
+    {
+        if (_initializing) return;
+
+        if (Services.Get<SettingsManager>() != null) Services.Get<SettingsManager>().ShowPinyin = value;
+        else PlayerPrefs.SetInt(SettingsManager.KeyShowPinyin, value ? 1 : 0);
+
+        chineseDisplay?.SetPinyinVisible(value);
         PlayerPrefs.Save();
     }
 
@@ -118,10 +131,10 @@ public class DisplaySettingsController : MonoBehaviour
 
     private void ApplyResolution()
     {
-        if (SettingsManager.Instance != null) SettingsManager.Instance.ResolutionIndex = _resIndex;
+        if (Services.Get<SettingsManager>() != null) Services.Get<SettingsManager>().ResolutionIndex = _resIndex;
         else PlayerPrefs.SetInt(SettingsManager.KeyResolution, _resIndex);
         var (w, h) = Resolutions[_resIndex];
-        bool fs = SettingsManager.Instance != null ? SettingsManager.Instance.Fullscreen : Screen.fullScreen;
+        bool fs = Services.Get<SettingsManager>() != null ? Services.Get<SettingsManager>().Fullscreen : Screen.fullScreen;
 
         Screen.SetResolution(w, h, fs); 
         
@@ -134,5 +147,18 @@ public class DisplaySettingsController : MonoBehaviour
         if (resolutionLabel == null) return;
         var (w, h) = Resolutions[Mathf.Clamp(_resIndex, 0, Resolutions.Length - 1)];
         resolutionLabel.text = $"{w} x {h}";
+    }
+
+    public void OnLanguageChanged(int index)
+    {
+        string code = index == 1 ? "zh-Hans" : "en";
+        if (Services.Get<SettingsManager>() != null)
+            Services.Get<SettingsManager>().UILanguageCode = code;
+        else
+            PlayerPrefs.SetString(SettingsManager.KeyUILanguage, code);
+
+        var locale = UnityEngine.Localization.Settings.LocalizationSettings.AvailableLocales.GetLocale(code);
+        if (locale != null)
+            UnityEngine.Localization.Settings.LocalizationSettings.SelectedLocale = locale;
     }
 }

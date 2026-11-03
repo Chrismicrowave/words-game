@@ -1,0 +1,91 @@
+{
+  "name": "Praise",
+  "nameZh": "夸夸",
+  "mixedWords": [
+    {
+      "segments": [
+        {
+          "type": "chinese",
+          "entries": [
+            {
+              "character": "逆",
+              "pinyin": "ni"
+            },
+            {
+              "character": "天",
+              "pinyin": "tian"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "segments": [
+        {
+          "type": "chinese",
+          "entries": [
+            {
+              "character": "顶",
+              "pinyin": "ding"
+            },
+            {
+              "character": "级",
+              "pinyin": "ji"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "segments": [
+        {
+          "type": "chinese",
+          "entries": [
+            {
+              "character": "战",
+              "pinyin": "zhan"
+            },
+            {
+              "character": "神",
+              "pinyin": "shen"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "segments": [
+        {
+          "type": "chinese",
+          "entries": [
+            {
+              "character": "完",
+              "pinyin": "wan"
+            },
+            {
+              "character": "美",
+              "pinyin": "mei"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "segments": [
+        {
+          "type": "chinese",
+          "entries": [
+            {
+              "character": "有",
+              "pinyin": "you"
+            },
+            {
+              "character": "才",
+              "pinyin": "cai"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

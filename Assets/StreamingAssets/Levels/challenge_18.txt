@@ -1,0 +1,16 @@
+{
+  "name": "Moon Walker",
+  "words": [
+    "velocity",
+    "gravity",
+    "friction",
+    "magnetic",
+    "kinetic",
+    "thermal",
+    "optical",
+    "acoustic",
+    "nuclear",
+    "orbital"
+  ],
+  "nameZh": "月行者"
+}

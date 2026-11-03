@@ -1,0 +1,251 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e9620f8c34305754d8cc9a7e49e852d9, type: 3}
+  m_Name: UI_en
+  m_EditorClassIdentifier: Unity.Localization::UnityEngine.Localization.Tables.StringTable
+  m_LocaleId:
+    m_Code: en
+  m_SharedData: {fileID: 11400000, guid: b0610b34cc9b175479751017d50609a0, type: 2}
+  m_Metadata:
+    m_Items: []
+  m_TableData:
+  - m_Id: 657448960
+    m_Localized: Words
+    m_Metadata:
+      m_Items: []
+  - m_Id: 732946432
+    m_Localized: Timer
+    m_Metadata:
+      m_Items: []
+  - m_Id: 737140736
+    m_Localized: Info
+    m_Metadata:
+      m_Items: []
+  - m_Id: 737140737
+    m_Localized: Reset
+    m_Metadata:
+      m_Items: []
+  - m_Id: 741335040
+    m_Localized: Settings
+    m_Metadata:
+      m_Items: []
+  - m_Id: 741335041
+    m_Localized: Close
+    m_Metadata:
+      m_Items: []
+  - m_Id: 741335042
+    m_Localized: Settings
+    m_Metadata:
+      m_Items: []
+  - m_Id: 741335043
+    m_Localized: Audio
+    m_Metadata:
+      m_Items: []
+  - m_Id: 741335044
+    m_Localized: Display
+    m_Metadata:
+      m_Items: []
+  - m_Id: 741335045
+    m_Localized: Gameplay
+    m_Metadata:
+      m_Items: []
+  - m_Id: 741335046
+    m_Localized: Custom
+    m_Metadata:
+      m_Items: []
+  - m_Id: 741335047
+    m_Localized: Reset Defaults
+    m_Metadata:
+      m_Items: []
+  - m_Id: 741335048
+    m_Localized: Close
+    m_Metadata:
+      m_Items: []
+  - m_Id: 741335049
+    m_Localized: Master
+    m_Metadata:
+      m_Items: []
+  - m_Id: 741335050
+    m_Localized: SFX
+    m_Metadata:
+      m_Items: []
+  - m_Id: 741335051
+    m_Localized: BGM
+    m_Metadata:
+      m_Items: []
+  - m_Id: 741335052
+    m_Localized: Fullscreen
+    m_Metadata:
+      m_Items: []
+  - m_Id: 741335053
+    m_Localized: CRT Filter
+    m_Metadata:
+      m_Items: []
+  - m_Id: 741335054
+    m_Localized: Resolution
+    m_Metadata:
+      m_Items: []
+  - m_Id: 741335055
+    m_Localized: Screen Shake
+    m_Metadata:
+      m_Items: []
+  - m_Id: 741335056
+    m_Localized: Show Pinyin
+    m_Metadata:
+      m_Items: []
+  - m_Id: 741335057
+    m_Localized: Language
+    m_Metadata:
+      m_Items: []
+  - m_Id: 741335058
+    m_Localized: Swap
+    m_Metadata:
+      m_Items: []
+  - m_Id: 741335059
+    m_Localized: '>'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 741335060
+    m_Localized: <
+    m_Metadata:
+      m_Items: []
+  - m_Id: 741335061
+    m_Localized: Delete
+    m_Metadata:
+      m_Items: []
+  - m_Id: 741335062
+    m_Localized: Add
+    m_Metadata:
+      m_Items: []
+  - m_Id: 741335063
+    m_Localized: Enter a phase...
+    m_Metadata:
+      m_Items: []
+  - m_Id: 741335064
+    m_Localized: Daily Word List
+    m_Metadata:
+      m_Items: []
+  - m_Id: 741335065
+    m_Localized: Dates
+    m_Metadata:
+      m_Items: []
+  - m_Id: 741335066
+    m_Localized: Words
+    m_Metadata:
+      m_Items: []
+  - m_Id: 741335067
+    m_Localized: Load
+    m_Metadata:
+      m_Items: []
+  - m_Id: 741335068
+    m_Localized: Close
+    m_Metadata:
+      m_Items: []
+  - m_Id: 741335069
+    m_Localized: Search...
+    m_Metadata:
+      m_Items: []
+  - m_Id: 741335070
+    m_Localized: Confirm Pinyin
+    m_Metadata:
+      m_Items: []
+  - m_Id: 741335071
+    m_Localized: Cancel
+    m_Metadata:
+      m_Items: []
+  - m_Id: 741335072
+    m_Localized: OK
+    m_Metadata:
+      m_Items: []
+  - m_Id: 741335073
+    m_Localized: Levels
+    m_Metadata:
+      m_Items: []
+  - m_Id: 741335074
+    m_Localized: Levels
+    m_Metadata:
+      m_Items: []
+  - m_Id: 741335075
+    m_Localized: Challenges
+    m_Metadata:
+      m_Items: []
+  - m_Id: 741335076
+    m_Localized: Custom
+    m_Metadata:
+      m_Items: []
+  - m_Id: 741335077
+    m_Localized: Community
+    m_Metadata:
+      m_Items: []
+  - m_Id: 741335078
+    m_Localized: Cancel
+    m_Metadata:
+      m_Items: []
+  - m_Id: 741335079
+    m_Localized: OK
+    m_Metadata:
+      m_Items: []
+  - m_Id: 741335080
+    m_Localized: Import
+    m_Metadata:
+      m_Items: []
+  - m_Id: 741335081
+    m_Localized: Export
+    m_Metadata:
+      m_Items: []
+  - m_Id: 741335082
+    m_Localized: Create
+    m_Metadata:
+      m_Items: []
+  - m_Id: 741335083
+    m_Localized: Delete
+    m_Metadata:
+      m_Items: []
+  - m_Id: 741335104
+    m_Localized: 'Rules:
+
+      1. Hold the letter one by one and don''t let go
+
+      2.
+      If you see the same letter when holding, release it
+
+
+      (Ignore cases,
+      space and punctuations)
+
+      (use props, extra hands, whatever you need:)
+      )'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 741335105
+    m_Localized: Username
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1103553958502400
+    m_Localized: '*Unlocks Custom List'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1103554025611264
+    m_Localized: '*Unlocks Community List (coming soon)'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1139348652154880
+    m_Localized: Copy
+    m_Metadata:
+      m_Items: []
+  - m_Id: 2525605609332736
+    m_Localized: Trending
+    m_Metadata:
+      m_Items: []
+  references:
+    version: 2
+    RefIds: []

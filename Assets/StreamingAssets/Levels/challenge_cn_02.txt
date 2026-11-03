@@ -1,0 +1,91 @@
+{
+  "name": "Internet",
+  "nameZh": "网络",
+  "mixedWords": [
+    {
+      "segments": [
+        {
+          "type": "chinese",
+          "entries": [
+            {
+              "character": "抽",
+              "pinyin": "chou"
+            },
+            {
+              "character": "象",
+              "pinyin": "xiang"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "segments": [
+        {
+          "type": "chinese",
+          "entries": [
+            {
+              "character": "绝",
+              "pinyin": "jue"
+            },
+            {
+              "character": "了",
+              "pinyin": "le"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "segments": [
+        {
+          "type": "chinese",
+          "entries": [
+            {
+              "character": "无",
+              "pinyin": "wu"
+            },
+            {
+              "character": "语",
+              "pinyin": "yu"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "segments": [
+        {
+          "type": "chinese",
+          "entries": [
+            {
+              "character": "吃",
+              "pinyin": "chi"
+            },
+            {
+              "character": "瓜",
+              "pinyin": "gua"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "segments": [
+        {
+          "type": "chinese",
+          "entries": [
+            {
+              "character": "冲",
+              "pinyin": "chong"
+            },
+            {
+              "character": "浪",
+              "pinyin": "lang"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

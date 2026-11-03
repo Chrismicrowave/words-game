@@ -1,0 +1,55 @@
+using UnityEngine;
+using TMPro;
+
+/// <summary>
+/// A single cell in the target display for a Chinese phase.
+/// Shows the Chinese character with optional pinyin above.
+/// </summary>
+public class TargetCell : MonoBehaviour
+{
+    [SerializeField] private TextMeshProUGUI pinyinLabel;   // small label above, e.g. "ni"
+    [SerializeField] private TextMeshProUGUI charLabel;     // large label, e.g. "你"
+
+    public void Init(string chineseChar, string pinyin, bool pinyinVisible)
+    {
+        if (charLabel != null) charLabel.text = chineseChar;
+        if (pinyinLabel != null)
+            pinyinLabel.text = string.IsNullOrEmpty(pinyin) ? "" : $"<font=\"Oswald Bold SDF\">{pinyin}</font>";
+        SetPinyinVisible(pinyinVisible);
+    }
+
+    public float CharFontSize  => charLabel  != null ? charLabel.fontSize  : 36f;
+    public float PinyinFontSize => pinyinLabel != null ? pinyinLabel.fontSize : 18f;
+
+    public void SetPinyinFontSize(float size)
+    {
+        if (pinyinLabel != null)
+        {
+            pinyinLabel.enableAutoSizing = false;
+            pinyinLabel.fontSize = size;
+        }
+    }
+
+    public void SetPinyinVisible(bool visible)
+    {
+        if (pinyinLabel != null) pinyinLabel.gameObject.SetActive(visible);
+    }
+
+    /// <summary>
+    /// Sets uniform font sizes on both labels, disabling auto-sizing.
+    /// Called during manual layout so all cells render identically.
+    /// </summary>
+    public void SetFixedFontSizes(float charSize, float pinyinSize)
+    {
+        if (charLabel != null)
+        {
+            charLabel.enableAutoSizing = false;
+            charLabel.fontSize = charSize;
+        }
+        if (pinyinLabel != null)
+        {
+            pinyinLabel.enableAutoSizing = false;
+            pinyinLabel.fontSize = pinyinSize;
+        }
+    }
+}

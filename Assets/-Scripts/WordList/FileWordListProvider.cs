@@ -6,16 +6,22 @@ using UnityEngine;
 public class FileWordListProvider : IWordListProvider
 {
     public string DisplayName { get; private set; }
+    public LanguageMode LanguageMode { get; private set; } = LanguageMode.English;
     public bool IsEditable => true;
     public string FilePath { get; private set; }
 
     private List<string> words = new List<string>();
+    private List<ChineseWordEntry> chineseWords = new List<ChineseWordEntry>();
+    private List<MixedWordEntry> mixedWords = new List<MixedWordEntry>();
 
     [Serializable]
     private class WordListData
     {
         public string name;
+        public string languageMode;
         public List<string> words;
+        public List<ChineseWordEntry> chineseWords;
+        public List<MixedWordEntry> mixedWords;
         public string createdAt;
     }
 
@@ -30,9 +36,40 @@ public class FileWordListProvider : IWordListProvider
         return new List<string>(words);
     }
 
+    public List<ChineseWordEntry> GetChineseWords()
+    {
+        return chineseWords != null ? new List<ChineseWordEntry>(chineseWords) : null;
+    }
+
+    public List<MixedWordEntry> GetMixedWords()
+    {
+        return mixedWords != null ? new List<MixedWordEntry>(mixedWords) : null;
+    }
+
     public void SetWords(List<string> newWords)
     {
         words = new List<string>(newWords);
+    }
+
+    public void SetMixedWords(List<MixedWordEntry> mixed)
+    {
+        mixedWords = new List<MixedWordEntry>(mixed);
+    }
+
+    public void SetLanguageMode(LanguageMode mode)
+    {
+        LanguageMode = mode;
+    }
+
+    /// <summary>
+    /// Clears any stale Chinese/Mixed data so a plain-text import never inherits
+    /// a previous list's structured word data or language mode.
+    /// </summary>
+    public void ResetToEnglish()
+    {
+        LanguageMode = LanguageMode.English;
+        chineseWords = new List<ChineseWordEntry>();
+        mixedWords   = new List<MixedWordEntry>();
     }
 
     public void SetName(string name)
@@ -45,7 +82,10 @@ public class FileWordListProvider : IWordListProvider
         var data = new WordListData
         {
             name = DisplayName,
+            languageMode = LanguageMode.ToString(),
             words = words,
+            chineseWords = chineseWords.Count > 0 ? chineseWords : null,
+            mixedWords = mixedWords.Count > 0 ? mixedWords : null,
             createdAt = DateTime.UtcNow.ToString("o")
         };
 
@@ -70,6 +110,14 @@ public class FileWordListProvider : IWordListProvider
         var data = JsonUtility.FromJson<WordListData>(json);
         DisplayName = data.name ?? "Untitled";
         words = data.words ?? new List<string>();
+        chineseWords = data.chineseWords ?? new List<ChineseWordEntry>();
+        mixedWords = data.mixedWords ?? new List<MixedWordEntry>();
+
+        if (!string.IsNullOrEmpty(data.languageMode) &&
+            System.Enum.TryParse<LanguageMode>(data.languageMode, out var mode))
+            LanguageMode = mode;
+        else
+            LanguageMode = LanguageMode.English;
     }
 
     public static string GetWordListDirectory()

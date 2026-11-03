@@ -1,0 +1,99 @@
+{
+  "name": "Food",
+  "nameZh": "美食",
+  "mixedWords": [
+    {
+      "segments": [
+        {
+          "type": "chinese",
+          "entries": [
+            {
+              "character": "烧",
+              "pinyin": "shao"
+            },
+            {
+              "character": "烤",
+              "pinyin": "kao"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "segments": [
+        {
+          "type": "chinese",
+          "entries": [
+            {
+              "character": "火",
+              "pinyin": "huo"
+            },
+            {
+              "character": "锅",
+              "pinyin": "guo"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "segments": [
+        {
+          "type": "chinese",
+          "entries": [
+            {
+              "character": "奶",
+              "pinyin": "nai"
+            },
+            {
+              "character": "茶",
+              "pinyin": "cha"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "segments": [
+        {
+          "type": "chinese",
+          "entries": [
+            {
+              "character": "麻",
+              "pinyin": "ma"
+            },
+            {
+              "character": "辣",
+              "pinyin": "la"
+            },
+            {
+              "character": "烫",
+              "pinyin": "tang"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "segments": [
+        {
+          "type": "chinese",
+          "entries": [
+            {
+              "character": "螺",
+              "pinyin": "luo"
+            },
+            {
+              "character": "蛳",
+              "pinyin": "si"
+            },
+            {
+              "character": "粉",
+              "pinyin": "fen"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

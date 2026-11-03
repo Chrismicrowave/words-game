@@ -2,9 +2,8 @@ using System;
 using UnityEngine;
 using UnityEngine.Audio;
 
-public class SettingsManager : MonoBehaviour
+public class SettingsManager : SingletonBehaviour<SettingsManager>
 {
-    public static SettingsManager Instance { get; private set; }
 
     [SerializeField] private AudioMixer mainMixer;
 
@@ -21,10 +20,22 @@ public class SettingsManager : MonoBehaviour
     public const string KeyBGMVolume     = "settings_bgmVolume";
     public const string KeyFullscreen    = "settings_fullscreen";
     public const string KeyResolution    = "settings_resolution";
-    public const string KeyQuality       = "settings_quality";
     public const string KeyActionPrompts = "settings_actionPrompts";
     public const string KeyCRTFilter     = "settings_crtFilter";
     public const string KeyScreenShake   = "settings_screenShake";
+
+    // Panel visibility keys (used by UIController + BuildDefaultsApplier)
+    public const string KeyWordsPanelOn = "WordsPanelOn";
+    public const string KeyTimerPanelOn = "TimerPanelOn";
+    public const string KeyInfoPanelOn  = "InfoPanelOn";
+    public const string KeyActiveTab    = "ActiveTab";
+
+    // Chinese language support
+    public const string KeyShowPinyin   = "ShowPinyin";
+    public const string KeyUILanguage   = "settings_uiLanguage";
+
+    // Player identity
+    public const string KeyPlayerName   = "PlayerName";
 
     public float MasterVolume
     {
@@ -46,7 +57,7 @@ public class SettingsManager : MonoBehaviour
 
     public bool Fullscreen
     {
-        get => PlayerPrefs.GetInt(KeyFullscreen, 1) == 1;
+        get => PlayerPrefs.GetInt(KeyFullscreen, 0) == 1;
         set { PlayerPrefs.SetInt(KeyFullscreen, value ? 1 : 0); ApplyDisplay(); }
     }
 
@@ -54,12 +65,6 @@ public class SettingsManager : MonoBehaviour
     {
         get => PlayerPrefs.GetInt(KeyResolution, 1);
         set { PlayerPrefs.SetInt(KeyResolution, value); ApplyDisplay(); }
-    }
-
-    public int QualityLevel
-    {
-        get => PlayerPrefs.GetInt(KeyQuality, QualitySettings.GetQualityLevel());
-        set { PlayerPrefs.SetInt(KeyQuality, value); QualitySettings.SetQualityLevel(value); }
     }
 
     public bool ShowActionPrompts
@@ -78,29 +83,54 @@ public class SettingsManager : MonoBehaviour
     {
         get => PlayerPrefs.GetInt(KeyScreenShake, 1) == 1;
         set => PlayerPrefs.SetInt(KeyScreenShake, value ? 1 : 0);
-        
+    }
+
+    public bool ShowPinyin
+    {
+        get => PlayerPrefs.GetInt(KeyShowPinyin, 1) == 1;
+        set => PlayerPrefs.SetInt(KeyShowPinyin, value ? 1 : 0);
+    }
+
+    public string UILanguageCode
+    {
+        get => PlayerPrefs.GetString(KeyUILanguage, "en");
+        set
+        {
+            PlayerPrefs.SetString(KeyUILanguage, value);
+            PlayerPrefs.Save();
+        }
+    }
+
+    /// <summary>Player display name used for leaderboards. Default: "Unnamed User #1234".</summary>
+    public const string DefaultPlayerName = "Unnamed User #1234";
+    public string PlayerName
+    {
+        get => PlayerPrefs.GetString(KeyPlayerName, DefaultPlayerName);
+        set
+        {
+            string cleaned = value?.Trim() ?? DefaultPlayerName;
+            if (string.IsNullOrEmpty(cleaned))
+                cleaned = DefaultPlayerName;
+            if (cleaned.Length > 16)
+                cleaned = cleaned.Substring(0, 16);
+            PlayerPrefs.SetString(KeyPlayerName, cleaned);
+            PlayerPrefs.Save();
+        }
     }
 
     public event Action OnSettingsChanged;
 
-    void Awake()
+    protected override void Awake()
     {
-        if (Instance == null) Instance = this;
-        else { Destroy(gameObject); return; }
+        base.Awake();
 
         Load();
-    }
-
-    void Start()
-    {
-        //Load();
     }
 
     public void Load()
     {
         ApplyAudio();
         ApplyDisplay();
-        QualitySettings.SetQualityLevel(QualityLevel);
         ApplyCRT();
     }
 
@@ -117,11 +147,17 @@ public class SettingsManager : MonoBehaviour
         PlayerPrefs.DeleteKey(KeyBGMVolume);
         PlayerPrefs.DeleteKey(KeyFullscreen);
         PlayerPrefs.DeleteKey(KeyResolution);
-        PlayerPrefs.DeleteKey(KeyQuality);
         PlayerPrefs.DeleteKey(KeyActionPrompts);
         PlayerPrefs.DeleteKey(KeyCRTFilter);
         PlayerPrefs.DeleteKey(KeyScreenShake);
-        PlayerPrefs.Save();
+        PlayerPrefs.DeleteKey(KeyPlayerName);
+
+        BuildDefaultsApplier defaultsApplier = FindAnyObjectByType<BuildDefaultsApplier>();
+        if (defaultsApplier != null)
+            defaultsApplier.ApplyMissingDefaults();
+        else
+            PlayerPrefs.Save();
+
         Load();
         OnSettingsChanged?.Invoke();
     }
@@ -147,8 +183,9 @@ public class SettingsManager : MonoBehaviour
     
     private void ApplyCRT()
     {
-        if (FilterManager.Instance != null)
-            FilterManager.Instance.SetFilter(0, CRTFilter);
+        var filterManager = Services.Get<FilterManager>();
+        if (filterManager != null)
+            filterManager.SetFilter(0, CRTFilter);
     }
 
  

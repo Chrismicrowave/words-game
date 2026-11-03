@@ -31,23 +31,23 @@ public class KeyboardVisualController : MonoBehaviour
 
     void OnEnable()
     {
-        if (GameStateManager.Instance != null)
+        if (Services.Get<GameStateManager>() != null)
         {
-            GameStateManager.Instance.OnStepProcessed += HandleStepProcessed;
-            GameStateManager.Instance.OnPhaseCompleted += ResetAllKeys;
-            GameStateManager.Instance.OnPhaseRestarted += ResetAllKeys;
-            GameStateManager.Instance.OnGameReset += ResetAllKeys;
+            Services.Get<GameStateManager>().OnStepProcessed += HandleStepProcessed;
+            Services.Get<GameStateManager>().OnPhaseCompleted += ResetAllKeys;
+            Services.Get<GameStateManager>().OnPhaseRestarted += ResetAllKeys;
+            Services.Get<GameStateManager>().OnGameReset += ResetAllKeys;
         }
     }
 
     void OnDisable()
     {
-        if (GameStateManager.Instance != null)
+        if (Services.Get<GameStateManager>() != null)
         {
-            GameStateManager.Instance.OnStepProcessed -= HandleStepProcessed;
-            GameStateManager.Instance.OnPhaseCompleted -= ResetAllKeys;
-            GameStateManager.Instance.OnPhaseRestarted -= ResetAllKeys;
-            GameStateManager.Instance.OnGameReset -= ResetAllKeys;
+            Services.Get<GameStateManager>().OnStepProcessed -= HandleStepProcessed;
+            Services.Get<GameStateManager>().OnPhaseCompleted -= ResetAllKeys;
+            Services.Get<GameStateManager>().OnPhaseRestarted -= ResetAllKeys;
+            Services.Get<GameStateManager>().OnGameReset -= ResetAllKeys;
         }
     }
 

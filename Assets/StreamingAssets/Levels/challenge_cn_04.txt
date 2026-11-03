@@ -1,0 +1,91 @@
+{
+  "name": "Animals",
+  "nameZh": "动物",
+  "mixedWords": [
+    {
+      "segments": [
+        {
+          "type": "chinese",
+          "entries": [
+            {
+              "character": "修",
+              "pinyin": "xiu"
+            },
+            {
+              "character": "狗",
+              "pinyin": "gou"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "segments": [
+        {
+          "type": "chinese",
+          "entries": [
+            {
+              "character": "水",
+              "pinyin": "shui"
+            },
+            {
+              "character": "豚",
+              "pinyin": "tun"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "segments": [
+        {
+          "type": "chinese",
+          "entries": [
+            {
+              "character": "吗",
+              "pinyin": "ma"
+            },
+            {
+              "character": "喽",
+              "pinyin": "lou"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "segments": [
+        {
+          "type": "chinese",
+          "entries": [
+            {
+              "character": "猫",
+              "pinyin": "mao"
+            },
+            {
+              "character": "猫",
+              "pinyin": "mao"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "segments": [
+        {
+          "type": "chinese",
+          "entries": [
+            {
+              "character": "狗",
+              "pinyin": "gou"
+            },
+            {
+              "character": "狗",
+              "pinyin": "gou"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,96 @@
+using TMPro;
+using UnityEngine;
+using UnityEngine.UI;
+
+public class PhaseListUIManager : MonoBehaviour
+{
+    [SerializeField] private Transform phaseListContent;
+    [SerializeField] private GameObject phaseButtonPrefab;
+    [SerializeField] private Color phaseSelectedColor = Color.yellow;
+    [SerializeField] private Color phaseUnselectedColor = Color.white;
+    [SerializeField] private TMP_FontAsset chineseFontAsset;  // Noto Sans SC, assigned in Inspector
+
+    private int selectedPhaseIndex = -1;
+    public int SelectedPhaseIndex => selectedPhaseIndex;
+
+    void OnEnable()
+    {
+        if (Services.Get<PhaseManager>() != null)
+            Services.Get<PhaseManager>().OnWordListChanged += RefreshPhaseList;
+    }
+
+    void OnDisable()
+    {
+        if (Services.Get<PhaseManager>() != null)
+            Services.Get<PhaseManager>().OnWordListChanged -= RefreshPhaseList;
+    }
+
+    public void RefreshPhaseList()
+    {
+        if (phaseListContent == null || phaseButtonPrefab == null) return;
+
+        // DestroyImmediate so old children are gone before we create new ones —
+        // Destroy (deferred) would leave stale entries in the hierarchy that throw
+        // off the index when SetSelectedPhaseIndex re-highlights after a move.
+        while (phaseListContent.childCount > 0)
+        {
+            var child = phaseListContent.GetChild(0);
+            DestroyImmediate(child.gameObject);
+        }
+
+        bool isChinese = Services.Get<PhaseManager>().CurrentLanguageMode == LanguageMode.Chinese;
+        var words = Services.Get<PhaseManager>().Words;
+        for (int i = 0; i < words.Count; i++)
+        {
+            int index = i;
+            GameObject btnObj = Instantiate(phaseButtonPrefab, phaseListContent);
+            var tmp = btnObj.GetComponentInChildren<TextMeshProUGUI>();
+            // Chinese lists show characters only; English/Mixed shows numbered
+            tmp.text = isChinese ? words[i] : $"{index + 1}. {words[i]}";
+            // Apply Chinese font whenever the word contains Chinese characters (covers Mixed mode too)
+            if (chineseFontAsset != null && PinyinLookup.ContainsChinese(words[i]))
+                tmp.font = chineseFontAsset;
+
+            Button btn = btnObj.GetComponent<Button>();
+            btn.onClick.AddListener(() =>
+            {
+                selectedPhaseIndex = index;
+                HighlightSelectedButton(btnObj);
+            });
+        }
+
+        Canvas.ForceUpdateCanvases();
+    }
+
+    public void ClearSelection()
+    {
+        selectedPhaseIndex = -1;
+    }
+
+    /// <summary>
+    /// Updates the tracked selection index and re-highlights the matching button.
+    /// Call after a move operation so Set still targets the correct word.
+    /// </summary>
+    public void SetSelectedPhaseIndex(int idx)
+    {
+        selectedPhaseIndex = idx;
+        int i = 0;
+        foreach (Transform child in phaseListContent)
+        {
+            Image img = child.GetComponent<Image>();
+            if (img != null)
+                img.color = (i == idx) ? phaseSelectedColor : phaseUnselectedColor;
+            i++;
+        }
+    }
+
+    private void HighlightSelectedButton(GameObject selected)
+    {
+        foreach (Transform child in phaseListContent)
+        {
+            Image img = child.GetComponent<Image>();
+            if (img != null)
+                img.color = (child.gameObject == selected) ? phaseSelectedColor : phaseUnselectedColor;
+        }
+    }
+}

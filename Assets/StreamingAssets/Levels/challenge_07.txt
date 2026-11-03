@@ -1,0 +1,16 @@
+{
+  "name": "Ocean Blue",
+  "words": [
+    "rainbow",
+    "sunshine",
+    "treasure",
+    "umbrella",
+    "volcano",
+    "whisper",
+    "diamond",
+    "explore",
+    "fortune",
+    "gallery"
+  ],
+  "nameZh": "蔚蓝海洋"
+}

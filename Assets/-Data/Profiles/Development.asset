@@ -1,0 +1,53 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 50ea77e2f18760b4aaedae32c22dbba0, type: 3}
+  m_Name: Development
+  m_EditorClassIdentifier: Core::GameConfigProfile
+  profileId: development
+  resetTargets: 0
+  resetLocalDataOnFirstRun: 0
+  resetRevision: 1
+  resetAllLocalDataOnNextEditorPlay: 0
+  resetAllLocalDataOnFirstBuildRun: 0
+  isDemo: 1
+  maxChallengeLevels: 5
+  maxCustomLists: 1
+  maxWordsPerList: 5
+  customUnlockLevels: 5
+  allowChineseAndMixed: 1
+  unlockAllFeatures: 0
+  unlockAllChallenges: 0
+  unlockCustomLists: 1
+  unlockCreateLists: 0
+  unlockEditLists: 1
+  unlockDeleteLists: 0
+  unlockDuplicateLists: 0
+  unlockImportLists: 0
+  unlockExportLists: 0
+  unlockAddWords: 1
+  defaults:
+    fullscreen: 0
+    resolutionIndex: 1
+    resizableWindow: 0
+    crt: 1
+    screenShake: 1
+    actionPrompts: 1
+    masterVolume: 0.7
+    sfxVolume: 0.7
+    bgmVolume: 0.7
+    showPinyin: 1
+    uiLanguage: en
+    playerName: Unnamed User #1234
+    wordsPanel: 0
+    timerPanel: 0
+    infoPanel: 1
+    initialChallengeTab: 0

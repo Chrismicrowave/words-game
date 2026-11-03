@@ -1,0 +1,16 @@
+{
+  "name": "Crystal",
+  "words": [
+    "history",
+    "instinct",
+    "landmark",
+    "mission",
+    "network",
+    "outburst",
+    "pioneer",
+    "quarter",
+    "refuge",
+    "strategy"
+  ],
+  "nameZh": "水晶"
+}

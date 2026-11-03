@@ -1,0 +1,11 @@
+{
+  "name": "Foodie",
+  "words": [
+    "pasta",
+    "ramen",
+    "tacos",
+    "carbonara",
+    "biryani",
+    "croissant"
+  ]
+}

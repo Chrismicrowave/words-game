@@ -1,5 +1,4 @@
 // Assets/-Scripts/UI/UIController.cs
-using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Text;
@@ -8,6 +7,7 @@ using SFB;
 using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
+using UnityEngine.Localization.Settings;
 using UnityEngine.UI;
 
 public class UIController : MonoBehaviour
@@ -22,19 +22,11 @@ public class UIController : MonoBehaviour
     private float blinkTimer;
     private bool showCursor = true;
 
-    [Header("Phase List UI")]
+    [Header("Phase Input")]
     [SerializeField] private TMP_InputField phaseInputField;
     [SerializeField] private Color inputFieldActiveColor = Color.white;
     [SerializeField] private Color inputFieldInactiveColor = new Color(0.75f, 0.75f, 0.75f, 1f);
     [SerializeField] private GameObject phaseInputFocusBorder;
-    [SerializeField] private Transform phaseListContent;
-    [SerializeField] private GameObject phaseButtonPrefab;
-    [SerializeField] private Color phaseSelectedColor = Color.yellow;
-    [SerializeField] private Color phaseUnselectedColor = Color.white;
-
-    [Header("Timer UI")]
-    [SerializeField] private TextMeshProUGUI phaseTimeUI;
-    [SerializeField] private TextMeshProUGUI totalTimeUI;
 
     [Header("Delete Animation")]
     [SerializeField] private float deleteDelayBetweenLetters = 0.05f;
@@ -42,17 +34,6 @@ public class UIController : MonoBehaviour
 
     [Header("Action Prompt")]
     [SerializeField] private bool showActionPrompt = true;
-
-    [Header("Tabs")]
-    [SerializeField] private Button myListTabBtn;
-    [SerializeField] private Button dailyTabBtn;
-
-    [Header("Panel Buttons")]
-    [SerializeField] private GameObject myListPanelBtns;
-    [SerializeField] private GameObject dailyPanelBtns;
-
-    [Header("Daily Picker")]
-    [SerializeField] private DailyPickerPanelController dailyPickerPanel;
 
     [Header("Panel Toggles")]
     [SerializeField] private MenuAnimOnOff wordsPanelAnim;
@@ -69,63 +50,54 @@ public class UIController : MonoBehaviour
     [SerializeField] private Button importBtn;
     [SerializeField] private Button exportBtn;
 
-    [Header("Config")]
-    [SerializeField] private GameConfig config;
+    [Header("Sub-managers")]
+    [SerializeField] private PhaseListUIManager phaseListUIManager;
+    [SerializeField] private WordListTabManager wordListTabManager;
 
-    private const string ActiveTabPrefKey    = "ActiveTab"; // "mylist" or "daily"
-    private const string DailyListPathPrefKey = "DailyListPath";
+    [Header("Chinese Language")]
+    [SerializeField] private ChineseDisplayController chineseDisplay;
+
+    [Header("Level Panel")]
+    [SerializeField] private GameObject levelPanel;
+
+    [Header("Demo Limit Prompt")]
+    [SerializeField] private GameObject demoCustomLimitPrompt;
+    [SerializeField] private float demoPromptDuration = 2f;
+
+    private const int    MaxWordLength    = 140;
     private const string WordsPanelPrefKey = "WordsPanelOn";
     private const string TimerPanelPrefKey = "TimerPanelOn";
     private const string InfoPanelPrefKey  = "InfoPanelOn";
 
-    private IWordListProvider myListProvider;
-    private IWordListProvider dailyProvider;
-
     private WordEngine wordEngine;
-    private int selectedPhaseIndex = -1;
+    private SettingsManager actionPromptSettings;
     private Coroutine deleteAnimCoroutine;
     private Color matchedTextOriginalColor;
     private Color phaseInputTextOriginalColor;
 
     void OnEnable()
     {
-        if (GameStateManager.Instance != null)
+        if (Services.Get<GameStateManager>() != null)
         {
-            GameStateManager.Instance.OnStepProcessed += HandleStepProcessed;
-            GameStateManager.Instance.OnPhaseCompleted += HandlePhaseCompleted;
-            GameStateManager.Instance.OnPhaseFailed += HandlePhaseFailed;
-            GameStateManager.Instance.OnPhaseRestarted += HandleRestart;
-            GameStateManager.Instance.OnGameReset += HandleGameReset;
-            GameStateManager.Instance.OnAllPhasesCompleted += HandleAllComplete;
-        }
-        if (PhaseManager.Instance != null)
-        {
-            PhaseManager.Instance.OnWordListChanged += RefreshPhaseList;
-        }
-        if (TimerSystem.Instance != null)
-        {
-            TimerSystem.Instance.OnTimerUpdated += UpdateTimerDisplay;
+            Services.Get<GameStateManager>().OnStepProcessed     += HandleStepProcessed;
+            Services.Get<GameStateManager>().OnPhaseCompleted    += HandlePhaseCompleted;
+            Services.Get<GameStateManager>().OnPhaseFailed       += HandlePhaseFailed;
+            Services.Get<GameStateManager>().OnPhaseRestarted    += HandleRestart;
+            Services.Get<GameStateManager>().OnGameReset         += HandleGameReset;
+            Services.Get<GameStateManager>().OnAllPhasesCompleted += HandleAllComplete;
         }
     }
 
     void OnDisable()
     {
-        if (GameStateManager.Instance != null)
+        if (Services.Get<GameStateManager>() != null)
         {
-            GameStateManager.Instance.OnStepProcessed -= HandleStepProcessed;
-            GameStateManager.Instance.OnPhaseCompleted -= HandlePhaseCompleted;
-            GameStateManager.Instance.OnPhaseFailed -= HandlePhaseFailed;
-            GameStateManager.Instance.OnPhaseRestarted -= HandleRestart;
-            GameStateManager.Instance.OnGameReset -= HandleGameReset;
-            GameStateManager.Instance.OnAllPhasesCompleted -= HandleAllComplete;
-        }
-        if (PhaseManager.Instance != null)
-        {
-            PhaseManager.Instance.OnWordListChanged -= RefreshPhaseList;
-        }
-        if (TimerSystem.Instance != null)
-        {
-            TimerSystem.Instance.OnTimerUpdated -= UpdateTimerDisplay;
+            Services.Get<GameStateManager>().OnStepProcessed     -= HandleStepProcessed;
+            Services.Get<GameStateManager>().OnPhaseCompleted    -= HandlePhaseCompleted;
+            Services.Get<GameStateManager>().OnPhaseFailed       -= HandlePhaseFailed;
+            Services.Get<GameStateManager>().OnPhaseRestarted    -= HandleRestart;
+            Services.Get<GameStateManager>().OnGameReset         -= HandleGameReset;
+            Services.Get<GameStateManager>().OnAllPhasesCompleted -= HandleAllComplete;
         }
     }
 
@@ -134,50 +106,72 @@ public class UIController : MonoBehaviour
         OnDisable();
         OnEnable();
 
-        if (config != null)
+        actionPromptSettings = Services.Get<SettingsManager>();
+        if (actionPromptSettings != null)
         {
-            bool showImportExport = !config.isDemo;
-            if (importBtn != null) importBtn.gameObject.SetActive(showImportExport);
-            if (exportBtn != null) exportBtn.gameObject.SetActive(showImportExport);
-        }
-
-        if (PhaseManager.Instance != null)
-            myListProvider = PhaseManager.Instance.ActiveProvider;
-
-        // Restore saved daily list path if any
-        string savedDailyPath = PlayerPrefs.GetString(DailyListPathPrefKey, "");
-        if (!string.IsNullOrEmpty(savedDailyPath) && System.IO.File.Exists(savedDailyPath))
-            dailyProvider = new DailyWordListProvider(savedDailyPath);
-
-        // Load saved tab preference, default to mylist
-        string savedTab = PlayerPrefs.GetString(ActiveTabPrefKey, "mylist");
-        if (savedTab == "daily")
-        {
-            OnDailyTabClicked();
+            actionPromptSettings.OnSettingsChanged -= HandleActionPromptSettingsChanged;
+            actionPromptSettings.OnSettingsChanged += HandleActionPromptSettingsChanged;
+            ApplyActionPromptSetting();
         }
         else
         {
-            OnMyListTabClicked();
+            showActionPrompt = PlayerPrefs.GetInt(
+                SettingsManager.KeyActionPrompts, showActionPrompt ? 1 : 0) == 1;
         }
 
-        // Restore Words panel state (startOn default = false)
+        if (LevelPanelController.Instance != null)
+        {
+            if (importBtn != null) importBtn.gameObject.SetActive(LevelPanelController.Instance.ShouldShowImportButton);
+            if (exportBtn != null) exportBtn.gameObject.SetActive(LevelPanelController.Instance.ShouldShowExportButton);
+        }
+
+        // Restore Words panel state
         if (wordsPanelAnim != null)
         {
             bool wordsOn = PlayerPrefs.GetInt(WordsPanelPrefKey, 0) == 1;
-            if (wordsOn) wordsPanelAnim.On(); else wordsPanelAnim.Off();
+            if (wordsOn)
+            {
+                wordsPanelAnim.On();
+                if (EventSystem.current != null)
+                    EventSystem.current.SetSelectedGameObject(null);
+            }
+            else
+            {
+                wordsPanelAnim.Off();
+            }
         }
 
-        // Restore Timer panel state (startOn default = false)
+        // Restore Timer panel state
         if (timerPanelAnim != null)
         {
             bool timerOn = PlayerPrefs.GetInt(TimerPanelPrefKey, 0) == 1;
             if (timerOn) timerPanelAnim.On(); else timerPanelAnim.Off();
         }
 
-        // Restore Info panel state (starts active in scene, default = 1)
+        // Restore Info panel state
         _infoPanelOn = PlayerPrefs.GetInt(InfoPanelPrefKey, 1) == 1;
         if (instructionPanel != null)
             instructionPanel.SetActive(_infoPanelOn);
+    }
+
+    private void HandleActionPromptSettingsChanged()
+    {
+        ApplyActionPromptSetting();
+    }
+
+    private void ApplyActionPromptSetting()
+    {
+        if (actionPromptSettings == null) return;
+
+        showActionPrompt = actionPromptSettings.ShowActionPrompts;
+        if (wordEngine != null)
+            UpdateTextDisplay();
+    }
+
+    void OnDestroy()
+    {
+        if (actionPromptSettings != null)
+            actionPromptSettings.OnSettingsChanged -= HandleActionPromptSettingsChanged;
     }
 
     public void Initialize(WordEngine engine)
@@ -186,8 +180,24 @@ public class UIController : MonoBehaviour
         matchedTextOriginalColor = matchedTextUI.color;
         if (phaseInputField != null)
             phaseInputTextOriginalColor = phaseInputField.textComponent.color;
-        UpdateTextDisplay();
-        RefreshPhaseList();
+        phaseListUIManager?.RefreshPhaseList();
+    }
+
+    /// <summary>
+    /// Called by GameCoordinator when a Chinese phase is loaded.
+    /// Rebuilds both the matched and target cell layouts.
+    /// </summary>
+    public void RebuildChineseDisplays(ChinesePhaseData data)
+    {
+        chineseDisplay?.RebuildForChinese(data);
+    }
+
+    /// <summary>
+    /// Called by GameCoordinator for every phase (English, Chinese, or Mixed).
+    /// </summary>
+    public void RebuildMixedDisplays(MixedPhaseParser.MixedPhaseResult parsed)
+    {
+        chineseDisplay?.RebuildForMixed(parsed);
     }
 
     void Update()
@@ -196,17 +206,14 @@ public class UIController : MonoBehaviour
             && EventSystem.current != null
             && EventSystem.current.currentSelectedGameObject == phaseInputField.gameObject;
 
-        // Input field visual feedback
         if (phaseInputField != null)
             phaseInputField.GetComponent<Image>().color = phaseFieldFocused
                 ? inputFieldActiveColor
                 : inputFieldInactiveColor;
 
-        // Orange focus border on the add-phase field
         if (phaseInputFocusBorder != null)
             phaseInputFocusBorder.SetActive(phaseFieldFocused);
 
-        // Gameplay text: dim and freeze cursor when add-phase field has focus
         if (phaseFieldFocused)
         {
             matchedTextUI.color = new Color(0.45f, 0.45f, 0.45f, 1f);
@@ -235,13 +242,27 @@ public class UIController : MonoBehaviour
     {
         if (wordEngine == null) return;
 
-        targetTextUI.text = wordEngine.TargetText;
-        matchedTextUI.text = wordEngine.GetDisplayText(showCursor);
+        bool useCellDisplay = chineseDisplay != null && chineseDisplay.IsShowingCells;
 
-        // Action prompt
-        if (showActionPrompt && GameStateManager.Instance.CurrentState == GameState.Playing)
+        if (useCellDisplay)
         {
-            string prompt = wordEngine.GetActionPrompt();
+            matchedTextUI.gameObject.SetActive(false);
+            targetTextUI.gameObject.SetActive(false);
+            chineseDisplay.SetVisible(true);
+            chineseDisplay.UpdateProgress(wordEngine.MatchedLength);
+        }
+        else
+        {
+            targetTextUI.gameObject.SetActive(true);
+            matchedTextUI.gameObject.SetActive(true);
+            chineseDisplay?.SetVisible(false);
+            targetTextUI.text = wordEngine.TargetText;
+            matchedTextUI.text = wordEngine.GetDisplayText(showCursor);
+        }
+
+        if (showActionPrompt && Services.Get<GameStateManager>().CurrentState == GameState.Playing)
+        {
+            string prompt = BuildActionPrompt();
             if (!string.IsNullOrEmpty(prompt))
                 statusTextUI.text = prompt;
         }
@@ -250,23 +271,18 @@ public class UIController : MonoBehaviour
     private void HandleStepProcessed(StepResult result, Step step)
     {
         UpdateTextDisplay();
-
         if (result == StepResult.Failed)
-        {
-            statusTextUI.text = wordEngine.LastFailureMessage
-                + ". Press Backspace to start again";
-        }
+            statusTextUI.text = BuildFailureMessage();
     }
 
     private void HandlePhaseCompleted()
     {
-        statusTextUI.text = "Phase complete! Hit Return to continue...";
+        statusTextUI.text = LocalizationService.Get("Gameplay", "Gameplay.PhaseComplete");
     }
 
     private void HandlePhaseFailed()
     {
-        statusTextUI.text = wordEngine.LastFailureMessage
-            + ". Press Backspace to start again";
+        statusTextUI.text = BuildFailureMessage();
     }
 
     private void HandleRestart()
@@ -283,171 +299,137 @@ public class UIController : MonoBehaviour
 
     private void HandleAllComplete()
     {
-        targetTextUI.text = "";
+        targetTextUI.text  = "";
         matchedTextUI.text = "";
-        statusTextUI.text = "Congratulations! You completed all phases!";
+        statusTextUI.text  = LocalizationService.Get("Gameplay", "Gameplay.AllPhasesComplete");
     }
 
-    // --- Timer Display ---
+    // --- Phase List Button Callbacks ---
 
-    private void UpdateTimerDisplay(float phaseDuration, float total)
-    {
-        TimeSpan phaseTime = TimeSpan.FromSeconds(phaseDuration);
-        phaseTimeUI.text = FormatTime(phaseTime);
-
-        TimeSpan totalTime = TimeSpan.FromSeconds(total);
-        totalTimeUI.text = FormatTime(totalTime);
-    }
-
-    private string FormatTime(TimeSpan t)
-    {
-        return $"{t.Hours:D2}\"{t.Minutes:D2}\'{t.Seconds:D2}.{t.Milliseconds / 10:D2}";
-    }
-
-    // --- Phase List UI ---
-
-    public void RefreshPhaseList()
-    {
-        if (phaseListContent == null || phaseButtonPrefab == null) return;
-
-        foreach (Transform child in phaseListContent)
-            Destroy(child.gameObject);
-
-        var words = PhaseManager.Instance.Words;
-        for (int i = 0; i < words.Count; i++)
-        {
-            int index = i;
-            GameObject btnObj = Instantiate(phaseButtonPrefab, phaseListContent);
-            btnObj.GetComponentInChildren<TextMeshProUGUI>().text = $"{index + 1}. {words[i]}";
-
-            Button btn = btnObj.GetComponent<Button>();
-            btn.onClick.AddListener(() =>
-            {
-                selectedPhaseIndex = index;
-                HighlightSelectedButton(btnObj);
-            });
-        }
-
-        Canvas.ForceUpdateCanvases();
-    }
-
-    private void HighlightSelectedButton(GameObject selected)
-    {
-        foreach (Transform child in phaseListContent)
-        {
-            Image img = child.GetComponent<Image>();
-            if (img != null)
-                img.color = (child.gameObject == selected) ? phaseSelectedColor : phaseUnselectedColor;
-        }
-    }
-
-    // Button callbacks (wire in Inspector)
     public void OnAddPhaseClicked()
     {
+        var phaseManager = Services.Get<PhaseManager>();
+        if (phaseManager == null) return;
+
+        var lp = LevelPanelController.Instance;
+        if (lp != null && !lp.CanAddWords)
+        {
+            Debug.LogWarning("[UIController] Adding words is disabled by the active profile.");
+            return;
+        }
+
+        if (lp != null && lp.IsWordLimitReached(phaseManager.TotalPhases))
+        {
+            ShowDemoLimitPrompt($"Max {lp.EffectiveMaxWordsPerList} words per list in demo");
+            return;
+        }
+
         string text = phaseInputField.text.Trim();
         if (string.IsNullOrEmpty(text)) return;
 
-        PhaseManager.Instance.AddPhase(text, 0);
-        phaseInputField.text = "";
-        EventSystem.current.SetSelectedGameObject(null);
+        if (text.Length > MaxWordLength)
+            text = text.Substring(0, MaxWordLength);
+
+        if (!phaseManager.AllowChineseAndMixed && PhaseManager.ContainsHanCharacters(text))
+        {
+            Debug.LogWarning("[UIController] Chinese content is disabled; the word was not added.");
+            return;
+        }
+
+        if (PinyinLookup.ContainsChinese(text))
+        {
+            // Open pinyin confirmation popup for any text containing Chinese characters
+            chineseDisplay?.ShowPinyinPopup(text, entry =>
+            {
+                if (!phaseManager.AddMixedPhase(entry)) return;
+                phaseManager.SaveCurrentList();
+                phaseInputField.text = "";
+                if (EventSystem.current != null) EventSystem.current.SetSelectedGameObject(null);
+            }, () => { /* cancelled — leave input as-is */ });
+        }
+        else
+        {
+            if (!phaseManager.AddPhase(text, 0))
+            {
+                Debug.LogWarning("[UIController] The word list does not allow this entry; the word was not added.");
+                return;
+            }
+            phaseManager.SaveCurrentList();
+            phaseInputField.text = "";
+            if (EventSystem.current != null) EventSystem.current.SetSelectedGameObject(null);
+        }
+    }
+
+    private void ShowDemoLimitPrompt(string message)
+    {
+        if (demoCustomLimitPrompt == null) return;
+        var tmp = demoCustomLimitPrompt.GetComponentInChildren<TMPro.TextMeshProUGUI>();
+        if (tmp != null) tmp.text = message;
+        demoCustomLimitPrompt.SetActive(true);
+        if (this.isActiveAndEnabled)
+            StartCoroutine(HideDemoLimitPrompt());
+    }
+
+    private System.Collections.IEnumerator HideDemoLimitPrompt()
+    {
+        yield return new WaitForSeconds(demoPromptDuration);
+        if (demoCustomLimitPrompt != null)
+            demoCustomLimitPrompt.SetActive(false);
     }
 
     public void OnDeletePhaseClicked()
     {
-        if (selectedPhaseIndex < 0) return;
-        PhaseManager.Instance.RemovePhase(selectedPhaseIndex);
-        selectedPhaseIndex = -1;
+        if (LevelPanelController.Instance != null && !LevelPanelController.Instance.CanEditLists)
+        {
+            Debug.LogWarning("[UIController] Editing word lists is disabled by the active profile.");
+            return;
+        }
+        if (phaseListUIManager == null || phaseListUIManager.SelectedPhaseIndex < 0) return;
+        Services.Get<PhaseManager>().RemovePhase(phaseListUIManager.SelectedPhaseIndex);
+        Services.Get<PhaseManager>().SaveCurrentList();
+        phaseListUIManager.ClearSelection();
     }
 
     public void OnSwapPhaseClicked()
     {
-        if (selectedPhaseIndex < 0) return;
-        PhaseManager.Instance.JumpToPhase(selectedPhaseIndex);
-        GameStateManager.Instance.RaisePhaseRestarted();
-        GameStateManager.Instance.TransitionTo(GameState.Playing);
+        if (phaseListUIManager == null || phaseListUIManager.SelectedPhaseIndex < 0) return;
+        Services.Get<PhaseManager>().JumpToPhase(phaseListUIManager.SelectedPhaseIndex);
+        Services.Get<GameStateManager>().RaisePhaseRestarted();
+        Services.Get<GameStateManager>().TransitionTo(GameState.Playing);
     }
 
     public void OnMovePhaseUpClicked()
     {
-        if (selectedPhaseIndex <= 0) return;
-        PhaseManager.Instance.MovePhase(selectedPhaseIndex, selectedPhaseIndex - 1);
-        selectedPhaseIndex--;
+        if (LevelPanelController.Instance != null && !LevelPanelController.Instance.CanEditLists)
+        {
+            Debug.LogWarning("[UIController] Editing word lists is disabled by the active profile.");
+            return;
+        }
+        if (phaseListUIManager == null || phaseListUIManager.SelectedPhaseIndex <= 0) return;
+        int idx = phaseListUIManager.SelectedPhaseIndex;
+        Services.Get<PhaseManager>().MovePhase(idx, idx - 1);
+        Services.Get<PhaseManager>().SaveCurrentList();
+        // RefreshPhaseList has already run (via OnWordListChanged); re-highlight at new position
+        phaseListUIManager.SetSelectedPhaseIndex(idx - 1);
     }
 
     public void OnMovePhaseDownClicked()
     {
-        if (selectedPhaseIndex < 0 || selectedPhaseIndex >= PhaseManager.Instance.TotalPhases - 1) return;
-        PhaseManager.Instance.MovePhase(selectedPhaseIndex, selectedPhaseIndex + 1);
-        selectedPhaseIndex++;
-    }
-
-    [Header("Tab Colors")]
-    [SerializeField] private Color tabActiveColor   = new Color(1f, 0.5f, 0f, 1f);
-    [SerializeField] private Color tabInactiveColor = Color.white;
-
-    private void SetTabColors(bool myListActive)
-    {
-        if (myListTabBtn != null) myListTabBtn.GetComponent<Image>().color = myListActive ? tabActiveColor : tabInactiveColor;
-        if (dailyTabBtn  != null) dailyTabBtn .GetComponent<Image>().color = myListActive ? tabInactiveColor : tabActiveColor;
-    }
-
-    public void OnMyListTabClicked()
-    {
-        PlayerPrefs.SetString(ActiveTabPrefKey, "mylist");
-        if (myListProvider != null)
-            PhaseManager.Instance.LoadWordList(myListProvider);
-        if (myListPanelBtns != null) myListPanelBtns.SetActive(true);
-        if (dailyPanelBtns != null) dailyPanelBtns.SetActive(false);
-        SetTabColors(myListActive: true);
-    }
-
-    public void OnFetchDailyClicked()
-    {
-        if (dailyPickerPanel == null) return;
-        dailyPickerPanel.OnListSelected = (provider) =>
+        if (LevelPanelController.Instance != null && !LevelPanelController.Instance.CanEditLists)
         {
-            dailyProvider = provider;
-            PlayerPrefs.SetString(DailyListPathPrefKey, provider.FilePath);
-            PhaseManager.Instance.LoadWordList(provider);
-            PlayerPrefs.SetString(ActiveTabPrefKey, "daily");
-            if (myListPanelBtns != null) myListPanelBtns.SetActive(false);
-            if (dailyPanelBtns != null) dailyPanelBtns.SetActive(true);
-            SetTabColors(myListActive: false);
-        };
-        dailyPickerPanel.gameObject.SetActive(true);
-    }
-
-    public void OnDailyTabClicked()
-    {
-        SetTabColors(myListActive: false);
-        PlayerPrefs.SetString(ActiveTabPrefKey, "daily");
-
-        if (dailyProvider != null)
-        {
-            PhaseManager.Instance.LoadWordList(dailyProvider);
+            Debug.LogWarning("[UIController] Editing word lists is disabled by the active profile.");
+            return;
         }
-        else
-        {
-            string date = System.DateTime.Now.ToString("yyyy-MM-dd");
-            string dir = System.IO.Path.GetFullPath(System.IO.Path.Combine(Application.dataPath, "..", "DailyLists"));
-            string path = System.IO.Path.Combine(dir, date + ".json");
-
-            if (!System.IO.File.Exists(path))
-            {
-                // Create sample for today if missing
-                if (!System.IO.Directory.Exists(dir))
-                    System.IO.Directory.CreateDirectory(dir);
-                string json = "{\"name\":\"Daily - " + date + "\",\"words\":[\"hello\",\"world\",\"unity\"],\"date\":\"" + date + "\"}";
-                System.IO.File.WriteAllText(path, json);
-            }
-
-            dailyProvider = new DailyWordListProvider(path);
-            PhaseManager.Instance.LoadWordList(dailyProvider);
-        }
-
-        if (myListPanelBtns != null) myListPanelBtns.SetActive(false);
-        if (dailyPanelBtns != null) dailyPanelBtns.SetActive(true);
+        if (phaseListUIManager == null || phaseListUIManager.SelectedPhaseIndex < 0
+            || phaseListUIManager.SelectedPhaseIndex >= Services.Get<PhaseManager>().TotalPhases - 1) return;
+        int idx = phaseListUIManager.SelectedPhaseIndex;
+        Services.Get<PhaseManager>().MovePhase(idx, idx + 1);
+        Services.Get<PhaseManager>().SaveCurrentList();
+        // RefreshPhaseList has already run (via OnWordListChanged); re-highlight at new position
+        phaseListUIManager.SetSelectedPhaseIndex(idx + 1);
     }
+
+    // --- Panel Toggles ---
 
     public void OnToggleWordsClicked()
     {
@@ -456,6 +438,12 @@ public class UIController : MonoBehaviour
         bool isOn = wordsPanelAnim.GetComponent<Animator>().GetBool("ON");
         PlayerPrefs.SetInt(WordsPanelPrefKey, isOn ? 1 : 0);
         PlayerPrefs.Save();
+
+        // Prevent auto-focus on the input field when the panel opens.
+        // InputHandler.IsUIFocused() already handles blocking game input
+        // while the input field is focused — no panel-level block needed.
+        if (isOn && EventSystem.current != null)
+            EventSystem.current.SetSelectedGameObject(null);
     }
 
     public void OnToggleTimerClicked()
@@ -481,26 +469,71 @@ public class UIController : MonoBehaviour
         if (settingsPanel != null) settingsPanel.gameObject.SetActive(true);
     }
 
+    public void OnPlayBtnClicked()
+    {
+        if (levelPanel != null) levelPanel.SetActive(true);
+    }
+
     public void OnImportClicked()
     {
         var ext = new[] { new ExtensionFilter("Text Files", "txt") };
         StandaloneFileBrowser.OpenFilePanelAsync("Import Word List", "", ext, false, paths =>
         {
             if (paths.Length == 0 || string.IsNullOrEmpty(paths[0])) return;
-            var provider = TxtWordListImporter.ImportFromTxt(paths[0]);
-            PhaseManager.Instance.LoadWordList(provider);
+
+            var phaseManager = Services.Get<PhaseManager>();
+            if (phaseManager == null) return;
+            if (LevelPanelController.Instance != null && !LevelPanelController.Instance.CanImportLists)
+            {
+                Debug.LogWarning("[UIController] Importing custom lists is disabled by the active profile.");
+                return;
+            }
+            if (!phaseManager.AllowChineseAndMixed &&
+                !phaseManager.CanLoadWordList(new LevelWordListProvider(paths[0])))
+            {
+                Debug.LogWarning("[UIController] Chinese content is disabled; the imported list was not written or activated.");
+                return;
+            }
+
+            var provider = TxtWordListImporter.ImportFromTxt(paths[0], phaseManager.CanLoadWordList);
+            if (provider == null)
+            {
+                Debug.LogWarning("[UIController] Import rejected; no files were written.");
+                return;
+            }
+            if (!phaseManager.LoadWordList(provider))
+            {
+                Debug.LogWarning("[UIController] The imported list could not be activated.");
+                return;
+            }
+
+            // Update tab manager state: set provider + persist path + mark active tab as mylist.
+            // Call these directly rather than through OnMyListTabClicked — the StandaloneFileBrowser
+            // async callback is not guaranteed to be on Unity's main thread on all platforms, so
+            // we keep the Unity API surface minimal and explicit.
+            wordListTabManager?.SetMyListProvider(provider);
+            wordListTabManager?.SaveMyListPath(provider.FilePath);
         });
     }
 
     public void OnExportClicked()
     {
-        var provider = PhaseManager.Instance.ActiveProvider;
-        string defaultName = provider.DisplayName.Replace(" ", "_");
+        if (LevelPanelController.Instance != null && !LevelPanelController.Instance.CanExportLists)
+        {
+            Debug.LogWarning("[UIController] Exporting custom lists is disabled by the active profile.");
+            return;
+        }
+        var provider = Services.Get<PhaseManager>().ActiveProvider;
+        string defaultName = (provider?.DisplayName ?? "wordlist").Replace(" ", "_");
+        // Snapshot the display words from PhaseManager — provider.GetWords() may be empty for
+        // Chinese/Mixed lists where the provider stores chineseWords/mixedWords, not words[].
+        // PhaseManager.Words is always the rebuilt display list populated by LoadWordList().
+        var words = new System.Collections.Generic.List<string>(Services.Get<PhaseManager>().Words);
         var ext = new[] { new ExtensionFilter("Text Files", "txt") };
         StandaloneFileBrowser.SaveFilePanelAsync("Export Word List", "", defaultName, ext, path =>
         {
             if (string.IsNullOrEmpty(path)) return;
-            TxtWordListImporter.ExportToTxt(provider, path);
+            System.IO.File.WriteAllLines(path, words);
         });
     }
 
@@ -568,4 +601,34 @@ public class UIController : MonoBehaviour
 
         return result.ToString();
     }
+
+    private string BuildFailureMessage()
+    {
+        string verbKey = wordEngine.FailedExpectedAction == "hold"
+            ? "Gameplay.VerbHoldLower" : "Gameplay.VerbReleaseLower";
+        string verb = LocalizationService.Get("Gameplay", verbKey);
+        var args = new Dictionary<string, object>
+        {
+            { "action", verb },
+            { "key",    wordEngine.FailedExpectedKey },
+            { "got",    wordEngine.FailedGotKey }
+        };
+        return LocalizationService.GetSmart("Gameplay", "Gameplay.ExpectedTo", args)
+             + LocalizationService.Get("Gameplay", "Gameplay.FailureSuffix");
+    }
+
+    private string BuildActionPrompt()
+    {
+        if (wordEngine == null || wordEngine.IsComplete) return "";
+        string verbKey = wordEngine.CurrentStepAction == StepAction.Hold
+            ? "Gameplay.VerbHold" : "Gameplay.VerbRelease";
+        string verb = LocalizationService.Get("Gameplay", verbKey);
+        var args = new Dictionary<string, object>
+        {
+            { "action", verb },
+            { "key",    wordEngine.CurrentStepLetter }
+        };
+        return LocalizationService.GetSmart("Gameplay", "Gameplay.ActionPrompt", args);
+    }
+
 }

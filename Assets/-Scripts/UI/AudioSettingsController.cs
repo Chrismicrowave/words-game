@@ -15,14 +15,14 @@ public class AudioSettingsController : MonoBehaviour
     {
         _initializing = true;
 
-        float master = SettingsManager.Instance != null
-            ? SettingsManager.Instance.MasterVolume
+        float master = Services.Get<SettingsManager>() != null
+            ? Services.Get<SettingsManager>().MasterVolume
             : PlayerPrefs.GetFloat(SettingsManager.KeyMasterVolume, 1f);
-        float sfx = SettingsManager.Instance != null
-            ? SettingsManager.Instance.SFXVolume
+        float sfx = Services.Get<SettingsManager>() != null
+            ? Services.Get<SettingsManager>().SFXVolume
             : PlayerPrefs.GetFloat(SettingsManager.KeySFXVolume, 1f);
-        float bgm = SettingsManager.Instance != null
-            ? SettingsManager.Instance.BGMVolume
+        float bgm = Services.Get<SettingsManager>() != null
+            ? Services.Get<SettingsManager>().BGMVolume
             : PlayerPrefs.GetFloat(SettingsManager.KeyBGMVolume, 1f);
 
         if (masterSlider != null) masterSlider.SetValueWithoutNotify(master);
@@ -35,7 +35,7 @@ public class AudioSettingsController : MonoBehaviour
     public void OnMasterChanged(float value)
     {
         if (_initializing) return;
-        if (SettingsManager.Instance != null) SettingsManager.Instance.MasterVolume = value;
+        if (Services.Get<SettingsManager>() != null) Services.Get<SettingsManager>().MasterVolume = value;
         else PlayerPrefs.SetFloat(SettingsManager.KeyMasterVolume, value);
         PlayerPrefs.Save();
     }
@@ -43,7 +43,7 @@ public class AudioSettingsController : MonoBehaviour
     public void OnSFXChanged(float value)
     {
         if (_initializing) return;
-        if (SettingsManager.Instance != null) SettingsManager.Instance.SFXVolume = value;
+        if (Services.Get<SettingsManager>() != null) Services.Get<SettingsManager>().SFXVolume = value;
         else PlayerPrefs.SetFloat(SettingsManager.KeySFXVolume, value);
         PlayerPrefs.Save();
     }
@@ -51,7 +51,7 @@ public class AudioSettingsController : MonoBehaviour
     public void OnBGMChanged(float value)
     {
         if (_initializing) return;
-        if (SettingsManager.Instance != null) SettingsManager.Instance.BGMVolume = value;
+        if (Services.Get<SettingsManager>() != null) Services.Get<SettingsManager>().BGMVolume = value;
         else PlayerPrefs.SetFloat(SettingsManager.KeyBGMVolume, value);
         PlayerPrefs.Save();
     }

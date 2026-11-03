@@ -1,0 +1,91 @@
+{
+  "name": "Travel",
+  "nameZh": "旅行",
+  "mixedWords": [
+    {
+      "segments": [
+        {
+          "type": "chinese",
+          "entries": [
+            {
+              "character": "出",
+              "pinyin": "chu"
+            },
+            {
+              "character": "游",
+              "pinyin": "you"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "segments": [
+        {
+          "type": "chinese",
+          "entries": [
+            {
+              "character": "攻",
+              "pinyin": "gong"
+            },
+            {
+              "character": "略",
+              "pinyin": "lve"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "segments": [
+        {
+          "type": "chinese",
+          "entries": [
+            {
+              "character": "打",
+              "pinyin": "da"
+            },
+            {
+              "character": "卡",
+              "pinyin": "ka"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "segments": [
+        {
+          "type": "chinese",
+          "entries": [
+            {
+              "character": "自",
+              "pinyin": "zi"
+            },
+            {
+              "character": "驾",
+              "pinyin": "jia"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "segments": [
+        {
+          "type": "chinese",
+          "entries": [
+            {
+              "character": "穷",
+              "pinyin": "qiong"
+            },
+            {
+              "character": "游",
+              "pinyin": "you"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

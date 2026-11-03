@@ -8,7 +8,7 @@ public class WordEngine
     private readonly List<Step> steps = new List<Step>();
     private readonly Dictionary<string, int> letterOccurrences = new Dictionary<string, int>();
     private string targetText = "";
-    private static readonly string blockChar = "<size=75%>\u2588</size>";
+    private const string CursorBlockChar = "<size=75%>\u2588</size>";
 
     public int CurrentStep { get; private set; }
     public int TotalSteps => steps.Count;
@@ -17,18 +17,100 @@ public class WordEngine
     public string LastFailureMessage { get; private set; } = "";
     public bool IsComplete => CurrentStep >= TotalSteps;
 
+    // Structured failure data — used by UIController to compose localized failure messages
+    public string FailedExpectedAction { get; private set; } = "";
+    public string FailedExpectedKey { get; private set; } = "";
+    public string FailedGotKey { get; private set; } = "";
+
+    // Current step data — used by UIController to compose localized action prompts
+    public StepAction CurrentStepAction => (CurrentStep < steps.Count) ? steps[CurrentStep].Action : StepAction.Hold;
+    public string CurrentStepLetter => (CurrentStep < steps.Count) ? targetText[steps[CurrentStep].TargetTextIndex].ToString() : "";
+
+    // Chinese mode
+    public bool IsChinesePhase { get; private set; }
+    public bool IsMixedPhase { get; private set; }
+    public ChinesePhaseData CurrentChineseData { get; private set; }
+    public MixedPhaseParser.MixedPhaseResult CurrentMixedData { get; private set; }
+
+    // Number of pinyin letters correctly typed so far (equals CurrentStep for plain phases)
+    public int MatchedLength => CurrentStep;
+
+    // How many character boundaries have been passed at the current typed position
+    public int CompletedCharacterCount
+    {
+        get
+        {
+            if (!IsChinesePhase) return 0;
+            int count = 0;
+            foreach (int b in CurrentChineseData.boundaries)
+            {
+                if (CurrentStep >= b) count++;
+                else break;
+            }
+            return count;
+        }
+    }
+
     public void LoadWord(string word)
     {
+        IsChinesePhase = false;
+        IsMixedPhase = false;
+        CurrentChineseData = default;
+        CurrentMixedData = default;
         targetText = word;
         CurrentStep = 0;
         LastFailureMessage = "";
         ParseSteps();
     }
 
+    public void LoadChineseWord(ChineseWordEntry chineseWord)
+    {
+        // Build ChinesePhaseData
+        var entries = chineseWord.entries;
+        int cumulative = 0;
+        var boundaries = new int[entries.Count];
+        var characters = new string[entries.Count];
+        var entryArr = new ChinesePhaseEntry[entries.Count];
+        var pinyinBuilder = new System.Text.StringBuilder();
+
+        for (int i = 0; i < entries.Count; i++)
+        {
+            pinyinBuilder.Append(entries[i].pinyin);
+            cumulative += entries[i].pinyin.Length;
+            boundaries[i] = cumulative;
+            characters[i] = entries[i].character;
+            entryArr[i] = entries[i];
+        }
+
+        var data = new ChinesePhaseData
+        {
+            typeTarget = pinyinBuilder.ToString(),
+            boundaries = boundaries,
+            characters = characters,
+            entries = entryArr
+        };
+
+        // LoadWord resets flags — set them AFTER
+        LoadWord(data.typeTarget);
+        CurrentChineseData = data;
+        IsChinesePhase = true;
+    }
+
+    public void LoadMixedWord(MixedPhaseParser.MixedPhaseResult parsed)
+    {
+        // LoadWord resets flags — set them AFTER
+        LoadWord(parsed.typeTarget);
+        CurrentMixedData = parsed;
+        IsMixedPhase = true;
+    }
+
     public void Reset()
     {
         CurrentStep = 0;
         LastFailureMessage = "";
+        FailedExpectedAction = "";
+        FailedExpectedKey = "";
+        FailedGotKey = "";
     }
 
     private void ParseSteps()
@@ -101,6 +183,9 @@ public class WordEngine
 
         string expectedAction = step.Action == StepAction.Hold ? "hold" : "release";
         LastFailureMessage = $"Expected to {expectedAction} '{step.Letter}', but got '{key}'";
+        FailedExpectedAction = expectedAction;
+        FailedExpectedKey = step.Letter;
+        FailedGotKey = key.ToString();
         return StepResult.Failed;
     }
 
@@ -119,7 +204,7 @@ public class WordEngine
                 }
                 else if (stepIndex == CurrentStep)
                 {
-                    display += showCursor ? blockChar : " ";
+                    display += showCursor ? CursorBlockChar : " ";
                 }
                 else
                 {

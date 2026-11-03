@@ -1,0 +1,11 @@
+{
+  "name": "Names",
+  "words": [
+    "olivia",
+    "amelia",
+    "samantha",
+    "isabella",
+    "victoria",
+    "charlotte"
+  ]
+}

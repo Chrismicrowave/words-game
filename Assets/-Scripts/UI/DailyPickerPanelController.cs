@@ -14,6 +14,7 @@ public class DailyPickerPanelController : MonoBehaviour
     [SerializeField] private Button loadBtn;
     [SerializeField] private Color dateSelectedColor   = new Color(1f, 0.5f, 0f, 1f);
     [SerializeField] private Color dateUnselectedColor = Color.white;
+    [SerializeField] private TMP_FontAsset chineseFontAsset; // NotoSansSC — for Chinese/Mixed word labels
 
     public System.Action<DailyWordListProvider> OnListSelected;
 
@@ -23,7 +24,7 @@ public class DailyPickerPanelController : MonoBehaviour
 
     void OnEnable()
     {
-        if (InputHandler.Instance != null) InputHandler.Instance.SetGameplayBlocked(true);
+        if (Services.Get<InputHandler>() != null) Services.Get<InputHandler>().SetGameplayBlocked(true);
         selectedProvider = null;
         selectedDateImage = null;
         if (loadBtn != null) loadBtn.interactable = false;
@@ -42,7 +43,7 @@ public class DailyPickerPanelController : MonoBehaviour
     private void LoadAllLists()
     {
         allProviders.Clear();
-        string dir = Path.GetFullPath(Path.Combine(Application.dataPath, "..", "DailyLists"));
+        string dir = Path.Combine(Application.streamingAssetsPath, "DailyLists");
         if (!Directory.Exists(dir)) return;
 
         foreach (var file in Directory.GetFiles(dir, "*.json").OrderByDescending(f => f))
@@ -95,11 +96,17 @@ public class DailyPickerPanelController : MonoBehaviour
 
         // Populate word preview
         ClearWordPreview();
+        bool needsChineseFont = chineseFontAsset != null &&
+            (provider.LanguageMode == LanguageMode.Chinese || provider.LanguageMode == LanguageMode.Mixed);
         foreach (var word in provider.GetWords())
         {
             var item = Instantiate(listItemPrefab, wordContent);
             var label = item.GetComponentInChildren<TextMeshProUGUI>();
-            if (label != null) label.text = word;
+            if (label != null)
+            {
+                label.text = word;
+                if (needsChineseFont) label.font = chineseFontAsset;
+            }
 
             // Word items are display-only — remove button interaction
             var btn = item.GetComponent<Button>();
@@ -118,13 +125,13 @@ public class DailyPickerPanelController : MonoBehaviour
     {
         if (selectedProvider == null) return;
         OnListSelected?.Invoke(selectedProvider);
-        if (InputHandler.Instance != null) InputHandler.Instance.SetGameplayBlocked(false);
+        if (Services.Get<InputHandler>() != null) Services.Get<InputHandler>().SetGameplayBlocked(false);
         gameObject.SetActive(false);
     }
 
     public void Close()
     {
-        if (InputHandler.Instance != null) InputHandler.Instance.SetGameplayBlocked(false);
+        if (Services.Get<InputHandler>() != null) Services.Get<InputHandler>().SetGameplayBlocked(false);
         gameObject.SetActive(false);
     }
 }

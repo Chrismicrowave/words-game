@@ -1,0 +1,16 @@
+{
+  "name": "Final Boss",
+  "words": [
+    "courage",
+    "kindness",
+    "patience",
+    "honesty",
+    "wisdom",
+    "bravery",
+    "loyalty",
+    "mercy",
+    "honor",
+    "grace"
+  ],
+  "nameZh": "最终BOSS"
+}

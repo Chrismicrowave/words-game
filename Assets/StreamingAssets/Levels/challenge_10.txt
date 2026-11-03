@@ -1,0 +1,16 @@
+{
+  "name": "Fire Dance",
+  "words": [
+    "universe",
+    "vibrant",
+    "weather",
+    "ancient",
+    "billion",
+    "climate",
+    "destiny",
+    "emotion",
+    "freedom",
+    "gravity"
+  ],
+  "nameZh": "火舞"
+}

@@ -2,10 +2,8 @@
 using System;
 using UnityEngine;
 
-public class GameStateManager : MonoBehaviour
+public class GameStateManager : SingletonBehaviour<GameStateManager>
 {
-    public static GameStateManager Instance { get; private set; }
-
     public GameState CurrentState { get; private set; } = GameState.Idle;
 
     // State transition events
@@ -17,19 +15,6 @@ public class GameStateManager : MonoBehaviour
     public event Action OnPhaseRestarted;
     public event Action OnAllPhasesCompleted;
     public event Action OnGameReset;
-
-    void Awake()
-    {
-        if (Instance == null)
-        {
-            Instance = this;
-        }
-        else
-        {
-            Destroy(gameObject);
-            return;
-        }
-    }
 
     public void TransitionTo(GameState newState)
     {

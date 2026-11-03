@@ -1,0 +1,242 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5b11a58205ec3474ca216360e9fa74a8, type: 3}
+  m_Name: UI Shared Data
+  m_EditorClassIdentifier: Unity.Localization::UnityEngine.Localization.Tables.SharedTableData
+  m_TableCollectionName: UI
+  m_TableCollectionNameGuidString: b0610b34cc9b175479751017d50609a0
+  m_Entries:
+  - m_Id: 657448960
+    m_Key: UI.HUD.WordsBtn
+    m_Metadata:
+      m_Items: []
+  - m_Id: 732946432
+    m_Key: UI.HUD.TimerBtn
+    m_Metadata:
+      m_Items: []
+  - m_Id: 737140736
+    m_Key: UI.HUD.InfoBtn
+    m_Metadata:
+      m_Items: []
+  - m_Id: 737140737
+    m_Key: UI.HUD.ResetBtn
+    m_Metadata:
+      m_Items: []
+  - m_Id: 741335040
+    m_Key: UI.HUD.SettingsBtn
+    m_Metadata:
+      m_Items: []
+  - m_Id: 741335041
+    m_Key: UI.HUD.CloseBtn
+    m_Metadata:
+      m_Items: []
+  - m_Id: 741335042
+    m_Key: UI.Settings.Title
+    m_Metadata:
+      m_Items: []
+  - m_Id: 741335043
+    m_Key: UI.Settings.TabAudio
+    m_Metadata:
+      m_Items: []
+  - m_Id: 741335044
+    m_Key: UI.Settings.TabDisplay
+    m_Metadata:
+      m_Items: []
+  - m_Id: 741335045
+    m_Key: UI.Settings.TabGameplay
+    m_Metadata:
+      m_Items: []
+  - m_Id: 741335046
+    m_Key: UI.Settings.TabCustom
+    m_Metadata:
+      m_Items: []
+  - m_Id: 741335047
+    m_Key: UI.Settings.ResetDefaultsBtn
+    m_Metadata:
+      m_Items: []
+  - m_Id: 741335048
+    m_Key: UI.Settings.CloseBtn
+    m_Metadata:
+      m_Items: []
+  - m_Id: 741335049
+    m_Key: UI.Settings.Audio.Master
+    m_Metadata:
+      m_Items: []
+  - m_Id: 741335050
+    m_Key: UI.Settings.Audio.SFX
+    m_Metadata:
+      m_Items: []
+  - m_Id: 741335051
+    m_Key: UI.Settings.Audio.BGM
+    m_Metadata:
+      m_Items: []
+  - m_Id: 741335052
+    m_Key: UI.Settings.Display.Fullscreen
+    m_Metadata:
+      m_Items: []
+  - m_Id: 741335053
+    m_Key: UI.Settings.Display.CRTFilter
+    m_Metadata:
+      m_Items: []
+  - m_Id: 741335054
+    m_Key: UI.Settings.Display.Resolution
+    m_Metadata:
+      m_Items: []
+  - m_Id: 741335055
+    m_Key: UI.Settings.Display.ScreenShake
+    m_Metadata:
+      m_Items: []
+  - m_Id: 741335056
+    m_Key: UI.Settings.Display.ShowPinyin
+    m_Metadata:
+      m_Items: []
+  - m_Id: 741335057
+    m_Key: UI.Settings.Display.Language
+    m_Metadata:
+      m_Items: []
+  - m_Id: 741335058
+    m_Key: UI.WordList.SwapBtn
+    m_Metadata:
+      m_Items: []
+  - m_Id: 741335059
+    m_Key: UI.WordList.UpBtn
+    m_Metadata:
+      m_Items: []
+  - m_Id: 741335060
+    m_Key: UI.WordList.DownBtn
+    m_Metadata:
+      m_Items: []
+  - m_Id: 741335061
+    m_Key: UI.WordList.DeleteBtn
+    m_Metadata:
+      m_Items: []
+  - m_Id: 741335062
+    m_Key: UI.WordList.AddBtn
+    m_Metadata:
+      m_Items: []
+  - m_Id: 741335063
+    m_Key: UI.WordList.PhasePlaceholder
+    m_Metadata:
+      m_Items: []
+  - m_Id: 741335064
+    m_Key: UI.DailyPicker.Title
+    m_Metadata:
+      m_Items: []
+  - m_Id: 741335065
+    m_Key: UI.DailyPicker.LabelDates
+    m_Metadata:
+      m_Items: []
+  - m_Id: 741335066
+    m_Key: UI.DailyPicker.LabelWords
+    m_Metadata:
+      m_Items: []
+  - m_Id: 741335067
+    m_Key: UI.DailyPicker.LoadBtn
+    m_Metadata:
+      m_Items: []
+  - m_Id: 741335068
+    m_Key: UI.DailyPicker.CloseBtn
+    m_Metadata:
+      m_Items: []
+  - m_Id: 741335069
+    m_Key: UI.DailyPicker.SearchPlaceholder
+    m_Metadata:
+      m_Items: []
+  - m_Id: 741335070
+    m_Key: UI.PinyinPopup.Title
+    m_Metadata:
+      m_Items: []
+  - m_Id: 741335071
+    m_Key: UI.PinyinPopup.CancelBtn
+    m_Metadata:
+      m_Items: []
+  - m_Id: 741335072
+    m_Key: UI.PinyinPopup.OKBtn
+    m_Metadata:
+      m_Items: []
+  - m_Id: 741335073
+    m_Key: UI.HUD.PlayBtn
+    m_Metadata:
+      m_Items: []
+  - m_Id: 741335074
+    m_Key: UI.Level.Title
+    m_Metadata:
+      m_Items: []
+  - m_Id: 741335075
+    m_Key: UI.Level.TabChallenges
+    m_Metadata:
+      m_Items: []
+  - m_Id: 741335076
+    m_Key: UI.Level.TabCustom
+    m_Metadata:
+      m_Items: []
+  - m_Id: 741335077
+    m_Key: UI.Level.TabCommunity
+    m_Metadata:
+      m_Items: []
+  - m_Id: 741335078
+    m_Key: UI.Level.CancelBtn
+    m_Metadata:
+      m_Items: []
+  - m_Id: 741335079
+    m_Key: UI.Level.OKBtn
+    m_Metadata:
+      m_Items: []
+  - m_Id: 741335080
+    m_Key: UI.Level.ImportBtn
+    m_Metadata:
+      m_Items: []
+  - m_Id: 741335081
+    m_Key: UI.Level.ExportBtn
+    m_Metadata:
+      m_Items: []
+  - m_Id: 741335082
+    m_Key: UI.Level.CreateListBtn
+    m_Metadata:
+      m_Items: []
+  - m_Id: 741335083
+    m_Key: UI.Level.DeleteListBtn
+    m_Metadata:
+      m_Items: []
+  - m_Id: 741335104
+    m_Key: UI.Instructions.Body
+    m_Metadata:
+      m_Items: []
+  - m_Id: 741335105
+    m_Key: UI.Settings.Gameplay.Username
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1103553958502400
+    m_Key: UI.Level.UnlockCustom
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1103554025611264
+    m_Key: UI.Level.UnlockCommunity
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1139348652154880
+    m_Key: 'UI.Level.CopyListBtn
+
+'
+    m_Metadata:
+      m_Items: []
+  m_Metadata:
+    m_Items: []
+  m_KeyGenerator:
+    rid: 7151743906518401108
+  references:
+    version: 2
+    RefIds:
+    - rid: 7151743906518401108
+      type: {class: DistributedUIDGenerator, ns: UnityEngine.Localization.Tables, asm: Unity.Localization}
+      data:
+        m_CustomEpoch: 1783582829934

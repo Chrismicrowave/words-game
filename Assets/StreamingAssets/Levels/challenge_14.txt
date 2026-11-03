@@ -1,0 +1,16 @@
+{
+  "name": "Golden Hour",
+  "words": [
+    "No Food",
+    "Melbourne",
+    "skrrrt",
+    "Good Game",
+    "Well Played",
+    "Too Easy",
+    "Bring It",
+    "Next Round",
+    "Almost",
+    "Nice Try"
+  ],
+  "nameZh": "金色时刻"
+}

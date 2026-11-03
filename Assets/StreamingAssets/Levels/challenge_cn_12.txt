@@ -1,0 +1,91 @@
+{
+  "name": "Weather",
+  "nameZh": "天气",
+  "mixedWords": [
+    {
+      "segments": [
+        {
+          "type": "chinese",
+          "entries": [
+            {
+              "character": "热",
+              "pinyin": "re"
+            },
+            {
+              "character": "化",
+              "pinyin": "hua"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "segments": [
+        {
+          "type": "chinese",
+          "entries": [
+            {
+              "character": "暴",
+              "pinyin": "bao"
+            },
+            {
+              "character": "雨",
+              "pinyin": "yu"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "segments": [
+        {
+          "type": "chinese",
+          "entries": [
+            {
+              "character": "台",
+              "pinyin": "tai"
+            },
+            {
+              "character": "风",
+              "pinyin": "feng"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "segments": [
+        {
+          "type": "chinese",
+          "entries": [
+            {
+              "character": "寒",
+              "pinyin": "han"
+            },
+            {
+              "character": "潮",
+              "pinyin": "chao"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "segments": [
+        {
+          "type": "chinese",
+          "entries": [
+            {
+              "character": "冰",
+              "pinyin": "bing"
+            },
+            {
+              "character": "雹",
+              "pinyin": "bao"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "name": "Iron Will",
+  "words": [
+    "triumph",
+    "utensil",
+    "venture",
+    "whistle",
+    "barrier",
+    "capsule",
+    "dynamic",
+    "element",
+    "fractal",
+    "glacier"
+  ],
+  "nameZh": "钢铁意志"
+}

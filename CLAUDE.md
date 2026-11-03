@@ -13,25 +13,46 @@ Architecture details: `docs/architecture.md`
 - CRT-Free shader package (post-processing)
 
 ## Debugging Rules
-- After 2 failed fix attempts on the same bug: search online (WebSearch) before trying again — do not rely solely on internal reasoning
-- Always search for Unity-version-specific solutions (include "Unity 6" in queries)
-- After 2 failed fix attempts: also audit the Unity Editor thoroughly for missing references (e.g. unassigned slider OnClick callbacks), duplicate components (e.g. two SettingsManager instances), and stale static declarations — code bugs and Editor wiring bugs are equally likely
+- After 2 failed fixes: search online (include "Unity 6" in queries) and audit Editor thoroughly for missing references, duplicate components, and stale statics.
 
 ## UI Element Creation
-- Always use Unity's built-in UI elements (Slider, InputField, Toggle, Dropdown, ScrollView, etc.) via DefaultControls or ExecuteMenuItem — never build them manually from scratch via MCP create_game_object
-- Only build custom UI from primitives if the built-in element genuinely cannot do the job, and ask the user first before doing so
+- Use built-in Unity UI elements (Slider, InputField, etc.) via DefaultControls/ExecuteMenuItem only — never build from primitives via MCP without asking first.
 
 ## Editor Workflow
-- Always use Unity MCP (coplay-mcp) tools for all Unity Editor tasks — creating assets, wiring components, building scene hierarchy, etc.
-- Never ask the user to perform Unity Editor actions manually unless the MCP tool truly cannot do it
-- All scene text must use TextMeshProUGUI (TMP) — never legacy Unity Text component
+- Use Unity MCP tools for all Editor tasks. Never ask the user to do manual Editor actions unless MCP truly can't. All scene text must be TextMeshProUGUI.
+
+## Prefab / Scene Safety
+- **Rebuild scripts are one-time only.** Once tweaked in Editor, never re-run — they wipe children.
+- **Targeted edits only on existing prefabs.** Use `set_property`, never child-destruction.
+- **Commit after every MCP prefab/scene edit** — keeps my changes separate from user's.
+- **Revert by specific commit hash, never HEAD.** Warn before any destructive git op if `.prefab`/`.unity` files are affected.
+- **Prompt to commit editor changes first** before touching the same prefab/scene file.
+
+## Asset Deletion Safety
+- **GUID-check before deleting any asset.** Grep target `.meta` GUIDs against the scene and prefabs.
+- **TMP `Examples & Extras/` fonts are in use** — verify GUIDs before deleting demo-content-looking folders.
+- **Git checkout restore may still fail** — Unity Library/ cache can hold missing state. Force reimport or delete Library/.
 
 ## Conventions
-- Script folder uses dash prefix (`-Scripts`) for sorting at top of Assets
-- Core assembly (`Core.asmdef`) for shared types and systems; UI/Feedback/Audio in Assembly-CSharp
-- GameCoordinator lives at `-Scripts/` root (not in Core asmdef) because it references Assembly-CSharp types
-- Singletons use `Instance` pattern with `Destroy(gameObject)` guard in Awake
-- Systems communicate via C# events on GameStateManager — no direct cross-references
-- Systems subscribe to events in OnEnable/Start, unsubscribe in OnDisable
-- InputHandler clears EventSystem selection on Enter/Backspace to prevent UI button double-triggers
-- TimerSystem pauses on failed input, resumes on restart — paused time excluded from phase duration
+- `-Scripts/` sorts at top of Assets. Core.asmdef for shared types; UI/Feedback/Audio in Assembly-CSharp.
+- GameCoordinator lives at `-Scripts/` root (references Assembly-CSharp types).
+- Singletons: `Instance` pattern with `Destroy(gameObject)` guard in Awake.
+- Systems communicate via C# events on GameStateManager — no direct cross-references.
+- Subscribe in OnEnable/Start, unsubscribe in OnDisable.
+- InputHandler clears EventSystem selection on Enter/Backspace to prevent button double-triggers.
+- TimerSystem pauses on failed input, resumes on restart — paused time excluded from phase duration.
+
+
+[UCC-START — do not edit]
+## Universal Unity Rules (from ucc-gateway v0.1.1)
+
+- **Never `??` with Unity Objects** — use `if (x == null)` only
+- **Always use the new Input System** — never `Input.GetKey`
+- **Editor values beat script defaults** — check inspector first
+- **Stop Play Mode before structural edits** — changes don't persist
+- **Script controls initial active state** — Awake()/Start(), not GO toggle
+- **Wire references via MCP** — never tell user to do it
+- **Use live Unity Pipeline tools** for scene hierarchy, object targets, assets, and Inspector values.
+- **RefHub for shared systems** — single source for cameras, UI, managers
+- **Use UCC Gateway** for codebase, reference, and knowledge queries; use live Unity Pipeline queries for Editor state and scene/asset data.
+[UCC-END]

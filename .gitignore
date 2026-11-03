@@ -5,6 +5,7 @@
 .utmp/
 /[Ll]ibrary/
 /[Tt]emp/
+/[Aa]ssets/_Recovery/
 /[Oo]bj/
 /[Bb]uild/
 /[Bb]uilds/
@@ -97,3 +98,55 @@ InitTestScene*.unity*
 
 # Auto-generated scenes by play mode tests
 /[Aa]ssets/[Ii]nit[Tt]est[Ss]cene*.unity*
+# ── Unity ─────────────────────────────────────────────────────
+ProfilerCaptures/
+
+# Asset meta data should only be ignored when manually modified
+
+*.userosscache
+
+# Rider
+.idea/
+*.sln.iml
+
+# VS Code
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Unity Editor per-user settings
+UserSettings/
+
+# ── CRITICAL: Binary art assets ────────────────────────────
+# DO NOT put *.fbx, *.psd, *.tga, *.wav, *.mp3 etc. here.
+# If listed here, git IGNORES them and LFS CAN'T BACK THEM UP.
+# If a binary file is missing from your repo, CHECK .gitignore FIRST.
+# ─────────────────────────────────────────────────────────────
+
+# AI / CLI / MCP tooling (teammates get raw Unity project only)
+# Everything serving only an AI workflow stays local and out of git.
+**/.claude/
+**/.codex/
+**/.agents/
+**/.hermes/
+**/.opencode/
+**/.cursor/
+**/.aider/
+**/.gemini/
+**/.codeium/
+**/.windsurf/
+**/.codegraph/
+**/.playwright-mcp/
+**/.mcp.json
+**/AGENTS.md
+**/CLAUDE.md
+**/CODEX.md
+**/codex.md
+**/.cursorrules
+**/.cursorignore
+**/opencode.json
+**/cursor-agent/
+**/cursor-agent-*/
+**/.claude/state/

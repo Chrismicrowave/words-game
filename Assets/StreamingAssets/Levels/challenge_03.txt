@@ -1,0 +1,12 @@
+{
+  "name": "World Tour",
+  "words": [
+    "rome",
+    "tokyo",
+    "dubai",
+    "shanghai",
+    "bangkok",
+    "new york",
+    "melbourne"
+  ]
+}

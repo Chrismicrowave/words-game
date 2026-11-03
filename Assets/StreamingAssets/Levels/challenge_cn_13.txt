@@ -1,0 +1,91 @@
+{
+  "name": "Exams",
+  "nameZh": "考试",
+  "mixedWords": [
+    {
+      "segments": [
+        {
+          "type": "chinese",
+          "entries": [
+            {
+              "character": "复",
+              "pinyin": "fu"
+            },
+            {
+              "character": "习",
+              "pinyin": "xi"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "segments": [
+        {
+          "type": "chinese",
+          "entries": [
+            {
+              "character": "挂",
+              "pinyin": "gua"
+            },
+            {
+              "character": "科",
+              "pinyin": "ke"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "segments": [
+        {
+          "type": "chinese",
+          "entries": [
+            {
+              "character": "上",
+              "pinyin": "shang"
+            },
+            {
+              "character": "岸",
+              "pinyin": "an"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "segments": [
+        {
+          "type": "chinese",
+          "entries": [
+            {
+              "character": "调",
+              "pinyin": "tiao"
+            },
+            {
+              "character": "剂",
+              "pinyin": "ji"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "segments": [
+        {
+          "type": "chinese",
+          "entries": [
+            {
+              "character": "蒙",
+              "pinyin": "meng"
+            },
+            {
+              "character": "对",
+              "pinyin": "dui"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
