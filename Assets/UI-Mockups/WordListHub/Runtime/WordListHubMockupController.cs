@@ -1164,6 +1164,12 @@ namespace Words.UiMockups.WordListHub
             return width > 0f ? width : WordListHubTileGridMetrics.PreferredTileSize;
         }
 
+        private static float TileSizeForWidth(float availableWidth)
+        {
+            return WordListHubTileGridMetrics.Calculate(
+                availableWidth, WordListHubTileGridMetrics.PreferredColumnCount).TileSize;
+        }
+
         private static void PrepareManualTileContent(Transform content)
         {
             if (content == null)
@@ -1212,6 +1218,37 @@ namespace Words.UiMockups.WordListHub
             rect.sizeDelta = new Vector2(width, height);
         }
 
+        private static void SetAuthoredHeaderRect(
+            RectTransform rect,
+            float left,
+            float top,
+            float width,
+            float height)
+        {
+            if (rect == null)
+                return;
+
+            RectTransform parent = rect.parent as RectTransform;
+            if (parent == null)
+            {
+                SetTopLeftRect(rect, left, top, width, height);
+                return;
+            }
+
+            rect.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, width);
+            rect.SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, height);
+
+            Vector2 anchorPoint = new Vector2(
+                Mathf.Lerp(rect.anchorMin.x, rect.anchorMax.x, rect.pivot.x),
+                Mathf.Lerp(rect.anchorMin.y, rect.anchorMax.y, rect.pivot.y));
+            Vector2 anchorLocalPosition = parent.rect.min
+                + Vector2.Scale(parent.rect.size, anchorPoint);
+            Vector2 pivotLocalPosition = new Vector2(
+                parent.rect.xMin + left + rect.rect.width * rect.pivot.x,
+                parent.rect.yMax - top - rect.rect.height * (1f - rect.pivot.y));
+            rect.anchoredPosition = pivotLocalPosition - anchorLocalPosition;
+        }
+
         private static void SetTileChildRect(RectTransform rect, float top, float width, float height)
         {
             if (rect == null)
@@ -1240,7 +1277,6 @@ namespace Words.UiMockups.WordListHub
             text.color = ListTileText;
             text.alignment = alignment;
             text.textWrappingMode = wrap ? TextWrappingModes.Normal : TextWrappingModes.NoWrap;
-            text.overflowMode = TextOverflowModes.Ellipsis;
             text.raycastTarget = false;
         }
 
@@ -1287,25 +1323,27 @@ namespace Words.UiMockups.WordListHub
             GameObject selectedVisual,
             Button favoriteButton,
             TMP_Text favoriteMark,
-            TMP_Text bestTime,
             TMP_Text title,
             TMP_Text metadata,
+            TMP_Text recordStars,
+            TMP_Text bestTime,
             GameObject badgeRoot,
-            TMP_Text badge)
+            TMP_Text badge,
+            float tileSize)
         {
-            RectTransform rootRect = root != null ? root.transform as RectTransform : null;
-            if (rootRect != null)
-                SetTileRootSize(rootRect);
             ConfigureTileBackground(button, selectedVisual);
 
-            SetTileText(title, 43f, 230f, 64f, 22f, TextAlignmentOptions.Center, true);
-            SetTileText(metadata, 116f, 230f, 54f, 18f, TextAlignmentOptions.Center, true);
-            SetTileText(bestTime, 184f, 230f, 28f, 18f, TextAlignmentOptions.Center, false);
-            SetTileText(badge, 230f, 205f, 24f, 15f, TextAlignmentOptions.Center, false);
+            ConfigureListTileRows(title, metadata, recordStars, bestTime, tileSize);
 
-            if (badgeRoot != null && badgeRoot.transform is RectTransform badgeRect
-                && (badge == null || badge.rectTransform != badgeRect))
-                SetTileChildRect(badgeRect, 230f, 205f, 24f);
+            if (badgeRoot != null && badgeRoot.transform is RectTransform badgeRect)
+                SetTopLeftRect(badgeRect, 12f, 8f, 180f, 22f);
+            if (badge != null)
+            {
+                if (badgeRoot != null && badge.rectTransform == badgeRoot.transform)
+                    SetTileCornerText(badge, false, 8f, 180f, 22f, 13f);
+                else
+                    SetTileText(badge, 2f, 168f, 18f, 13f, TextAlignmentOptions.Left, false);
+            }
 
             if (favoriteButton != null)
             {
@@ -1315,7 +1353,7 @@ namespace Words.UiMockups.WordListHub
                     favoriteRect.anchorMin = new Vector2(1f, 1f);
                     favoriteRect.anchorMax = new Vector2(1f, 1f);
                     favoriteRect.pivot = new Vector2(1f, 1f);
-                    favoriteRect.anchoredPosition = new Vector2(-10f, -10f);
+                    favoriteRect.anchoredPosition = new Vector2(-10f, 0f);
                     favoriteRect.sizeDelta = new Vector2(34f, 34f);
                 }
             }
@@ -1333,35 +1371,74 @@ namespace Words.UiMockups.WordListHub
             GameObject selectedVisual,
             TMP_Text title,
             TMP_Text metadata,
+            TMP_Text recordStars,
+            TMP_Text bestTime,
             TMP_Text summary,
-            TMP_Text status)
+            TMP_Text status,
+            float tileSize)
         {
-            RectTransform rootRect = root != null ? root.transform as RectTransform : null;
-            if (rootRect != null)
-                SetTileRootSize(rootRect);
             ConfigureTileBackground(button, selectedVisual);
-            SetTileText(title, 72f, 230f, 64f, 22f, TextAlignmentOptions.Center, true);
-            SetTileText(metadata, 144f, 230f, 54f, 18f, TextAlignmentOptions.Center, true);
-            SetTileText(status, 230f, 205f, 24f, 15f, TextAlignmentOptions.Center, false);
+            ConfigureListTileRows(title, metadata, recordStars, bestTime, tileSize);
+            SetTileCornerText(status, true, 8f, 70f, 22f, 13f);
             if (summary != null && summary.gameObject.activeSelf)
                 summary.gameObject.SetActive(false);
         }
 
-        private static void SetTileRootSize(RectTransform root)
+        private static void ConfigureListTileRows(
+            TMP_Text title,
+            TMP_Text metadata,
+            TMP_Text recordStars,
+            TMP_Text bestTime,
+            float tileSize)
         {
-            float tileSize = WordListHubTileGridMetrics.PreferredTileSize;
-            root.sizeDelta = new Vector2(tileSize, tileSize);
-            LayoutElement layout = root.GetComponent<LayoutElement>();
-            if (layout != null)
-            {
-                layout.minWidth = tileSize;
-                layout.preferredWidth = tileSize;
-                layout.minHeight = tileSize;
-                layout.preferredHeight = tileSize;
-            }
+            float verticalScale = tileSize < WordListHubTileGridMetrics.MinimumReadableTileSize
+                ? tileSize / WordListHubTileGridMetrics.MinimumReadableTileSize
+                : 1f;
+            float textWidth = Mathf.Max(0f, tileSize - 40f);
+            SetTileText(title, 36f * verticalScale, textWidth, 64f * verticalScale,
+                22f, TextAlignmentOptions.Center, true);
+            SetTileText(metadata, 116f * verticalScale, textWidth, 28f * verticalScale,
+                18f, TextAlignmentOptions.Center, false);
+            SetTileText(recordStars, 168f * verticalScale, textWidth, 34f * verticalScale,
+                22f, TextAlignmentOptions.Center, false);
+            SetTileText(bestTime, 222f * verticalScale, textWidth, 28f * verticalScale,
+                18f, TextAlignmentOptions.Center, false);
         }
 
-        private static float LayoutTileGrid(
+        private static void SetTileCornerText(
+            TMP_Text text,
+            bool rightAligned,
+            float top,
+            float width,
+            float height,
+            float fontSize)
+        {
+            if (text == null)
+                return;
+            RectTransform rect = text.rectTransform;
+            if (rightAligned)
+                SetTopRightRect(rect, 12f, top, width, height);
+            else
+                SetTopLeftRect(rect, 12f, top, width, height);
+            text.fontSize = fontSize;
+            text.color = ListTileText;
+            text.alignment = rightAligned ? TextAlignmentOptions.MidlineRight : TextAlignmentOptions.MidlineLeft;
+            text.textWrappingMode = TextWrappingModes.NoWrap;
+            text.raycastTarget = false;
+        }
+
+        private static void SetTopRightRect(RectTransform rect, float right, float top, float width, float height)
+        {
+            if (rect == null)
+                return;
+            rect.anchorMin = new Vector2(1f, 1f);
+            rect.anchorMax = new Vector2(1f, 1f);
+            rect.pivot = new Vector2(1f, 1f);
+            rect.anchoredPosition = new Vector2(-right, -top);
+            rect.sizeDelta = new Vector2(width, height);
+        }
+
+        private float LayoutTileGrid(
             IReadOnlyList<RectTransform> tiles,
             float availableWidth,
             float topOffset)
@@ -1379,6 +1456,7 @@ namespace Words.UiMockups.WordListHub
                     + column * (metrics.TileSize + WordListHubTileGridMetrics.Gap);
                 float top = topOffset + row * (metrics.RowHeight + WordListHubTileGridMetrics.Gap);
                 SetTopLeftRect(tiles[i], left, top, metrics.TileSize, metrics.TileSize);
+                ConfigureTileForSize(tiles[i], metrics.TileSize);
                 LayoutElement layout = tiles[i].GetComponent<LayoutElement>();
                 if (layout != null)
                 {
@@ -1389,6 +1467,77 @@ namespace Words.UiMockups.WordListHub
                 }
             }
             return metrics.ContentHeight;
+        }
+
+        private void ConfigureTileForSize(RectTransform tile, float tileSize)
+        {
+            if (tile == null)
+                return;
+
+            WordListHubSceneBindings.LibraryRowBinding authoredLibraryRow = sceneBindings != null
+                && sceneBindings.library != null && sceneBindings.library.authoredRows != null
+                ? sceneBindings.library.authoredRows.FirstOrDefault(row => row != null && row.root != null
+                    && row.root.transform == tile)
+                : null;
+            if (authoredLibraryRow != null)
+            {
+                ConfigureLibraryTile(authoredLibraryRow.root, authoredLibraryRow.button,
+                    authoredLibraryRow.selectedVisual, authoredLibraryRow.favoriteButton,
+                    authoredLibraryRow.favoriteMark, authoredLibraryRow.title,
+                    authoredLibraryRow.metadata, authoredLibraryRow.recordStars,
+                    authoredLibraryRow.bestTime, authoredLibraryRow.badgeRoot,
+                    authoredLibraryRow.badge, tileSize);
+                return;
+            }
+
+            WordListHubLibraryRowView libraryView = tile.GetComponent<WordListHubLibraryRowView>();
+            if (libraryView != null)
+            {
+                ConfigureLibraryTile(libraryView.gameObject, libraryView.button, libraryView.selectedVisual,
+                    libraryView.favoriteButton, libraryView.favoriteMark, libraryView.title,
+                    libraryView.metadata, libraryView.recordStars, libraryView.bestTime,
+                    libraryView.badgeRoot, libraryView.badge, tileSize);
+                return;
+            }
+
+            WordListHubSceneBindings.DiscoveryRowBinding authoredCommunityRow = sceneBindings != null
+                && sceneBindings.community != null && sceneBindings.community.authoredRows != null
+                ? sceneBindings.community.authoredRows.FirstOrDefault(row => row != null && row.root != null
+                    && row.root.transform == tile)
+                : null;
+            if (authoredCommunityRow != null)
+            {
+                ConfigureCommunityTile(authoredCommunityRow.root, authoredCommunityRow.button,
+                    authoredCommunityRow.selectedVisual, authoredCommunityRow.title,
+                    authoredCommunityRow.metadata, authoredCommunityRow.recordStars,
+                    authoredCommunityRow.bestTime, authoredCommunityRow.summary,
+                    authoredCommunityRow.status, tileSize);
+                return;
+            }
+
+            WordListHubDiscoveryRowView communityView = tile.GetComponent<WordListHubDiscoveryRowView>();
+            if (communityView != null)
+            {
+                ConfigureCommunityTile(communityView.gameObject, communityView.button,
+                    communityView.selectedVisual, communityView.title, communityView.metadata,
+                    communityView.recordStars, communityView.bestTime, communityView.summary,
+                    communityView.status, tileSize);
+            }
+        }
+
+        private static void SetTileRootSize(RectTransform root, float tileSize)
+        {
+            if (root == null)
+                return;
+            root.sizeDelta = new Vector2(tileSize, tileSize);
+            LayoutElement layout = root.GetComponent<LayoutElement>();
+            if (layout != null)
+            {
+                layout.minWidth = tileSize;
+                layout.preferredWidth = tileSize;
+                layout.minHeight = tileSize;
+                layout.preferredHeight = tileSize;
+            }
         }
 
         private static void SetContentHeight(Transform content, float height)
@@ -1419,9 +1568,13 @@ namespace Words.UiMockups.WordListHub
             if (library.rowTemplate != null)
             {
                 WordListHubLibraryRowView template = library.rowTemplate;
+                float templateSize = WordListHubTileGridMetrics.Calculate(
+                    availableWidth, WordListHubTileGridMetrics.PreferredColumnCount).TileSize;
+                SetTileRootSize(template.transform as RectTransform, templateSize);
                 ConfigureLibraryTile(template.gameObject, template.button, template.selectedVisual,
-                    template.favoriteButton, template.favoriteMark, template.bestTime, template.title,
-                    template.metadata, template.badgeRoot, template.badge);
+                    template.favoriteButton, template.favoriteMark, template.title,
+                    template.metadata, template.recordStars, template.bestTime,
+                    template.badgeRoot, template.badge, templateSize);
             }
             SyncLibraryControlValues(library);
             DestroyOwnedRuntimeChildren(library.listContent);
@@ -1477,7 +1630,7 @@ namespace Words.UiMockups.WordListHub
                         header.button.transform.SetSiblingIndex(siblingIndex++);
                         float headerHeight = HeaderHeight(header);
                         if (header.button.transform is RectTransform headerRect)
-                            SetTopLeftRect(headerRect, 0f, cursorY, availableWidth, headerHeight);
+                            SetAuthoredHeaderRect(headerRect, 0f, cursorY, availableWidth, headerHeight);
                         cursorY += headerHeight + WordListHubTileGridMetrics.Gap;
                     }
                 }
@@ -1602,8 +1755,8 @@ namespace Words.UiMockups.WordListHub
             SetText(binding.favoriteMark, item.IsFavorite ? "★" : "☆");
             SetText(binding.bestTime, BestTimeLabel(item));
             SetText(binding.title, item.Title);
-            SetText(binding.metadata,
-                LanguageLabel(item.Language) + "  ·  " + item.WordCount + " words  ·  " + RecordLabel(item));
+            SetText(binding.metadata, LanguageLabel(item.Language) + "  ·  " + item.WordCount + " words");
+            SetText(binding.recordStars, PersonalStarsLabel(item));
             string badge = ListBadge(item);
             SetText(binding.badge, badge.ToUpperInvariant());
             if (binding.badgeRoot != null)
@@ -1611,8 +1764,11 @@ namespace Words.UiMockups.WordListHub
             BindButton(binding.button, () => SelectLibraryItem(item.Id));
             BindButton(binding.favoriteButton, () => ToggleFavorite(item.Id));
             ConfigureLibraryTile(binding.root, binding.button, binding.selectedVisual,
-                binding.favoriteButton, binding.favoriteMark, binding.bestTime, binding.title,
-                binding.metadata, binding.badgeRoot, binding.badge);
+                binding.favoriteButton, binding.favoriteMark, binding.title,
+                binding.metadata, binding.recordStars, binding.bestTime,
+                binding.badgeRoot, binding.badge,
+                TileSizeForWidth(lastLibraryTileViewportWidth > 0f
+                    ? lastLibraryTileViewportWidth : WordListHubTileGridMetrics.PreferredTileSize));
         }
 
         private void UpdateLibraryRow(WordListHubLibraryRowView view, MockupWordList item)
@@ -1623,8 +1779,8 @@ namespace Words.UiMockups.WordListHub
             SetText(view.favoriteMark, item.IsFavorite ? "★" : "☆");
             SetText(view.bestTime, BestTimeLabel(item));
             SetText(view.title, item.Title);
-            SetText(view.metadata,
-                LanguageLabel(item.Language) + "  ·  " + item.WordCount + " words  ·  " + RecordLabel(item));
+            SetText(view.metadata, LanguageLabel(item.Language) + "  ·  " + item.WordCount + " words");
+            SetText(view.recordStars, PersonalStarsLabel(item));
             string badge = ListBadge(item);
             SetText(view.badge, badge.ToUpperInvariant());
             if (view.badgeRoot != null)
@@ -1632,8 +1788,11 @@ namespace Words.UiMockups.WordListHub
             BindButton(view.button, () => SelectLibraryItem(item.Id));
             BindButton(view.favoriteButton, () => ToggleFavorite(item.Id));
             ConfigureLibraryTile(view.gameObject, view.button, view.selectedVisual,
-                view.favoriteButton, view.favoriteMark, view.bestTime, view.title,
-                view.metadata, view.badgeRoot, view.badge);
+                view.favoriteButton, view.favoriteMark, view.title,
+                view.metadata, view.recordStars, view.bestTime,
+                view.badgeRoot, view.badge,
+                TileSizeForWidth(lastLibraryTileViewportWidth > 0f
+                    ? lastLibraryTileViewportWidth : WordListHubTileGridMetrics.PreferredTileSize));
         }
 
         private void UpdateLibrarySelectionVisuals(
@@ -1945,8 +2104,12 @@ namespace Words.UiMockups.WordListHub
             if (community.rowTemplate != null)
             {
                 WordListHubDiscoveryRowView template = community.rowTemplate;
+                float templateSize = WordListHubTileGridMetrics.Calculate(
+                    availableWidth, WordListHubTileGridMetrics.PreferredColumnCount).TileSize;
+                SetTileRootSize(template.transform as RectTransform, templateSize);
                 ConfigureCommunityTile(template.gameObject, template.button, template.selectedVisual,
-                    template.title, template.metadata, template.summary, template.status);
+                    template.title, template.metadata, template.recordStars, template.bestTime,
+                    template.summary, template.status, templateSize);
             }
             Vector2 scrollPosition = community.listScroll != null && community.listScroll.content != null
                 ? community.listScroll.content.anchoredPosition
@@ -2077,13 +2240,17 @@ namespace Words.UiMockups.WordListHub
         private void UpdateDiscoveryRow(WordListHubSceneBindings.DiscoveryRowBinding row, MockupDiscoveryItem item)
         {
             SetText(row.title, item.Title);
-            SetText(row.metadata, LanguageLabel(item.Language) + "  ·  " + item.WordCount
-                + " words  ·  " + item.LikeCount + " likes");
+            SetText(row.metadata, LanguageLabel(item.Language) + "  ·  " + item.WordCount + " words");
+            MockupWordList downloaded = store.FindCommunityDownload(item.RemoteItemId);
+            SetText(row.recordStars, PersonalStarsLabel(downloaded));
+            SetText(row.bestTime, BestTimeLabel(downloaded));
             SetText(row.summary, item.Description);
             SetText(row.status, item.Status == MockupDiscoveryStatus.New ? "NEW" : "UPDATED");
             BindButton(row.button, () => SelectDiscoveryItem(item.RemoteItemId));
             ConfigureCommunityTile(row.root, row.button, row.selectedVisual,
-                row.title, row.metadata, row.summary, row.status);
+                row.title, row.metadata, row.recordStars, row.bestTime, row.summary, row.status,
+                TileSizeForWidth(lastCommunityTileViewportWidth > 0f
+                    ? lastCommunityTileViewportWidth : WordListHubTileGridMetrics.PreferredTileSize));
         }
 
         private void UpdateDiscoveryRow(WordListHubDiscoveryRowView view, MockupDiscoveryItem item)
@@ -2091,13 +2258,17 @@ namespace Words.UiMockups.WordListHub
             if (view == null)
                 return;
             SetText(view.title, item.Title);
-            SetText(view.metadata, LanguageLabel(item.Language) + "  ·  " + item.WordCount
-                + " words  ·  " + item.LikeCount + " likes");
+            SetText(view.metadata, LanguageLabel(item.Language) + "  ·  " + item.WordCount + " words");
+            MockupWordList downloaded = store.FindCommunityDownload(item.RemoteItemId);
+            SetText(view.recordStars, PersonalStarsLabel(downloaded));
+            SetText(view.bestTime, BestTimeLabel(downloaded));
             SetText(view.summary, item.Description);
             SetText(view.status, item.Status == MockupDiscoveryStatus.New ? "NEW" : "UPDATED");
             BindButton(view.button, () => SelectDiscoveryItem(item.RemoteItemId));
             ConfigureCommunityTile(view.gameObject, view.button, view.selectedVisual,
-                view.title, view.metadata, view.summary, view.status);
+                view.title, view.metadata, view.recordStars, view.bestTime, view.summary, view.status,
+                TileSizeForWidth(lastCommunityTileViewportWidth > 0f
+                    ? lastCommunityTileViewportWidth : WordListHubTileGridMetrics.PreferredTileSize));
         }
 
         private void UpdateCommunitySelectionVisuals(
@@ -2875,16 +3046,16 @@ namespace Words.UiMockups.WordListHub
             }
         }
 
-        private static string RecordLabel(MockupWordList item)
+        private static string PersonalStarsLabel(MockupWordList item)
         {
-            if (!item.PersonalStars.HasValue)
-                return item.HasBeenPlayed ? "played" : "not played";
-            return new string('★', Mathf.Clamp(item.PersonalStars.Value, 0, 5));
+            if (item == null || !item.PersonalStars.HasValue || item.PersonalStars.Value <= 0)
+                return "☆☆☆";
+            return new string('★', Mathf.Clamp(item.PersonalStars.Value, 0, 3));
         }
 
         private static string BestTimeLabel(MockupWordList item)
         {
-            return item.BestTimeSeconds.HasValue
+            return item != null && item.BestTimeSeconds.HasValue
                 ? item.BestTimeSeconds.Value.ToString("0.0") + " s"
                 : "—";
         }

@@ -169,6 +169,13 @@ namespace Words.UiMockups.WordListHub
             return libraryEntries.FirstOrDefault(item => item.Id == mockId);
         }
 
+        public MockupWordList FindCommunityDownload(string remoteItemId)
+        {
+            return libraryEntries.FirstOrDefault(item =>
+                item.Ownership == MockupOwnership.CommunityDownloaded
+                && item.RemoteItemId == remoteItemId);
+        }
+
         public MockupDiscoveryItem FindDiscoveryItem(string remoteItemId)
         {
             return discoveryItems.FirstOrDefault(item => item.RemoteItemId == remoteItemId);

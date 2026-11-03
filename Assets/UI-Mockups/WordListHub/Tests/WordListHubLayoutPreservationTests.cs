@@ -88,6 +88,50 @@ namespace Words.UiMockups.WordListHub.Tests
         }
 
         [Test]
+        public void LibraryAndCommunityTilesRenderFourRowsAndKeepLikesInDetails()
+        {
+            WordListHubMockupController controller = harness.Controller;
+            WordListHubSceneBindings bindings = harness.Bindings;
+            InvokeAwake(controller);
+            MockupWordListStore store = GetStore(controller);
+
+            MockupWordList libraryItem = store.FindById("mock-list-empty");
+            store.CompleteRun(libraryItem.Id, 2, 12.5f);
+            InvokeRefreshLibraryPage(controller);
+            WordListHubSceneBindings.LibraryRowBinding libraryRow = bindings.library.authoredRows
+                .Single(row => row != null && row.listId == libraryItem.Id);
+            Assert.That(libraryRow.metadata.text, Does.EndWith("0 words"));
+            Assert.That(libraryRow.metadata.text, Does.Not.Contain("★"));
+            Assert.That(libraryRow.recordStars.text, Is.EqualTo("★★"));
+            Assert.That(libraryRow.bestTime.text, Is.EqualTo("12.5 s"));
+            AssertTileInformationRows(libraryRow.title, libraryRow.metadata,
+                libraryRow.recordStars, libraryRow.bestTime, "Library tile");
+
+            const string remoteItemId = "mock-ugc-weekend-garden";
+            MockupDiscoveryItem discoveryItem = store.FindDiscoveryItem(remoteItemId);
+            InvokeChangePage(controller, "Community");
+            WordListHubSceneBindings.DiscoveryRowBinding communityRow = bindings.community.authoredRows
+                .Single(row => row != null && row.remoteItemId == remoteItemId);
+            Assert.That(communityRow.metadata.text, Does.EndWith(discoveryItem.WordCount + " words"));
+            Assert.That(communityRow.metadata.text, Does.Not.Contain("likes"));
+            Assert.That(communityRow.recordStars.text, Is.EqualTo("☆☆☆"));
+            Assert.That(communityRow.bestTime.text, Is.EqualTo("—"));
+            AssertTileInformationRows(communityRow.title, communityRow.metadata,
+                communityRow.recordStars, communityRow.bestTime, "Community tile");
+
+            Press(communityRow.button);
+            Press(bindings.community.like.button);
+            Assert.That(bindings.community.like.label.text, Does.Contain(discoveryItem.LikeCount.ToString()));
+
+            MockupWordList downloaded = store.Download(remoteItemId);
+            store.CompleteRun(downloaded.Id, 3, 7.4f);
+            InvokeChangePage(controller, "Community");
+            Assert.That(communityRow.recordStars.text, Is.EqualTo("★★★"));
+            Assert.That(communityRow.bestTime.text, Is.EqualTo("7.4 s"));
+            Assert.That(bindings.community.like.label.text, Does.Contain(discoveryItem.LikeCount.ToString()));
+        }
+
+        [Test]
         public void RuntimeTilesAndEditWordControlsPreserveGroupsAndUncommittedPinyin()
         {
             WordListHubMockupController controller = harness.Controller;
@@ -107,13 +151,10 @@ namespace Words.UiMockups.WordListHub.Tests
             Assert.That(libraryContent.rect.height, Is.GreaterThan(library.listScroll.viewport.rect.height));
             Assert.That(GetVisibleLibraryRowIds(library).Count,
                 Is.EqualTo(store.QueryLibrary(new MockupLibraryQuery()).Count));
-            foreach (WordListHubSceneBindings.LibraryRowBinding row in library.authoredRows
-                .Where(row => row != null && row.root != null && row.root.activeInHierarchy))
-            {
-                RectTransform tile = row.root.transform as RectTransform;
-                Assert.That(tile.rect.width, Is.EqualTo(270f).Within(0.1f));
-                Assert.That(tile.rect.height, Is.EqualTo(270f).Within(0.1f));
-            }
+            AssertTileSetMatchesGrid(library.listContent.GetComponentsInChildren<WordListHubLibraryRowView>(true)
+                .Where(view => view != null && view.gameObject.activeInHierarchy)
+                .Select(view => view.transform as RectTransform), libraryContent.rect.width,
+                "Runtime Library tiles");
 
             WordListHubSceneBindings.GroupBinding myListsHeader = library.groups
                 .Single(group => group.groupKey == MockupLibraryGroup.MyLists.ToString());
@@ -140,8 +181,8 @@ namespace Words.UiMockups.WordListHub.Tests
                 .Select(child => child as RectTransform)
                 .ToList();
             Assert.That(visibleCommunityTiles, Is.Not.Empty);
-            Assert.That(visibleCommunityTiles.All(tile =>
-                Mathf.Abs(tile.rect.width - 270f) < 0.1f && Mathf.Abs(tile.rect.height - 270f) < 0.1f), Is.True);
+            AssertTileSetMatchesGrid(visibleCommunityTiles, communityContent.rect.width,
+                "Runtime Community tiles");
             Assert.That(bindings.community.authoredRows.Where(row => row != null && row.root.activeInHierarchy)
                 .All(row => row.summary == null || !row.summary.gameObject.activeSelf), Is.True);
 
@@ -220,6 +261,12 @@ namespace Words.UiMockups.WordListHub.Tests
                 .All(row => IsSquareTile(row.root.transform as RectTransform)), Is.True);
             Assert.That(bindings.community.authoredRows.Where(row => row != null && row.root != null)
                 .All(row => IsSquareTile(row.root.transform as RectTransform)), Is.True);
+            AssertTileSetMatchesGrid(bindings.library.authoredRows.Where(row => row != null && row.root != null)
+                .Select(row => row.root.transform as RectTransform),
+                ((RectTransform)bindings.library.listContent).rect.width, "Static Library tiles");
+            AssertTileSetMatchesGrid(bindings.community.authoredRows.Where(row => row != null && row.root != null)
+                .Select(row => row.root.transform as RectTransform),
+                ((RectTransform)bindings.community.listContent).rect.width, "Static Community tiles");
 
             WordListHubSceneBindings.WordEditorLayoutBinding editor = bindings.modal.editList.wordEditorLayout;
             Assert.That(editor.root, Is.Not.Null);
@@ -259,6 +306,12 @@ namespace Words.UiMockups.WordListHub.Tests
                 .All(row => IsSquareTile(row.root.transform as RectTransform)), Is.True);
             Assert.That(bindings.community.authoredRows.Where(row => row != null && row.root != null)
                 .All(row => IsSquareTile(row.root.transform as RectTransform)), Is.True);
+            AssertTileSetMatchesGrid(bindings.library.authoredRows.Where(row => row != null && row.root != null)
+                .Select(row => row.root.transform as RectTransform),
+                ((RectTransform)bindings.library.listContent).rect.width, "Initialized Library tiles");
+            AssertTileSetMatchesGrid(bindings.community.authoredRows.Where(row => row != null && row.root != null)
+                .Select(row => row.root.transform as RectTransform),
+                ((RectTransform)bindings.community.listContent).rect.width, "Initialized Community tiles");
             Assert.That(bindings.modal.editList.wordEditorLayout.root, Is.SameAs(editor.root));
             communityDetailTitleStyle.AssertUnchanged("controller initialization Community detail title");
             libraryDetailTitleStyle.AssertUnchanged("controller initialization Library detail title");
@@ -268,30 +321,20 @@ namespace Words.UiMockups.WordListHub.Tests
                 Assert.That(libraryDetailTitle.fontSize, Is.EqualTo(libraryDetailTitleSize).Within(0.001f));
         }
         [Test]
-        public void CommunityRowsShowOnlyCenteredTitleAndMetadata()
+        public void CommunityRowsShowFourInformationRowsAndKeepStatusInCorner()
         {
             WordListHubSceneBindings.CommunityPageBinding community = harness.Bindings.community;
             WordListHubDiscoveryRowView template = community.rowTemplate;
-            RectTransform titleRect = template.title.rectTransform;
-            RectTransform metadataRect = template.metadata.rectTransform;
 
             Assert.That(template.summary.gameObject.activeSelf, Is.False,
                 "The selectable Community row should not show a description line.");
-            AssertVector2(titleRect.anchoredPosition, new Vector2(0f, -72f),
-                "Community title position");
-            AssertVector2(metadataRect.anchoredPosition, new Vector2(0f, -144f),
-                "Community metadata position");
-            Assert.That(titleRect.sizeDelta, Is.EqualTo(new Vector2(230f, 64f)));
-            Assert.That(metadataRect.sizeDelta, Is.EqualTo(new Vector2(230f, 54f)));
-
-            float titleTop = 72f;
-            float metadataBottom = 144f + metadataRect.rect.height;
-            Assert.That((titleTop + metadataBottom) * 0.5f,
-                Is.EqualTo(template.transform.GetComponent<RectTransform>().rect.height * 0.5f).Within(0.001f),
-                "The title and metadata block should be vertically centered in its tile.");
+            AssertTileInformationRows(template.title, template.metadata, template.recordStars,
+                template.bestTime, "Community template");
             Assert.That(template.status.gameObject.activeSelf, Is.True);
-            Assert.That(template.status.rectTransform.anchoredPosition.y,
-                Is.EqualTo(-230f).Within(0.001f), "Keep the status in the lower tile band.");
+            AssertVector2(template.status.rectTransform.anchoredPosition, new Vector2(-12f, -8f),
+                "Keep the Community status in the top-right corner.");
+            AssertNoRectOverlap(template.title.rectTransform, template.status.rectTransform,
+                "Community title and status");
 
             WordListHubDiscoveryRowView dynamicClone = UnityEngine.Object.Instantiate(
                 template, community.listContent, false);
@@ -299,10 +342,8 @@ namespace Words.UiMockups.WordListHub.Tests
             {
                 Assert.That(dynamicClone.summary.gameObject.activeSelf, Is.False,
                     "Runtime Community rows should inherit the hidden description line.");
-                Assert.That(dynamicClone.title.rectTransform.anchoredPosition.y,
-                    Is.EqualTo(-72f).Within(0.001f));
-                Assert.That(dynamicClone.metadata.rectTransform.anchoredPosition.y,
-                    Is.EqualTo(-144f).Within(0.001f));
+                AssertTileInformationRows(dynamicClone.title, dynamicClone.metadata,
+                    dynamicClone.recordStars, dynamicClone.bestTime, "Community clone");
             }
             finally
             {
@@ -1437,6 +1478,10 @@ namespace Words.UiMockups.WordListHub.Tests
                 AssertTextRendersWithin(row.bestTime, "Authored Library row " + row.listId + ".bestTime");
                 Assert.That(row.title, Is.Not.Null);
                 Assert.That(row.metadata, Is.Not.Null);
+                Assert.That(row.recordStars, Is.Not.Null);
+                AssertTileInformationRows(row.title, row.metadata, row.recordStars, row.bestTime,
+                    "Authored Library row " + row.listId);
+                AssertTextRendersWithin(row.recordStars, "Authored Library row " + row.listId + ".recordStars");
             }
 
             string expectedSelectedId = MockupWordListStore.CreateWithFixtures()
@@ -1460,10 +1505,14 @@ namespace Words.UiMockups.WordListHub.Tests
                 Assert.That(row.button, Is.Not.Null);
                 Assert.That(row.title, Is.Not.Null);
                 Assert.That(row.metadata, Is.Not.Null);
+                Assert.That(row.recordStars, Is.Not.Null);
+                Assert.That(row.bestTime, Is.Not.Null);
                 Assert.That(row.summary, Is.Not.Null);
                 Assert.That(row.summary.gameObject.activeSelf, Is.False,
                     "Authored Community selection rows should hide the description line.");
                 Assert.That(row.status, Is.Not.Null);
+                AssertTileInformationRows(row.title, row.metadata, row.recordStars, row.bestTime,
+                    "Authored Community row " + row.remoteItemId);
             }
 
             string expectedSelectedId = MockupWordListStore.CreateWithFixtures()
@@ -1517,12 +1566,16 @@ namespace Words.UiMockups.WordListHub.Tests
             Assert.That(template.bestTime.raycastTarget, Is.False);
             Assert.That(template.title, Is.Not.Null);
             Assert.That(template.metadata, Is.Not.Null);
+            Assert.That(template.recordStars, Is.Not.Null);
             AssertReferenceWithin(template.transform, template.button.transform, "Library row button");
             AssertReferenceWithin(template.transform, template.favoriteButton.transform, "Library favorite button");
             AssertReferenceWithin(template.transform, template.favoriteMark.transform, "Library favorite text");
             AssertReferenceWithin(template.transform, template.bestTime.transform, "Library best time text");
             AssertReferenceWithin(template.transform, template.title.transform, "Library title text");
             AssertReferenceWithin(template.transform, template.metadata.transform, "Library metadata text");
+            AssertReferenceWithin(template.transform, template.recordStars.transform, "Library record stars text");
+            AssertTileInformationRows(template.title, template.metadata, template.recordStars,
+                template.bestTime, "Library template");
             if (template.badge != null)
                 AssertReferenceWithin(template.transform, template.badge.transform, "Library badge text");
         }
@@ -1534,6 +1587,8 @@ namespace Words.UiMockups.WordListHub.Tests
             Assert.That(template.button, Is.Not.Null);
             Assert.That(template.title, Is.Not.Null);
             Assert.That(template.metadata, Is.Not.Null);
+            Assert.That(template.recordStars, Is.Not.Null);
+            Assert.That(template.bestTime, Is.Not.Null);
             Assert.That(template.summary, Is.Not.Null);
             Assert.That(template.summary.gameObject.activeSelf, Is.False,
                 "Community selection rows should hide the description line.");
@@ -1541,6 +1596,10 @@ namespace Words.UiMockups.WordListHub.Tests
             AssertReferenceWithin(template.transform, template.button.transform, "Community row button");
             AssertReferenceWithin(template.transform, template.title.transform, "Community title text");
             AssertReferenceWithin(template.transform, template.metadata.transform, "Community metadata text");
+            AssertReferenceWithin(template.transform, template.recordStars.transform, "Community record stars text");
+            AssertReferenceWithin(template.transform, template.bestTime.transform, "Community best time text");
+            AssertTileInformationRows(template.title, template.metadata, template.recordStars,
+                template.bestTime, "Community template");
             AssertReferenceWithin(template.transform, template.summary.transform, "Community summary text");
             AssertReferenceWithin(template.transform, template.status.transform, "Community status text");
         }
@@ -1619,6 +1678,7 @@ namespace Words.UiMockups.WordListHub.Tests
                 AssertReferenceWithin(row.transform, row.bestTime.transform, row.name + ".bestTime");
                 AssertReferenceWithin(row.transform, row.title.transform, row.name + ".title");
                 AssertReferenceWithin(row.transform, row.metadata.transform, row.name + ".metadata");
+                AssertReferenceWithin(row.transform, row.recordStars.transform, row.name + ".recordStars");
                 if (row.badge != null)
                     AssertReferenceWithin(row.transform, row.badge.transform, row.name + ".badge");
                 AssertTextStyleMatches(library.rowTemplate.favoriteMark, row.favoriteMark, row.name + ".favorite");
@@ -1626,6 +1686,10 @@ namespace Words.UiMockups.WordListHub.Tests
                 AssertTextRendersWithin(row.bestTime, row.name + ".bestTime");
                 AssertTextStyleMatches(library.rowTemplate.title, row.title, row.name + ".title");
                 AssertTextStyleMatches(library.rowTemplate.metadata, row.metadata, row.name + ".metadata");
+                AssertTextStyleMatches(library.rowTemplate.recordStars, row.recordStars, row.name + ".recordStars");
+                AssertTileInformationRows(row.title, row.metadata, row.recordStars, row.bestTime,
+                    row.name + " tile");
+                AssertTextRendersWithin(row.recordStars, row.name + ".recordStars");
                 if (library.rowTemplate.badge != null)
                     AssertTextStyleMatches(library.rowTemplate.badge, row.badge, row.name + ".badge");
             }
@@ -1644,10 +1708,14 @@ namespace Words.UiMockups.WordListHub.Tests
                 AssertReferenceWithin(row.transform, row.button.transform, row.name + ".button");
                 AssertReferenceWithin(row.transform, row.title.transform, row.name + ".title");
                 AssertReferenceWithin(row.transform, row.metadata.transform, row.name + ".metadata");
+                AssertReferenceWithin(row.transform, row.recordStars.transform, row.name + ".recordStars");
+                AssertReferenceWithin(row.transform, row.bestTime.transform, row.name + ".bestTime");
                 AssertReferenceWithin(row.transform, row.summary.transform, row.name + ".summary");
                 AssertReferenceWithin(row.transform, row.status.transform, row.name + ".status");
                 AssertTextStyleMatches(community.rowTemplate.title, row.title, row.name + ".title");
                 AssertTextStyleMatches(community.rowTemplate.metadata, row.metadata, row.name + ".metadata");
+                AssertTextStyleMatches(community.rowTemplate.recordStars, row.recordStars, row.name + ".recordStars");
+                AssertTextStyleMatches(community.rowTemplate.bestTime, row.bestTime, row.name + ".bestTime");
                 AssertTextStyleMatches(community.rowTemplate.summary, row.summary, row.name + ".summary");
                 AssertTextStyleMatches(community.rowTemplate.status, row.status, row.name + ".status");
                 Assert.That(row.summary.gameObject.activeSelf, Is.False,
@@ -1656,17 +1724,32 @@ namespace Words.UiMockups.WordListHub.Tests
                 RectTransform rowRect = row.transform as RectTransform;
                 AssertRectContained(row.title.rectTransform, rowRect, row.name + ".title");
                 AssertRectContained(row.metadata.rectTransform, rowRect, row.name + ".metadata");
+                AssertRectContained(row.recordStars.rectTransform, rowRect, row.name + ".recordStars");
+                AssertRectContained(row.bestTime.rectTransform, rowRect, row.name + ".bestTime");
                 AssertRectContained(row.summary.rectTransform, rowRect, row.name + ".summary");
                 AssertRectContained(row.status.rectTransform, rowRect, row.name + ".status");
                 AssertTextRendersWithin(row.title, row.name + ".title");
                 AssertTextRendersWithin(row.metadata, row.name + ".metadata");
+                AssertTextRendersWithin(row.recordStars, row.name + ".recordStars");
+                AssertTextRendersWithin(row.bestTime, row.name + ".bestTime");
                 AssertTextRendersWithin(row.status, row.name + ".status");
-                AssertNoRectOverlap(row.title.rectTransform, row.metadata.rectTransform,
-                    row.name + " title and metadata");
-                AssertNoRectOverlap(row.title.rectTransform, row.status.rectTransform,
-                    row.name + " title and status");
-                AssertNoRectOverlap(row.metadata.rectTransform, row.status.rectTransform,
-                    row.name + " metadata and status");
+                AssertTileInformationRows(row.title, row.metadata, row.recordStars, row.bestTime,
+                    row.name + " tile");
+                RectTransform[] informationRows =
+                {
+                    row.title.rectTransform,
+                    row.metadata.rectTransform,
+                    row.recordStars.rectTransform,
+                    row.bestTime.rectTransform
+                };
+                for (int i = 0; i < informationRows.Length; i++)
+                {
+                    for (int j = i + 1; j < informationRows.Length; j++)
+                        AssertNoRectOverlap(informationRows[i], informationRows[j],
+                            row.name + " information row " + i + " and " + j);
+                    AssertNoRectOverlap(informationRows[i], row.status.rectTransform,
+                        row.name + " information row " + i + " and status");
+                }
             }
         }
 
@@ -1739,13 +1822,32 @@ namespace Words.UiMockups.WordListHub.Tests
             Vector2 position,
             Vector2 size,
             string description,
-            bool wraps = false)
+            bool wraps = false,
+            TextOverflowModes overflow = TextOverflowModes.Ellipsis)
         {
             AssertVector2(text.rectTransform.anchoredPosition, position, description + " position");
             AssertVector2(text.rectTransform.sizeDelta, size, description + " size");
             Assert.That(text.textWrappingMode,
                 Is.EqualTo(wraps ? TextWrappingModes.Normal : TextWrappingModes.NoWrap), description + " wrapping");
-            Assert.That(text.overflowMode, Is.EqualTo(TextOverflowModes.Ellipsis), description + " overflow");
+            Assert.That(text.overflowMode, Is.EqualTo(overflow), description + " overflow");
+        }
+
+        private static void AssertCommunityLabelMatches(
+            TMP_Text source,
+            TMP_Text target,
+            string description,
+            bool wraps = false,
+            TextOverflowModes overflow = TextOverflowModes.Ellipsis)
+        {
+            Rect sourceBounds = GetWorldRect(source.rectTransform);
+            Rect targetBounds = GetWorldRect(target.rectTransform);
+            Assert.That(targetBounds.xMin, Is.EqualTo(sourceBounds.xMin).Within(0.001f), description + " left edge");
+            Assert.That(targetBounds.xMax, Is.EqualTo(sourceBounds.xMax).Within(0.001f), description + " right edge");
+            Assert.That(targetBounds.yMin, Is.EqualTo(sourceBounds.yMin).Within(0.001f), description + " bottom edge");
+            Assert.That(targetBounds.yMax, Is.EqualTo(sourceBounds.yMax).Within(0.001f), description + " top edge");
+            Assert.That(target.textWrappingMode,
+                Is.EqualTo(wraps ? TextWrappingModes.Normal : TextWrappingModes.NoWrap), description + " wrapping");
+            Assert.That(target.overflowMode, Is.EqualTo(overflow), description + " overflow");
         }
 
         private static void AssertRectContained(
@@ -1802,6 +1904,33 @@ namespace Words.UiMockups.WordListHub.Tests
             Assert.That(clone.raycastTarget, Is.EqualTo(source.raycastTarget), description + " raycast target");
         }
 
+        private static void AssertTextBaseStyleMatches(TMP_Text source, TMP_Text clone, string description)
+        {
+            Assert.That(clone.font, Is.SameAs(source.font), description + " font");
+            Assert.That(clone.fontSharedMaterial, Is.SameAs(source.fontSharedMaterial), description + " material");
+            Assert.That(GetBaseFontSize(clone), Is.EqualTo(GetBaseFontSize(source)).Within(0.001f),
+                description + " base font size");
+            Assert.That(clone.fontSizeMin, Is.EqualTo(source.fontSizeMin).Within(0.001f),
+                description + " fontSizeMin");
+            Assert.That(clone.fontSizeMax, Is.EqualTo(source.fontSizeMax).Within(0.001f),
+                description + " fontSizeMax");
+            Assert.That(clone.enableAutoSizing, Is.EqualTo(source.enableAutoSizing), description + " auto sizing");
+            Assert.That(clone.fontStyle, Is.EqualTo(source.fontStyle), description + " fontStyle");
+            Assert.That(clone.alignment, Is.EqualTo(source.alignment), description + " alignment");
+            Assert.That(clone.textWrappingMode, Is.EqualTo(source.textWrappingMode), description + " wrapping");
+            Assert.That(clone.overflowMode, Is.EqualTo(source.overflowMode), description + " overflow");
+            Assert.That(clone.color, Is.EqualTo(source.color), description + " color");
+        }
+
+        private static float GetBaseFontSize(TMP_Text text)
+        {
+            var serialized = new SerializedObject(text);
+            serialized.Update();
+            SerializedProperty baseFontSize = serialized.FindProperty("m_fontSizeBase");
+            Assert.That(baseFontSize, Is.Not.Null, text.name + " should expose its authored TMP base font size.");
+            return baseFontSize.floatValue;
+        }
+
         private static void AssertImageStyleMatches(Image source, Image clone, string description)
         {
             Assert.That(clone.type, Is.EqualTo(source.type), description + " type");
@@ -1852,12 +1981,46 @@ namespace Words.UiMockups.WordListHub.Tests
 
         private static void AssertCommunityVisualAlignment(WordListHubSceneBindings bindings)
         {
+            Canvas.ForceUpdateCanvases();
+            RectTransform libraryListPane = bindings.library.listScroll.transform.parent as RectTransform;
+            RectTransform communityListPane = bindings.community.listScroll.transform.parent as RectTransform;
+            RectTransform libraryDetailPane = bindings.library.detailPane as RectTransform;
+            RectTransform communityDetailPane = bindings.community.detailPane as RectTransform;
+            RectTransform libraryScrollRoot = bindings.library.listScroll.GetComponent<RectTransform>();
+            RectTransform communityScrollRoot = bindings.community.listScroll.GetComponent<RectTransform>();
+
+            AssertVector2(communityListPane.anchoredPosition, libraryListPane.anchoredPosition,
+                "Community list pane position should match Library");
+            AssertVector2(communityListPane.rect.size, libraryListPane.rect.size,
+                "Community list pane size should match Library");
+            AssertVector2(communityListPane.anchorMin, libraryListPane.anchorMin,
+                "Community list pane anchorMin should match Library");
+            AssertVector2(communityListPane.anchorMax, libraryListPane.anchorMax,
+                "Community list pane anchorMax should match Library");
+            AssertVector2(communityListPane.pivot, libraryListPane.pivot,
+                "Community list pane pivot should match Library");
+            AssertVector2(communityDetailPane.anchoredPosition, libraryDetailPane.anchoredPosition,
+                "Community detail pane position should match Library");
+            AssertVector2(communityDetailPane.rect.size, libraryDetailPane.rect.size,
+                "Community detail pane size should match Library");
+            AssertVector2(communityScrollRoot.rect.size, libraryScrollRoot.rect.size,
+                "Community list scroll root size should match Library");
+            AssertVector2(bindings.community.listScroll.viewport.rect.size,
+                bindings.library.listScroll.viewport.rect.size,
+                "Community list viewport size should match Library");
+            Assert.That(((RectTransform)bindings.community.listContent).rect.width,
+                Is.EqualTo(((RectTransform)bindings.library.listContent).rect.width).Within(0.001f),
+                "Community list content should use the same available width as Library.");
+
             RectTransform communityRow = bindings.community.rowTemplate.GetComponent<RectTransform>();
             LayoutElement communityRowLayout = bindings.community.rowTemplate.GetComponent<LayoutElement>();
-            Assert.That(communityRow.rect.width, Is.EqualTo(270f).Within(0.001f));
-            Assert.That(communityRow.rect.height, Is.EqualTo(270f).Within(0.001f));
-            Assert.That(communityRowLayout.preferredWidth, Is.EqualTo(270f).Within(0.001f));
-            Assert.That(communityRowLayout.preferredHeight, Is.EqualTo(270f).Within(0.001f));
+            float expectedTemplateSize = WordListHubTileGridMetrics.Calculate(
+                ((RectTransform)bindings.community.listContent).rect.width,
+                WordListHubTileGridMetrics.PreferredColumnCount).TileSize;
+            Assert.That(communityRow.rect.width, Is.EqualTo(expectedTemplateSize).Within(0.001f));
+            Assert.That(communityRow.rect.height, Is.EqualTo(expectedTemplateSize).Within(0.001f));
+            Assert.That(communityRowLayout.preferredWidth, Is.EqualTo(expectedTemplateSize).Within(0.001f));
+            Assert.That(communityRowLayout.preferredHeight, Is.EqualTo(expectedTemplateSize).Within(0.001f));
             Assert.That(communityRowLayout.preferredWidth, Is.EqualTo(communityRow.rect.width).Within(0.001f));
             Assert.That(communityRow.rect.width,
                 Is.LessThan(bindings.community.listScroll.viewport.rect.width));
@@ -1868,58 +2031,117 @@ namespace Words.UiMockups.WordListHub.Tests
             Assert.That(bindings.community.rowTemplate.title.fontSize, Is.EqualTo(22f).Within(0.001f));
             Assert.That(bindings.community.rowTemplate.metadata.fontSize, Is.EqualTo(18f).Within(0.001f));
             Assert.That(bindings.community.rowTemplate.summary.fontSize, Is.EqualTo(15f).Within(0.001f));
-            Assert.That(bindings.community.rowTemplate.status.fontSize, Is.EqualTo(15f).Within(0.001f));
+            Assert.That(bindings.community.rowTemplate.status.fontSize, Is.EqualTo(13f).Within(0.001f));
             Assert.That(bindings.community.rowTemplate.summary.textWrappingMode,
                 Is.EqualTo(TextWrappingModes.NoWrap));
             Assert.That(bindings.community.rowTemplate.summary.overflowMode,
                 Is.EqualTo(TextOverflowModes.Ellipsis));
             AssertCommunityLabelLayout(bindings.community.rowTemplate.title,
-                new Vector2(0f, -72f), new Vector2(230f, 64f), "Community row title", true);
+                new Vector2(0f, -36f), new Vector2(expectedTemplateSize - 40f, 64f), "Community row title", true);
             AssertCommunityLabelLayout(bindings.community.rowTemplate.metadata,
-                new Vector2(0f, -144f), new Vector2(230f, 54f), "Community row metadata", true);
+                new Vector2(0f, -116f), new Vector2(expectedTemplateSize - 40f, 28f), "Community row metadata");
+            AssertCommunityLabelLayout(bindings.community.rowTemplate.recordStars,
+                new Vector2(0f, -168f), new Vector2(expectedTemplateSize - 40f, 34f), "Community row PersonalStars");
+            AssertCommunityLabelLayout(bindings.community.rowTemplate.bestTime,
+                new Vector2(0f, -222f), new Vector2(expectedTemplateSize - 40f, 28f), "Community row best time");
             AssertCommunityLabelLayout(bindings.community.rowTemplate.status,
-                new Vector2(0f, -230f), new Vector2(205f, 24f), "Community row status");
+                new Vector2(-12f, -8f), new Vector2(70f, 22f), "Community row status");
             Assert.That(bindings.community.rowTemplate.status.alignment,
-                Is.EqualTo(TextAlignmentOptions.Center));
+                Is.EqualTo(TextAlignmentOptions.MidlineRight));
 
             RectTransform communitySearch = bindings.community.searchInput.GetComponent<RectTransform>();
-            Assert.That(communitySearch.rect.size, Is.EqualTo(new Vector2(450f, 42f)),
-                "Preserve the authored Community search width from the saved mockup scene.");
-            RectTransform communityConnection = bindings.community.connectionState.GetComponent<RectTransform>();
-            RectTransform libraryLanguage = bindings.library.languageFilter.GetComponent<RectTransform>();
-            Assert.That(communityConnection.rect.size, Is.EqualTo(libraryLanguage.rect.size));
+            RectTransform librarySearch = bindings.library.searchInput.GetComponent<RectTransform>();
+            AssertVector2(communitySearch.anchoredPosition, librarySearch.anchoredPosition,
+                "Community search position should match Library");
+            AssertVector2(communitySearch.rect.size, librarySearch.rect.size,
+                "Community search size should match Library");
+            RectTransform communityFilters = bindings.community.connectionMenu.toggleButton.GetComponent<RectTransform>();
+            RectTransform libraryFilters = bindings.library.filtersMenu.toggleButton.GetComponent<RectTransform>();
+            AssertVector2(communityFilters.anchoredPosition, libraryFilters.anchoredPosition,
+                "Community filters position should match Library");
+            AssertVector2(communityFilters.rect.size, libraryFilters.rect.size,
+                "Community filters size should match Library");
+            RectTransform communityPopup = bindings.community.connectionMenu.panel.GetComponent<RectTransform>();
+            Assert.That(communityPopup.anchoredPosition.x + (1f - communityPopup.pivot.x) * communityPopup.rect.width,
+                Is.EqualTo(communityFilters.anchoredPosition.x
+                    + (1f - communityFilters.pivot.x) * communityFilters.rect.width).Within(0.001f),
+                "Community filter popup right edge should align with its toggle.");
 
             Transform communityListTitle = bindings.community.root.transform
                 .Find("CommunityListPane/CommunityListTitle");
             Transform libraryListTitle = bindings.library.root.transform
                 .Find("LibraryListPane/ListPaneTitle");
-            Assert.That(communityListTitle.GetComponent<TMP_Text>().fontSize,
-                Is.EqualTo(libraryListTitle.GetComponent<TMP_Text>().fontSize).Within(0.001f));
+            AssertVector2(communityListTitle.GetComponent<RectTransform>().anchoredPosition,
+                libraryListTitle.GetComponent<RectTransform>().anchoredPosition,
+                "Community list heading position should match Library");
+            AssertVector2(communityListTitle.GetComponent<RectTransform>().rect.size,
+                libraryListTitle.GetComponent<RectTransform>().rect.size,
+                "Community list heading size should match Library");
+            AssertTextBaseStyleMatches(libraryListTitle.GetComponent<TMP_Text>(),
+                communityListTitle.GetComponent<TMP_Text>(), "Community list heading style");
+
             TMP_Text communityDetailTitle = bindings.community.detailTitle;
             TMP_Text libraryDetailTitle = bindings.library.detailTitle;
-            Assert.That(communityDetailTitle.font, Is.SameAs(libraryDetailTitle.font));
-            Assert.That(communityDetailTitle.enableAutoSizing, Is.True);
-            Assert.That(libraryDetailTitle.enableAutoSizing, Is.True);
-            Assert.That(communityDetailTitle.fontSizeMin, Is.EqualTo(23f).Within(0.001f));
-            Assert.That(communityDetailTitle.fontSizeMax, Is.EqualTo(29f).Within(0.001f));
-            Assert.That(libraryDetailTitle.fontSizeMin, Is.EqualTo(23f).Within(0.001f));
-            Assert.That(libraryDetailTitle.fontSizeMax, Is.EqualTo(29f).Within(0.001f));
-            Assert.That(communityDetailTitle.fontSize,
-                Is.InRange(communityDetailTitle.fontSizeMin, communityDetailTitle.fontSizeMax));
-            Assert.That(libraryDetailTitle.fontSize,
-                Is.InRange(libraryDetailTitle.fontSizeMin, libraryDetailTitle.fontSizeMax));
-            Assert.That(bindings.community.detailAuthor.fontSize,
-                Is.EqualTo(bindings.library.detailMetadata.fontSize).Within(0.001f));
-            Assert.That(bindings.community.detailDescription.fontSize,
-                Is.EqualTo(bindings.library.detailDescription.fontSize).Within(0.001f));
-            Assert.That(bindings.community.detailSummary.fontSize,
-                Is.EqualTo(bindings.library.detailWords.fontSize).Within(0.001f));
-            Assert.That(bindings.community.like.button.GetComponent<RectTransform>().rect.height,
-                Is.EqualTo(bindings.library.play.button.GetComponent<RectTransform>().rect.height).Within(0.001f));
-            Assert.That(bindings.community.download.button.GetComponent<RectTransform>().rect.height,
-                Is.EqualTo(bindings.library.play.button.GetComponent<RectTransform>().rect.height).Within(0.001f));
-            Assert.That(bindings.community.play.button.GetComponent<RectTransform>().rect.height,
-                Is.EqualTo(bindings.library.play.button.GetComponent<RectTransform>().rect.height).Within(0.001f));
+            AssertCommunityLabelMatches(libraryDetailTitle, communityDetailTitle,
+                "Community detail title", false, TextOverflowModes.Truncate);
+            AssertCommunityLabelMatches(bindings.library.detailMetadata, bindings.community.detailAuthor,
+                "Community detail author", true, TextOverflowModes.Truncate);
+            AssertCommunityLabelMatches(bindings.library.detailDescription, bindings.community.detailDescription,
+                "Community detail description", true);
+            AssertTextBaseStyleMatches(libraryDetailTitle, communityDetailTitle, "Community detail title style");
+            AssertTextBaseStyleMatches(bindings.library.detailMetadata, bindings.community.detailAuthor,
+                "Community detail author style");
+            AssertTextBaseStyleMatches(bindings.library.detailDescription, bindings.community.detailDescription,
+                "Community detail description style");
+            AssertTextBaseStyleMatches(bindings.library.detailWordsLabel, bindings.community.detailMetadata,
+                "Community sample label style");
+            AssertTextBaseStyleMatches(bindings.library.detailWords, bindings.community.detailSummary,
+                "Community sample words style");
+
+            RectTransform sampleRoot = communityDetailPane.Find("DiscoverySample").GetComponent<RectTransform>();
+            AssertVector2(sampleRoot.anchoredPosition, new Vector2(0f, -25f),
+                "Community sample wrapper position");
+            AssertVector2(sampleRoot.rect.size, new Vector2(490f, 390f),
+                "Community sample wrapper size");
+            AssertCommunityLabelLayout(bindings.community.detailMetadata, new Vector2(0f, 180f),
+                new Vector2(450f, 22f), "Community sample label", true, TextOverflowModes.Truncate);
+            AssertCommunityLabelLayout(bindings.community.detailSummary, new Vector2(0f, -12f),
+                new Vector2(470f, 350f), "Community sample words", true, TextOverflowModes.Overflow);
+            AssertRectContained(bindings.community.detailMetadata.rectTransform, sampleRoot,
+                "Community sample label");
+            AssertRectContained(bindings.community.detailSummary.rectTransform, sampleRoot,
+                "Community sample words");
+            AssertNoRectOverlap(bindings.community.detailMetadata.rectTransform,
+                bindings.community.detailSummary.rectTransform, "Community sample label and words");
+
+            RectTransform[] communityActions =
+            {
+                bindings.community.like.button.GetComponent<RectTransform>(),
+                bindings.community.download.button.GetComponent<RectTransform>(),
+                bindings.community.play.button.GetComponent<RectTransform>(),
+                bindings.community.report.button.GetComponent<RectTransform>()
+            };
+            float[] communityActionX = { -183f, -61f, 61f, 183f };
+            for (int i = 0; i < communityActions.Length; i++)
+            {
+                AssertVector2(communityActions[i].anchoredPosition,
+                    new Vector2(communityActionX[i], -259f), "Community action " + i + " position");
+                AssertVector2(communityActions[i].rect.size, new Vector2(110f, 60f),
+                    "Community action " + i + " size");
+                Assert.That(communityActions[i].anchoredPosition.x - communityActions[i].rect.width * 0.5f,
+                    Is.GreaterThanOrEqualTo(communityDetailPane.rect.xMin),
+                    "Community action " + i + " left edge should fit inside the pane.");
+                Assert.That(communityActions[i].anchoredPosition.x + communityActions[i].rect.width * 0.5f,
+                    Is.LessThanOrEqualTo(communityDetailPane.rect.xMax),
+                    "Community action " + i + " right edge should fit inside the pane.");
+                if (i > 0)
+                    AssertNoRectOverlap(communityActions[i - 1], communityActions[i],
+                        "Community action " + (i - 1) + " / " + i);
+            }
+            Assert.That(communityDetailPane.Find("DiscoveryEyebrow").gameObject.activeSelf, Is.False,
+                "The inactive discovery eyebrow should remain hidden.");
+            Assert.That(bindings.community.detailTrustNote.gameObject.activeSelf, Is.False,
+                "The inactive community trust note should remain hidden.");
 
             AssertNoRectOverlap(
                 bindings.community.rowTemplate.title.rectTransform,
@@ -1968,9 +2190,20 @@ namespace Words.UiMockups.WordListHub.Tests
 
         private static void AssertNoRectOverlap(RectTransform first, RectTransform second, string description)
         {
-            Rect firstBounds = new Rect(first.anchoredPosition - first.rect.size * 0.5f, first.rect.size);
-            Rect secondBounds = new Rect(second.anchoredPosition - second.rect.size * 0.5f, second.rect.size);
+            Rect firstBounds = GetWorldRect(first);
+            Rect secondBounds = GetWorldRect(second);
             Assert.That(firstBounds.Overlaps(secondBounds), Is.False, description + " must not overlap.");
+        }
+
+        private static Rect GetWorldRect(RectTransform rect)
+        {
+            Vector3[] corners = new Vector3[4];
+            rect.GetWorldCorners(corners);
+            float minX = corners.Min(corner => corner.x);
+            float maxX = corners.Max(corner => corner.x);
+            float minY = corners.Min(corner => corner.y);
+            float maxY = corners.Max(corner => corner.y);
+            return Rect.MinMaxRect(minX, minY, maxX, maxY);
         }
 
         private sealed class NavigationStyleSnapshot
@@ -2102,8 +2335,23 @@ namespace Words.UiMockups.WordListHub.Tests
         private static bool IsSquareTile(RectTransform rect)
         {
             return rect != null
-                && Mathf.Abs(rect.rect.width - 270f) < 0.1f
-                && Mathf.Abs(rect.rect.height - 270f) < 0.1f;
+                && rect.rect.width > 0f
+                && Mathf.Abs(rect.rect.width - rect.rect.height) < 0.1f;
+        }
+
+        private static void AssertTileSetMatchesGrid(
+            IEnumerable<RectTransform> tileRects,
+            float availableWidth,
+            string description)
+        {
+            List<RectTransform> tiles = tileRects.Where(tile => tile != null).ToList();
+            Assert.That(tiles, Is.Not.Empty, description + " should contain tiles.");
+            float expectedSize = WordListHubTileGridMetrics.Calculate(availableWidth, tiles.Count).TileSize;
+            foreach (RectTransform tile in tiles)
+            {
+                Assert.That(tile.rect.width, Is.EqualTo(expectedSize).Within(0.1f), description + ".width");
+                Assert.That(tile.rect.height, Is.EqualTo(expectedSize).Within(0.1f), description + ".height");
+            }
         }
 
         private static void AddAuthoredCommunityPreviewRows(
@@ -2179,6 +2427,39 @@ namespace Words.UiMockups.WordListHub.Tests
                 "RefreshLibraryPage", BindingFlags.Instance | BindingFlags.NonPublic);
             Assert.That(refresh, Is.Not.Null);
             refresh.Invoke(controller, new object[] { false, false });
+        }
+
+        private static void InvokeChangePage(WordListHubMockupController controller, string pageName)
+        {
+            MethodInfo changePage = typeof(WordListHubMockupController).GetMethod(
+                "ChangePage", BindingFlags.Instance | BindingFlags.NonPublic);
+            Assert.That(changePage, Is.Not.Null);
+            Type pageType = changePage.GetParameters()[0].ParameterType;
+            changePage.Invoke(controller, new[] { Enum.Parse(pageType, pageName) });
+        }
+
+        private static void AssertTileInformationRows(
+            TMP_Text title,
+            TMP_Text metadata,
+            TMP_Text recordStars,
+            TMP_Text bestTime,
+            string description)
+        {
+            AssertTileTextRect(title, 36f, 64f, 22f, description + ".name");
+            AssertTileTextRect(metadata, 116f, 28f, 18f, description + ".languageAndCount");
+            AssertTileTextRect(recordStars, 168f, 34f, 22f, description + ".stars");
+            AssertTileTextRect(bestTime, 222f, 28f, 18f, description + ".time");
+        }
+
+        private static void AssertTileTextRect(TMP_Text text, float top, float height, float fontSize, string description)
+        {
+            Assert.That(text, Is.Not.Null, description + " must be assigned.");
+            RectTransform tile = text.rectTransform.parent as RectTransform;
+            Assert.That(tile, Is.Not.Null, description + " must be parented to a tile.");
+            float expectedWidth = Mathf.Max(0f, tile.rect.width - 40f);
+            AssertVector2(text.rectTransform.anchoredPosition, new Vector2(0f, -top), description + " position");
+            AssertVector2(text.rectTransform.sizeDelta, new Vector2(expectedWidth, height), description + " size");
+            Assert.That(text.fontSize, Is.EqualTo(fontSize).Within(0.01f), description + " font size");
         }
 
         private static void InvokeControllerUpdate(WordListHubMockupController controller)

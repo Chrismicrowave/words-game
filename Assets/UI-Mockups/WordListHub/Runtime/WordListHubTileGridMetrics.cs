@@ -8,7 +8,9 @@ namespace Words.UiMockups.WordListHub
     /// </summary>
     public readonly struct WordListHubTileGridMetrics
     {
+        public const int PreferredColumnCount = 4;
         public const float PreferredTileSize = 270f;
+        public const float MinimumReadableTileSize = 250f;
         public const float Gap = 5f;
 
         private WordListHubTileGridMetrics(
@@ -35,17 +37,22 @@ namespace Words.UiMockups.WordListHub
         public float RowHeight => TileSize;
         public float ContentHeight { get; }
 
-        /// <summary>Calculates grid dimensions for the current viewport width and item count.</summary>
+        /// <summary>
+        /// Calculates grid dimensions for the current viewport width and item count.
+        /// Uses up to four columns while keeping tiles at least 250 pixels wide when
+        /// the viewport can fit them; otherwise it falls back to fewer columns.
+        /// </summary>
         public static WordListHubTileGridMetrics Calculate(float availableWidth, int itemCount)
         {
             if (float.IsNaN(availableWidth) || float.IsInfinity(availableWidth))
                 throw new ArgumentOutOfRangeException(nameof(availableWidth), "Width must be finite.");
 
             float width = Math.Max(0f, availableWidth);
-            int columns = (int)Math.Min(
-                int.MaxValue,
-                Math.Max(1d, Math.Floor(((double)width + Gap) / (PreferredTileSize + Gap))));
-            float tileSize = width < PreferredTileSize ? width : PreferredTileSize;
+            int columnsAtReadableSize = (int)Math.Floor(
+                ((double)width + Gap) / (MinimumReadableTileSize + Gap));
+            int columns = Math.Min(PreferredColumnCount, Math.Max(1, columnsAtReadableSize));
+            float widthPerTile = (width - (columns - 1) * Gap) / columns;
+            float tileSize = Math.Min(PreferredTileSize, Math.Max(0f, widthPerTile));
             int normalizedItemCount = Math.Max(0, itemCount);
             int rows = normalizedItemCount == 0
                 ? 0

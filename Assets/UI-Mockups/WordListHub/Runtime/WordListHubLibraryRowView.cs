@@ -15,6 +15,7 @@ namespace Words.UiMockups.WordListHub
         public TMP_Text bestTime;
         public TMP_Text title;
         public TMP_Text metadata;
+        public TMP_Text recordStars;
         public GameObject badgeRoot;
         public TMP_Text badge;
     }

@@ -11,6 +11,8 @@ namespace Words.UiMockups.WordListHub
         public Button button;
         public TMP_Text title;
         public TMP_Text metadata;
+        public TMP_Text recordStars;
+        public TMP_Text bestTime;
         public TMP_Text summary;
         public TMP_Text status;
     }

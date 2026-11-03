@@ -451,6 +451,26 @@ namespace Words.UiMockups.WordListHub.Tests
         }
 
         [Test]
+        public void FindCommunityDownload_usesRemoteIdentityAndReturnsItsPersonalRecord()
+        {
+            const string remoteItemId = "mock-ugc-weekend-garden";
+            Assert.That(store.FindCommunityDownload(remoteItemId), Is.Null);
+
+            MockupWordList downloaded = store.Download(remoteItemId);
+            Assert.That(store.FindCommunityDownload(remoteItemId), Is.SameAs(downloaded));
+            Assert.That(downloaded.PersonalStars, Is.Null);
+            Assert.That(downloaded.BestTimeSeconds, Is.Null);
+
+            store.CompleteRun(downloaded.Id, 2, 12.5f);
+
+            MockupWordList record = store.FindCommunityDownload(remoteItemId);
+            Assert.That(record, Is.SameAs(downloaded));
+            Assert.That(record.PersonalStars, Is.EqualTo(2));
+            Assert.That(record.BestTimeSeconds, Is.EqualTo(12.5f));
+            Assert.That(store.FindCommunityDownload("missing-community-item"), Is.Null);
+        }
+
+        [Test]
         public void DownloadingAnExistingCommunityItem_returnsItsExistingLibraryEntry()
         {
             MockupWordList existing = store.FindById("mock-list-cafe-abroad");
