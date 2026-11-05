@@ -14,6 +14,9 @@ public class InputHandler : SingletonBehaviour<InputHandler>
 
     private Keyboard keyboard;
     private bool _gameplayBlocked;
+    private bool _hubGameplayBlocked;
+
+    public bool IsHubGameplayBlocked => _hubGameplayBlocked;
 
     // Map New Input System Key enum to legacy KeyCode for WordEngine compatibility
     private readonly Dictionary<Key, KeyCode> keyToKeyCode = new Dictionary<Key, KeyCode>();
@@ -25,6 +28,7 @@ public class InputHandler : SingletonBehaviour<InputHandler>
     }
 
     public void SetGameplayBlocked(bool blocked) => _gameplayBlocked = blocked;
+    public void SetHubGameplayBlocked(bool blocked) => _hubGameplayBlocked = blocked;
 
     void BuildKeyMap()
     {
@@ -71,7 +75,7 @@ public class InputHandler : SingletonBehaviour<InputHandler>
         if (keyboard == null || IsUIFocused()) return;
 
         // Check backspace
-        if (keyboard.backspaceKey.wasPressedThisFrame)
+        if (!_hubGameplayBlocked && keyboard.backspaceKey.wasPressedThisFrame)
         {
             // Clear UI selection so EventSystem doesn't also fire Submit on a button
             if (EventSystem.current != null)
@@ -81,7 +85,7 @@ public class InputHandler : SingletonBehaviour<InputHandler>
         }
 
         // Check enter
-        if (keyboard.enterKey.wasPressedThisFrame)
+        if (!_hubGameplayBlocked && keyboard.enterKey.wasPressedThisFrame)
         {
             // Clear UI selection so EventSystem doesn't also fire Submit on a button
             if (EventSystem.current != null)
@@ -91,7 +95,7 @@ public class InputHandler : SingletonBehaviour<InputHandler>
         }
 
         // Check all mapped keys for press and release
-        if (!_gameplayBlocked)
+        if (!_gameplayBlocked && !_hubGameplayBlocked)
         {
             // Check presses first — alphabetical order meant C-release hid G-press
             // when both happened the same frame (C < G in dictionary).

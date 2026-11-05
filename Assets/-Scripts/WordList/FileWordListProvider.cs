@@ -38,17 +38,22 @@ public class FileWordListProvider : IWordListProvider
 
     public List<ChineseWordEntry> GetChineseWords()
     {
-        return chineseWords != null ? new List<ChineseWordEntry>(chineseWords) : null;
+        return chineseWords != null ? LevelWordListProvider.CloneChineseWords(chineseWords) : null;
     }
 
     public List<MixedWordEntry> GetMixedWords()
     {
-        return mixedWords != null ? new List<MixedWordEntry>(mixedWords) : null;
+        return mixedWords != null ? LevelWordListProvider.CloneMixedWords(mixedWords) : null;
     }
 
     public void SetWords(List<string> newWords)
     {
         words = new List<string>(newWords);
+    }
+
+    public void SetChineseWords(List<ChineseWordEntry> chinese)
+    {
+        chineseWords = LevelWordListProvider.CloneChineseWords(chinese);
     }
 
     public void SetMixedWords(List<MixedWordEntry> mixed)
@@ -59,6 +64,15 @@ public class FileWordListProvider : IWordListProvider
     public void SetLanguageMode(LanguageMode mode)
     {
         LanguageMode = mode;
+    }
+
+    public void SetContent(LanguageMode mode, List<string> newWords,
+        List<ChineseWordEntry> chinese, List<MixedWordEntry> mixed)
+    {
+        LanguageMode = mode;
+        words = newWords != null ? new List<string>(newWords) : new List<string>();
+        chineseWords = LevelWordListProvider.CloneChineseWords(chinese);
+        mixedWords = LevelWordListProvider.CloneMixedWords(mixed);
     }
 
     /// <summary>

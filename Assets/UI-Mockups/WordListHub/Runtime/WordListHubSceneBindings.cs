@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
+using UnityEngine.Serialization;
 using UnityEngine.UI;
 
 namespace Words.UiMockups.WordListHub
@@ -198,6 +199,8 @@ namespace Words.UiMockups.WordListHub
             public TMP_Dropdown directionFilter;
             public FilterMenuBinding filtersMenu = new FilterMenuBinding();
             public ButtonBinding createList = new ButtonBinding();
+            public ButtonBinding importList = new ButtonBinding();
+            public ButtonBinding exportList = new ButtonBinding();
             public ScrollRect listScroll;
             public Transform listContent;
             public Transform detailPane;
@@ -263,8 +266,22 @@ namespace Words.UiMockups.WordListHub
         public sealed class ChallengesPageBinding
         {
             public GameObject root;
+            public ScrollRect listScroll;
+            public Transform listContent;
+            public WordListHubLibraryRowView rowTemplate;
+            public TMP_Text emptyNotice;
+            public TMP_Text detailTitle;
+            [FormerlySerializedAs("detailDescription")]
+            public TMP_Text detailRecords;
+            public TMP_Text detailMetadata;
+            public TMP_Text detailWordsLabel;
+            public TMP_Text detailWords;
+            public Transform detailPane;
+            public ButtonBinding play = new ButtonBinding();
+            public ButtonBinding copyToCustom = new ButtonBinding();
             public ButtonBinding dailyChallenge = new ButtonBinding();
             public ButtonBinding weeklyChallenge = new ButtonBinding();
+            public RubyPreviewBinding rubyWords = new RubyPreviewBinding();
             public TMP_Text description;
             public TMP_Text status;
         }
@@ -282,12 +299,15 @@ namespace Words.UiMockups.WordListHub
         }
 
         public RectTransform card;
+        public GameObject hostRoot;
         public Transform hubRoot;
         public Transform navigationRoot;
         public ButtonBinding navChallenges = new ButtonBinding();
         public ButtonBinding navLibrary = new ButtonBinding();
         public ButtonBinding navCommunity = new ButtonBinding();
         public ButtonBinding navAchievements = new ButtonBinding();
+        public ButtonBinding closeHub = new ButtonBinding();
+        public ButtonBinding openSettings = new ButtonBinding();
         public ButtonBinding resetMockData = new ButtonBinding();
         public TMP_Text footer;
         public List<PageBinding> pages = new List<PageBinding>();

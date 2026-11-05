@@ -11,6 +11,14 @@ public static class ChallengeTrackResolver
     public const string ChineseTrackPrefix = "cn_";
     public const string EnglishTrackPrefix = "";
 
+    /// <summary>Resolves the current locale's progression track without depending on UI types.</summary>
+    public static string ResolvePreferredTrackPrefix(bool allowChineseAndMixed, string localeCode)
+    {
+        return allowChineseAndMixed && string.Equals(localeCode, "zh-Hans", StringComparison.Ordinal)
+            ? ChineseTrackPrefix
+            : EnglishTrackPrefix;
+    }
+
     public static string GetTrackPrefixForChallengeProvider(LevelWordListProvider provider)
     {
         if (provider == null || string.IsNullOrWhiteSpace(provider.FilePath))

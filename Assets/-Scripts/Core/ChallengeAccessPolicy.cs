@@ -16,19 +16,24 @@ public static class ChallengeAccessPolicy
         if (challengeIndex < 0)
             return false;
 
+        int challengeCap = profile != null
+            ? profile.EffectiveChallengeCap
+            : Math.Max(0, legacyMaxChallengeLevels);
+        if (challengeCap > 0 && challengeIndex >= challengeCap)
+            return false;
+
         if (profile != null)
         {
-            if (profile.unlockAllFeatures || profile.unlockAllChallenges)
+            if (profile.unlockAllFeatures || profile.ignoreProgressionLocks)
                 return true;
 
             return ChallengeProgression.IsChallengeIndexUnlocked(
-                challengeIndex, unlockedCount, profile.EffectiveChallengeCap);
+                challengeIndex, unlockedCount, challengeCap);
         }
 
-        if (legacyUnlockAllChallenges)
-            return true;
-
+        // The legacy override parameter is retained for callers, but unprofiled
+        // challenges always follow their configured cap and saved progression.
         return ChallengeProgression.IsChallengeIndexUnlocked(
-            challengeIndex, unlockedCount, Math.Max(0, legacyMaxChallengeLevels));
+            challengeIndex, unlockedCount, challengeCap);
     }
 }

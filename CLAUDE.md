@@ -2,7 +2,7 @@
 
 Unity typing game targeting Steam release. Players hold a key on first letter appearance, release on second, alternating for repeated letters, progressing through word phases.
 
-Architecture details: `docs/architecture.md`
+Architecture details: `../doc/archive/260311/architecture.md`
 
 ## Tech Stack
 - Unity 6 (6000.3.11f1), C#

@@ -120,12 +120,18 @@ namespace Words.UiMockups.WordListHub
     {
         private readonly List<MockupPreviousRecordSummary> previousContentRecords =
             new List<MockupPreviousRecordSummary>();
+        private MockupLanguage? detectedLanguageOverride;
 
         public string Id { get; internal set; }
         public string Title { get; internal set; }
         public string Description { get; internal set; }
         public string Tags { get; internal set; }
         public MockupLanguage Language { get; internal set; }
+        public MockupLanguage DetectedLanguage
+        {
+            get => detectedLanguageOverride ?? Language;
+            internal set => detectedLanguageOverride = value;
+        }
         public List<string> Words { get; internal set; }
         public int WordCount { get; internal set; }
         public bool IsFavorite { get; internal set; }
@@ -144,6 +150,9 @@ namespace Words.UiMockups.WordListHub
         public string RemoteAuthor { get; internal set; }
         public MockupDownloadStatus DownloadStatus { get; internal set; }
         public MockupPublicationStatus PublicationStatus { get; internal set; }
+        public bool IsChallenge { get; internal set; }
+        public bool IsChallengeUnlocked { get; internal set; } = true;
+        public string UnlockRewardLabel { get; internal set; }
 
         public MockupLibraryGroup Group
         {
@@ -157,7 +166,7 @@ namespace Words.UiMockups.WordListHub
             }
         }
 
-        public bool IsReadOnly => Ownership == MockupOwnership.CommunityDownloaded;
+        public bool IsReadOnly => Ownership == MockupOwnership.CommunityDownloaded || IsChallenge;
         public bool HasPublishedBinding => Ownership == MockupOwnership.Owned
             && !string.IsNullOrEmpty(RemoteItemId);
         public bool HasBeenPlayed => LastPlayedAt.HasValue;
@@ -177,6 +186,12 @@ namespace Words.UiMockups.WordListHub
             // Keep the mock bounded if a reviewer edits the sample repeatedly.
             if (previousContentRecords.Count > 5)
                 previousContentRecords.RemoveAt(0);
+        }
+
+        internal void AddPreviousRecord(int contentRevision, int? personalStars, float? bestTimeSeconds)
+        {
+            previousContentRecords.Add(new MockupPreviousRecordSummary(
+                contentRevision, personalStars, bestTimeSeconds));
         }
     }
 
@@ -602,13 +617,25 @@ namespace Words.UiMockups.WordListHub
         public bool ContentChanged { get; }
         public bool ShowRecordWarning { get; }
         public bool CreatedNewList { get; }
+        public bool Succeeded => Item != null;
+        public string Message { get; }
 
-        internal MockupEditResult(MockupWordList item, bool contentChanged, bool createdNewList = false)
+        public MockupEditResult(MockupWordList item, bool contentChanged, bool createdNewList = false)
         {
             Item = item;
             ContentChanged = contentChanged;
             ShowRecordWarning = contentChanged;
             CreatedNewList = createdNewList;
+        }
+
+        private MockupEditResult(string message)
+        {
+            Message = message ?? string.Empty;
+        }
+
+        public static MockupEditResult Failure(string message)
+        {
+            return new MockupEditResult(message);
         }
     }
 
@@ -619,7 +646,7 @@ namespace Words.UiMockups.WordListHub
         public MockupWordList List { get; }
         public MockupDiscoveryItem DiscoveryItem { get; }
 
-        internal MockupActionResult(
+        public MockupActionResult(
             bool succeeded,
             string message,
             MockupWordList list = null,
@@ -644,6 +671,125 @@ namespace Words.UiMockups.WordListHub
             : base(succeeded, message, list)
         {
             DownloadedNow = downloadedNow;
+        }
+    }
+
+    /// <summary>Creates UI read models from authoritative runtime data outside this asmdef.</summary>
+    public static class MockupWordListProjection
+    {
+        public static MockupPlayResult CreateBlockedPlayResult(string message) =>
+            new MockupPlayResult(false, message ?? string.Empty);
+
+        public static MockupWordList CreateWordList(
+            string id,
+            string title,
+            string description,
+            string tags,
+            MockupLanguage language,
+            IEnumerable<string> words,
+            bool isFavorite,
+            DateTime addedAt,
+            DateTime modifiedAt,
+            DateTime contentModifiedAt,
+            DateTime? lastPlayedAt,
+            int? personalStars,
+            float? bestTimeSeconds,
+            int contentRevision,
+            int playCount,
+            IEnumerable<MockupPreviousRecordSummary> previousRecords = null,
+            bool isChallenge = false,
+            bool isChallengeUnlocked = true,
+            string unlockRewardLabel = null,
+            MockupLanguage? detectedLanguage = null)
+        {
+            List<string> projectedWords = words == null ? new List<string>() : new List<string>(words);
+            var item = new MockupWordList
+            {
+                Id = id,
+                Title = title ?? string.Empty,
+                Description = description ?? string.Empty,
+                Tags = tags ?? string.Empty,
+                Language = language,
+                DetectedLanguage = detectedLanguage ?? language,
+                Words = projectedWords,
+                WordCount = projectedWords.Count,
+                IsFavorite = isFavorite,
+                AddedAt = addedAt,
+                ModifiedAt = modifiedAt,
+                ContentModifiedAt = contentModifiedAt,
+                LastPlayedAt = lastPlayedAt,
+                PersonalStars = personalStars,
+                BestTimeSeconds = bestTimeSeconds,
+                ContentRevision = Math.Max(1, contentRevision),
+                PlayCount = Math.Max(0, playCount),
+                Ownership = MockupOwnership.Owned,
+                HasOfflineCache = true,
+                IsPubliclyVisible = false,
+                RemoteItemId = null,
+                RemoteAuthor = null,
+                DownloadStatus = MockupDownloadStatus.None,
+                PublicationStatus = MockupPublicationStatus.NotPublished,
+                IsChallenge = isChallenge,
+                IsChallengeUnlocked = isChallengeUnlocked,
+                UnlockRewardLabel = unlockRewardLabel ?? string.Empty
+            };
+
+            if (previousRecords != null)
+            {
+                foreach (MockupPreviousRecordSummary record in previousRecords)
+                {
+                    if (record != null)
+                        item.AddPreviousRecord(record.ContentRevision, record.PersonalStars, record.BestTimeSeconds);
+                }
+            }
+            return item;
+        }
+
+        public static MockupPreviousRecordSummary CreatePreviousRecord(
+            int contentRevision, int? personalStars, float? bestTimeSeconds)
+        {
+            return new MockupPreviousRecordSummary(contentRevision, personalStars, bestTimeSeconds);
+        }
+
+        public static MockupAchievement CreateAchievement(
+            string id,
+            string title,
+            string description,
+            MockupAchievementStatus status,
+            string progressText)
+        {
+            return new MockupAchievement(id, title, description, status, progressText);
+        }
+
+        public static MockupDiscoveryItem CreateDiscoveryItem(
+            string remoteItemId,
+            string title,
+            string description,
+            MockupLanguage language,
+            IEnumerable<string> words,
+            string remoteAuthor,
+            MockupDiscoveryStatus status = MockupDiscoveryStatus.New)
+        {
+            List<string> displayWords = words == null ? new List<string>() : new List<string>(words);
+            return new MockupDiscoveryItem
+            {
+                RemoteItemId = remoteItemId,
+                Title = title ?? string.Empty,
+                Description = description ?? string.Empty,
+                Language = language,
+                Words = displayWords,
+                WordCount = displayWords.Count,
+                RemoteAuthor = remoteAuthor ?? string.Empty,
+                Status = status,
+                LikeCount = 0,
+                IsLiked = false,
+                IsDownloaded = false,
+                IsHiddenByCurrentUser = false,
+                IsReportedByCurrentUser = false,
+                MockReportCount = 0,
+                ReportStatus = MockupReportStatus.None,
+                IsRemovedFromCommunity = false
+            };
         }
     }
 }

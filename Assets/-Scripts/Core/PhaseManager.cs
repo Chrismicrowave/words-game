@@ -9,6 +9,10 @@ public class PhaseManager : SingletonBehaviour<PhaseManager>
     private bool allowChineseAndMixed = true;
 
     private IWordListProvider activeProvider;
+    private LanguageMode activeLanguageMode = LanguageMode.English;
+    private WordListLibraryService wordListLibrary;
+    private bool subscribedToLibrary;
+    private bool committingLocalMutation;
     private List<string> words = new List<string>();
     private List<ChineseWordEntry> chineseWords = new List<ChineseWordEntry>();
     private List<MixedWordEntry> mixedWords = new List<MixedWordEntry>();
@@ -19,20 +23,36 @@ public class PhaseManager : SingletonBehaviour<PhaseManager>
     public bool HasMorePhases => CurrentPhaseIndex < words.Count - 1;
     public IWordListProvider ActiveProvider => activeProvider;
     public IReadOnlyList<string> Words => words;
-    public LanguageMode CurrentLanguageMode => activeProvider?.LanguageMode ?? LanguageMode.English;
+    public LanguageMode CurrentLanguageMode => activeProvider != null ? activeLanguageMode : LanguageMode.English;
     public bool AllowChineseAndMixed => config != null && config.activeProfile != null
         ? config.activeProfile.allowChineseAndMixed
         : allowChineseAndMixed;
     public GameConfigProfile ActiveProfile => config != null ? config.activeProfile : null;
-    public bool CanAddWords => config == null || config.activeProfile == null
-        || config.activeProfile.IsFeatureAvailable(config.activeProfile.unlockAddWords);
-    public bool CanEditLists => config == null || config.activeProfile == null
-        || config.activeProfile.IsFeatureAvailable(config.activeProfile.unlockEditLists);
-    public bool HasReachedWordLimit => config != null && config.activeProfile != null
-        && config.activeProfile.isDemo && !config.activeProfile.unlockAllFeatures
-        && config.activeProfile.maxWordsPerList > 0
-        && words.Count >= config.activeProfile.maxWordsPerList;
+    public string PreferredProgressTrackPrefix => ChallengeTrackResolver.ResolvePreferredTrackPrefix(
+        AllowChineseAndMixed, GetSelectedLocaleCode());
+    public int CompletedChallengesForProfile =>
+        ChallengeProgression.GetCompletedChallengesForTrack(PreferredProgressTrackPrefix);
+    public bool IsCustomUnlockedForProfile => ActiveProfile != null
+        && ActiveProfile.CanOpenCustomLists(CompletedChallengesForProfile);
+    public bool CanAddWords => IsCustomUnlockedForProfile;
+    public bool CanEditLists => IsCustomUnlockedForProfile;
+    public bool HasReachedWordLimit => ActiveProfile != null
+        && ActiveProfile.maxWordsPerList > 0
+        && words.Count >= ActiveProfile.maxWordsPerList;
     public LevelMode CurrentLevelMode { get; set; } = LevelMode.Challenge;
+
+    private static string GetSelectedLocaleCode()
+    {
+        try
+        {
+            var locale = UnityEngine.Localization.Settings.LocalizationSettings.SelectedLocale;
+            return locale != null ? locale.Identifier.Code : null;
+        }
+        catch (Exception)
+        {
+            return null;
+        }
+    }
 
     /// <summary>Total failed attempts during the current game session.</summary>
     public int TotalErrors { get; private set; }
@@ -43,6 +63,39 @@ public class PhaseManager : SingletonBehaviour<PhaseManager>
     public event Action<string> OnPhaseWordChanged;
     public event Action OnWordListChanged;
 
+    protected override void Awake()
+    {
+        base.Awake();
+    }
+
+    internal void SetWordListLibraryForTests(WordListLibraryService service)
+    {
+        if (subscribedToLibrary && wordListLibrary != null)
+            wordListLibrary.ContentChanged -= HandleLibraryContentChanged;
+        wordListLibrary = service;
+        subscribedToLibrary = false;
+    }
+
+    private void EnsureWordListLibrary()
+    {
+        if (wordListLibrary == null)
+            wordListLibrary = WordListLibraryService.Shared;
+        if (subscribedToLibrary) return;
+        wordListLibrary.ContentChanged += HandleLibraryContentChanged;
+        subscribedToLibrary = true;
+    }
+
+    private void OnDestroy()
+    {
+        if (wordListLibrary != null)
+        {
+            if (subscribedToLibrary)
+                wordListLibrary.ContentChanged -= HandleLibraryContentChanged;
+            if (activeProvider is LevelWordListProvider levelProvider)
+                wordListLibrary.ClearActiveProvider(levelProvider);
+        }
+    }
+
     /// <summary>Returns false without changing the active list when Chinese content is disabled.</summary>
     public bool LoadWordList(IWordListProvider provider)
     {
@@ -52,11 +105,22 @@ public class PhaseManager : SingletonBehaviour<PhaseManager>
             return false;
         }
 
+        if (provider is LevelWordListProvider || activeProvider is LevelWordListProvider)
+            EnsureWordListLibrary();
+
+        if (wordListLibrary != null && activeProvider is LevelWordListProvider previousProvider
+            && !ReferenceEquals(activeProvider, provider))
+            wordListLibrary.ClearActiveProvider(previousProvider);
+
         activeProvider = provider;
         LanguageMode mode = provider.LanguageMode;
+        activeLanguageMode = mode;
         words = provider.GetWords();
         chineseWords = provider.GetChineseWords() ?? new List<ChineseWordEntry>();
         mixedWords = provider.GetMixedWords() ?? new List<MixedWordEntry>();
+
+        if (wordListLibrary != null && provider is LevelWordListProvider levelProvider)
+            wordListLibrary.SetActiveProvider(levelProvider);
 
         ResetErrors(); // fresh session, clear failure count
 
@@ -255,8 +319,9 @@ public class PhaseManager : SingletonBehaviour<PhaseManager>
 
     private bool CanModifyCurrentList(string addedText = null)
     {
-        return AllowChineseAndMixed
-            || (!CurrentListContainsHan() && !ContainsHanCharacters(addedText));
+        return activeProvider != null && activeProvider.IsEditable
+            && (AllowChineseAndMixed
+                || (!CurrentListContainsHan() && !ContainsHanCharacters(addedText)));
     }
 
     // Returns the ChineseWordEntry for the given index (null if not a Chinese list or out of range)
@@ -304,9 +369,15 @@ public class PhaseManager : SingletonBehaviour<PhaseManager>
     {
         if (!CanAddWords || HasReachedWordLimit || !CanModifyCurrentList(word)) return false;
 
+        WordListLibraryContent before = CaptureCurrentContent();
+        index = Mathf.Clamp(index, 0, words.Count);
+        LanguageMode languageBeforeMutation = CurrentLanguageMode;
         words.Insert(index, word);
-        // In Mixed mode, keep mixedWords in sync so the entry persists after save/reload
-        if (CurrentLanguageMode == LanguageMode.Mixed)
+        // Keep the current typed source rows intact until auto-normalization has matched
+        // their display text and pinyin. The new row is English unless already Mixed.
+        if (languageBeforeMutation == LanguageMode.Chinese)
+            chineseWords.Insert(index, null);
+        else if (languageBeforeMutation == LanguageMode.Mixed)
         {
             mixedWords.Insert(index, new MixedWordEntry
             {
@@ -316,8 +387,7 @@ public class PhaseManager : SingletonBehaviour<PhaseManager>
                 }
             });
         }
-        OnWordListChanged?.Invoke();
-        return true;
+        return CommitCurrentMutation(before);
     }
 
     /// <summary>
@@ -327,66 +397,66 @@ public class PhaseManager : SingletonBehaviour<PhaseManager>
     /// </summary>
     public bool AddMixedPhase(MixedWordEntry entry)
     {
-        if (entry == null || !CanAddWords || HasReachedWordLimit || !CanModifyCurrentList()
+        if (entry == null || entry.segments == null || !CanAddWords || HasReachedWordLimit || !CanModifyCurrentList()
             || (!AllowChineseAndMixed && MixedEntryContainsHan(entry)))
             return false;
+
+        WordListLibraryContent before = CaptureCurrentContent();
 
         // Build display string for the phase list
         var sb = new System.Text.StringBuilder();
         foreach (var seg in entry.segments)
         {
+            if (seg == null) return false;
             if (seg.type == "english") sb.Append(seg.text);
             else if (seg.entries != null)
                 foreach (var e in seg.entries) sb.Append(e.character);
         }
         string display = sb.ToString();
 
-        // If not already Mixed, convert existing words to Mixed entries
-        if (CurrentLanguageMode != LanguageMode.Mixed)
+        // Keep typed Chinese rows available as a separate exact-display source while
+        // normalization combines them with this new typed Mixed row.
+        if (CurrentLanguageMode == LanguageMode.Chinese)
         {
             mixedWords = new List<MixedWordEntry>();
-            foreach (var w in words)
-            {
-                mixedWords.Add(new MixedWordEntry
-                {
-                    segments = new List<MixedSegmentData>
-                    {
-                        new MixedSegmentData { type = "english", text = w }
-                    }
-                });
-            }
-            if (activeProvider is FileWordListProvider fp)
-                fp.SetLanguageMode(LanguageMode.Mixed);
-            else if (activeProvider is LevelWordListProvider lvlp)
-                lvlp.SetLanguageMode(LanguageMode.Mixed);
+            for (int i = 0; i < words.Count; i++) mixedWords.Add(null);
+            chineseWords.Insert(0, null);
         }
+        else if (CurrentLanguageMode == LanguageMode.English)
+            ConvertCurrentWordsToMixed();
 
-        mixedWords.Insert(0, entry);
+        mixedWords.Insert(0, LevelWordListProvider.CloneMixedWords(new List<MixedWordEntry> { entry })[0]);
         words.Insert(0, display);
-        OnWordListChanged?.Invoke();
-        return true;
+        return CommitCurrentMutation(before);
     }
 
-    public void RemovePhase(int index)
+    public bool RemovePhase(int index)
     {
-        if (!CanEditLists || !CanModifyCurrentList()) return;
-        if (index < 0 || index >= words.Count) return;
+        if (!CanEditLists || !CanModifyCurrentList()) return false;
+        if (index < 0 || index >= words.Count) return false;
+
+        WordListLibraryContent before = CaptureCurrentContent();
 
         words.RemoveAt(index);
         // Keep mixedWords/chineseWords in sync so SaveCurrentList doesn't restore the deleted entry
         if (index < mixedWords.Count)  mixedWords.RemoveAt(index);
         if (index < chineseWords.Count) chineseWords.RemoveAt(index);
 
-        if (CurrentPhaseIndex >= words.Count)
-            CurrentPhaseIndex = Mathf.Max(0, words.Count - 1);
-        OnWordListChanged?.Invoke();
+        if (!CommitCurrentMutation(before))
+        {
+            Debug.LogWarning("[PhaseManager] The word-list removal could not be saved; the original content was restored.");
+            return false;
+        }
+        return true;
     }
 
-    public void MovePhase(int fromIndex, int toIndex)
+    public bool MovePhase(int fromIndex, int toIndex)
     {
-        if (!CanEditLists || !CanModifyCurrentList()) return;
-        if (fromIndex < 0 || fromIndex >= words.Count) return;
-        if (toIndex < 0 || toIndex >= words.Count) return;
+        if (!CanEditLists || !CanModifyCurrentList()) return false;
+        if (fromIndex < 0 || fromIndex >= words.Count) return false;
+        if (toIndex < 0 || toIndex >= words.Count) return false;
+
+        WordListLibraryContent before = CaptureCurrentContent();
 
         string word = words[fromIndex];
         words.RemoveAt(fromIndex);
@@ -406,30 +476,216 @@ public class PhaseManager : SingletonBehaviour<PhaseManager>
             chineseWords.Insert(toIndex, cw);
         }
 
-        OnWordListChanged?.Invoke();
+        if (!CommitCurrentMutation(before))
+        {
+            Debug.LogWarning("[PhaseManager] The word-list move could not be saved; the original content was restored.");
+            return false;
+        }
+        return true;
     }
 
     public void SaveCurrentList()
     {
+        if (!TrySaveCurrentList(out string error))
+            Debug.LogWarning("[PhaseManager] The current word list could not be saved: " + error);
+    }
+
+    public bool TrySaveCurrentList(out string error)
+    {
+        return TryPersistCurrentContent(true, out error);
+    }
+
+    private bool CommitCurrentMutation(WordListLibraryContent previousContent)
+    {
+        WordListLibraryContent candidate = CaptureCurrentContent();
+        LanguageMode fallback = previousContent != null ? previousContent.LanguageMode : candidate.LanguageMode;
+        if (!WordListLibraryContentCodec.TryNormalizeAutoContent(candidate, fallback,
+            out _, out _, out WordListLibraryContent normalized, out string error))
+        {
+            RestoreCurrentContent(previousContent);
+            Debug.LogWarning("[PhaseManager] The word-list mutation could not be saved: " + error);
+            return false;
+        }
+
+        if (!TryPersistCurrentContent(false, out error, normalized))
+        {
+            RestoreCurrentContent(previousContent);
+            Debug.LogWarning("[PhaseManager] The current word list could not be saved: " + error);
+            return false;
+        }
+
+        ApplyCurrentContentSnapshot(normalized);
+        ResetAfterContentChange();
+        return true;
+    }
+
+    private bool TryPersistCurrentContent(bool publishChange, out string error,
+        WordListLibraryContent contentOverride = null)
+    {
+        error = null;
         if (!AllowChineseAndMixed && CurrentListContainsHan())
         {
             Debug.LogWarning("[PhaseManager] Chinese content is disabled; the current Chinese list was not saved.");
-            return;
+            error = "Chinese and mixed content is disabled by the active profile.";
+            return false;
         }
 
         if (activeProvider is LevelWordListProvider lvlProvider)
         {
-            lvlProvider.SetWords(words);
-            if (CurrentLanguageMode == LanguageMode.Mixed)
-                lvlProvider.SetMixedWords(mixedWords);
-            lvlProvider.Save();
+            EnsureWordListLibrary();
+            WordListLibraryItem current = wordListLibrary.GetOrRegister(lvlProvider);
+            if (current == null)
+            {
+                error = wordListLibrary.SidecarLoadError ?? "The Library metadata is unavailable.";
+                return false;
+            }
+            WordListLibraryContent content = contentOverride ?? CaptureCurrentContent();
+            bool changed = !string.Equals(current.ContentHash,
+                WordListLibraryService.ComputeContentHash(content), StringComparison.Ordinal);
+            committingLocalMutation = true;
+            bool saved;
+            WordListLibraryItem updated;
+            try
+            {
+                saved = wordListLibrary.TrySaveListEdit(current.LocalListId,
+                    current.Title, current.Description, current.Tags, current.IsFavorite,
+                    content, out updated, out error);
+            }
+            finally { committingLocalMutation = false; }
+            if (!saved) return false;
+
+            activeProvider = updated.Provider;
+            activeLanguageMode = updated.LanguageMode;
+            wordListLibrary.SetActiveProvider(updated.Provider);
+            if (changed && publishChange) ResetAfterContentChange();
+            return true;
         }
         else if (activeProvider is FileWordListProvider fileProvider)
         {
-            fileProvider.SetWords(words);
-            if (CurrentLanguageMode == LanguageMode.Mixed)
-                fileProvider.SetMixedWords(mixedWords);
-            fileProvider.Save();
+            if (!fileProvider.IsEditable || !CanEditLists)
+            {
+                error = "The current word list is read-only or editing is locked by the active profile.";
+                return false;
+            }
+            WordListLibraryContent before = CaptureCurrentContent();
+            byte[] oldFile = null;
+            if (!string.IsNullOrEmpty(fileProvider.FilePath) && System.IO.File.Exists(fileProvider.FilePath))
+                oldFile = System.IO.File.ReadAllBytes(fileProvider.FilePath);
+            try
+            {
+                WordListLibraryContent content = contentOverride ?? CaptureCurrentContent();
+                fileProvider.SetContent(content.LanguageMode, content.Words, content.ChineseWords, content.MixedWords);
+                fileProvider.Save();
+            }
+            catch (Exception ex)
+            {
+                RestoreCurrentContent(before);
+                if (oldFile != null)
+                {
+                    try { System.IO.File.WriteAllBytes(fileProvider.FilePath, oldFile); }
+                    catch (Exception restoreError)
+                    {
+                        error = ex.Message + " Original legacy file restore failed: " + restoreError.Message;
+                        return false;
+                    }
+                }
+                error = ex.Message;
+                return false;
+            }
+            if (publishChange) ResetAfterContentChange();
+            return true;
         }
+
+        error = "The current word list does not support saving.";
+        return false;
+    }
+
+    private WordListLibraryContent CaptureCurrentContent()
+    {
+        return new WordListLibraryContent
+        {
+            LanguageMode = CurrentLanguageMode,
+            Words = new List<string>(words),
+            ChineseWords = LevelWordListProvider.CloneChineseWords(chineseWords),
+            MixedWords = LevelWordListProvider.CloneMixedWords(mixedWords)
+        };
+    }
+
+    private void ApplyCurrentContentSnapshot(WordListLibraryContent content)
+    {
+        if (content == null) return;
+        activeLanguageMode = content.LanguageMode;
+        words = new List<string>(content.Words ?? new List<string>());
+        chineseWords = LevelWordListProvider.CloneChineseWords(content.ChineseWords);
+        mixedWords = LevelWordListProvider.CloneMixedWords(content.MixedWords);
+    }
+
+    private void ConvertCurrentWordsToMixed()
+    {
+        mixedWords = new List<MixedWordEntry>();
+        if (activeLanguageMode == LanguageMode.Chinese && chineseWords.Count == words.Count)
+        {
+            foreach (ChineseWordEntry chinese in chineseWords)
+            {
+                mixedWords.Add(new MixedWordEntry
+                {
+                    segments = new List<MixedSegmentData>
+                    {
+                        new MixedSegmentData
+                        {
+                            type = "chinese",
+                            entries = chinese != null ? LevelWordListProvider.CloneChineseWords(new List<ChineseWordEntry> { chinese })[0].entries : new List<ChinesePhaseEntry>()
+                        }
+                    }
+                });
+            }
+        }
+        else
+        {
+            foreach (string word in words)
+            {
+                mixedWords.Add(new MixedWordEntry
+                {
+                    segments = new List<MixedSegmentData>
+                    {
+                        new MixedSegmentData { type = "english", text = word }
+                    }
+                });
+            }
+        }
+        chineseWords = new List<ChineseWordEntry>();
+        activeLanguageMode = LanguageMode.Mixed;
+    }
+
+    private void RestoreCurrentContent(WordListLibraryContent content)
+    {
+        if (content == null) return;
+        activeLanguageMode = content.LanguageMode;
+        words = new List<string>(content.Words ?? new List<string>());
+        chineseWords = LevelWordListProvider.CloneChineseWords(content.ChineseWords);
+        mixedWords = LevelWordListProvider.CloneMixedWords(content.MixedWords);
+        if (activeProvider is LevelWordListProvider levelProvider)
+            levelProvider.SetContent(content.LanguageMode, content.Words, content.ChineseWords, content.MixedWords);
+        else if (activeProvider is FileWordListProvider fileProvider)
+            fileProvider.SetContent(content.LanguageMode, content.Words, content.ChineseWords, content.MixedWords);
+    }
+
+    private void ResetAfterContentChange()
+    {
+        CurrentPhaseIndex = 0;
+        ResetErrors();
+        OnWordListChanged?.Invoke();
+        OnPhaseWordChanged?.Invoke(CurrentWord);
+    }
+
+    private void HandleLibraryContentChanged(WordListLibraryItem item)
+    {
+        if (committingLocalMutation || item == null || !(activeProvider is LevelWordListProvider levelProvider)) return;
+        if (!string.Equals(item.LocalListId, levelProvider.GetListKey(), StringComparison.Ordinal)
+            || !ReferenceEquals(item.Provider, levelProvider))
+            return;
+
+        // The service has already saved canonical content and sidecar before raising this event.
+        LoadWordList(item.Provider);
     }
 }

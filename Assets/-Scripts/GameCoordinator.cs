@@ -1,6 +1,50 @@
 // Assets/-Scripts/GameCoordinator.cs
+using System;
 using System.Collections.Generic;
+using System.IO;
 using UnityEngine;
+
+public sealed class GameRunCompletionSnapshot
+{
+    public string LocalListId { get; }
+    public IWordListProvider Provider { get; }
+    public LanguageMode LanguageMode { get; }
+    public LevelMode Mode { get; }
+    public int PhaseCount { get; }
+    public int Errors { get; }
+    public float TotalTimeSeconds { get; }
+    public int Stars { get; }
+    public bool IsChallenge { get; }
+    public string ChallengeTrackPrefix { get; }
+    public int ChallengeIndex { get; }
+    public bool RecordPersisted { get; }
+    public string RecordError { get; }
+    public bool HasAchievementProgressSnapshot { get; }
+    public WordAchievementProgressSnapshot AchievementProgressSnapshot { get; }
+
+    public GameRunCompletionSnapshot(string localListId, IWordListProvider provider,
+        LanguageMode languageMode, LevelMode mode, int phaseCount, int errors,
+        float totalTimeSeconds, int stars, bool isChallenge, string challengeTrackPrefix,
+        int challengeIndex, bool recordPersisted, string recordError, bool hasAchievementProgressSnapshot,
+        WordAchievementProgressSnapshot achievementProgressSnapshot)
+    {
+        LocalListId = localListId;
+        Provider = provider;
+        LanguageMode = languageMode;
+        Mode = mode;
+        PhaseCount = phaseCount;
+        Errors = errors;
+        TotalTimeSeconds = totalTimeSeconds;
+        Stars = stars;
+        IsChallenge = isChallenge;
+        ChallengeTrackPrefix = challengeTrackPrefix;
+        ChallengeIndex = challengeIndex;
+        RecordPersisted = recordPersisted;
+        RecordError = recordError ?? string.Empty;
+        HasAchievementProgressSnapshot = hasAchievementProgressSnapshot;
+        AchievementProgressSnapshot = achievementProgressSnapshot;
+    }
+}
 
 public class GameCoordinator : MonoBehaviour
 {
@@ -33,6 +77,14 @@ public class GameCoordinator : MonoBehaviour
     private float nextWordAchievementProfileRetryTime;
     private float nextWordAchievementInitRetryTime;
     private float nextWordAchievementPersistenceRetryTime;
+    private bool hubVisible;
+    private bool hubTimerWasRunning;
+
+    public event Action<GameRunCompletionSnapshot> RunCompleted;
+    public bool IsHubVisible => hubVisible;
+    public bool HasAchievementProgressSnapshot => wordAchievementProfileReady && wordAchievementProgress != null;
+    public WordAchievementProgressSnapshot AchievementProgressSnapshot =>
+        HasAchievementProgressSnapshot ? wordAchievementProgress.Snapshot : default;
 
     void Start()
     {
@@ -191,6 +243,15 @@ public class GameCoordinator : MonoBehaviour
 
     void OnDestroy()
     {
+        if (hubVisible)
+        {
+            hubVisible = false;
+            if (Services.Get<InputHandler>() != null)
+                Services.Get<InputHandler>().SetHubGameplayBlocked(false);
+            if (Services.Get<TimerSystem>() != null)
+                Services.Get<TimerSystem>().ResumeFromOverlay(false);
+        }
+
         if (wordAchievementProgress != null && wordAchievementProgress.HasPendingPersistence
             && !wordAchievementProgress.RetryPersistence())
         {
@@ -280,6 +341,7 @@ public class GameCoordinator : MonoBehaviour
 
     private void HandleKeyAction(KeyCode key, bool isPressed)
     {
+        if (hubVisible) return;
         var state = Services.Get<GameStateManager>().CurrentState;
 
         if (state != GameState.Playing)
@@ -361,28 +423,53 @@ public class GameCoordinator : MonoBehaviour
         if (keyboardShake != null)
             keyboardShake.SetShaking(false);
 
-        // Save time record for LevelWordListProvider lists (challenge + custom)
+        // Save legacy and versioned records for the canonical file provider.
         var provider = Services.Get<PhaseManager>().ActiveProvider;
+        var phaseManager = Services.Get<PhaseManager>();
+        float time = Services.Get<TimerSystem>().TotalElapsedTime;
+        int phases = phaseManager.TotalPhases;
+        int errors = phaseManager.TotalErrors;
+        int stars = ChallengeProgression.CalculateStars(errors);
+        string localListId = null;
+        bool recordPersisted = false;
+        string recordError = null;
+        string trackPrefix = null;
+        int challengeIndex = -1;
+        bool isChallenge = phaseManager.CurrentLevelMode == LevelMode.Challenge;
         Debug.Log($"[TimeDebug] HandleAllPhasesCompleted, provider type={provider?.GetType()?.Name}, mode={Services.Get<PhaseManager>().CurrentLevelMode}");
-        if (provider is LevelWordListProvider lvlProvider)
+        if (provider is LevelWordListProvider lvlProvider && File.Exists(lvlProvider.FilePath))
         {
-            string key = lvlProvider.GetListKey();
-            float time = Services.Get<TimerSystem>().TotalElapsedTime;
-            int phases = Services.Get<PhaseManager>().TotalPhases;
-            int errors = Services.Get<PhaseManager>().TotalErrors;
-            Debug.Log($"[TimeDebug] Saving: key={key} time={time:F2}s phases={phases} errors={errors}");
-            ListTimeManager.SaveTime(key, time, phases, errors);
+            localListId = lvlProvider.GetListKey();
+            try
+            {
+                recordPersisted = WordListLibraryService.Shared.TryRecordRun(
+                    lvlProvider, time, phases, errors, stars, out recordError);
+            }
+            catch (Exception exception)
+            {
+                recordError = exception.Message;
+                recordPersisted = false;
+            }
+            if (!recordPersisted)
+                Debug.LogWarning("[GameCoordinator] The local run record was not saved: " + (recordError ?? "Unknown persistence error."));
+            else if (string.IsNullOrEmpty(lvlProvider.IdentityPersistenceError))
+            {
+                try { ListTimeManager.SaveTime(localListId, time, phases, errors); }
+                catch (Exception exception)
+                {
+                    Debug.LogWarning("[GameCoordinator] The compatibility time record was not saved: " + exception.Message);
+                }
+            }
         }
         else
         {
-            Debug.LogWarning($"[TimeDebug] NOT a LevelWordListProvider, cannot save time");
+            recordError = "The active word list is unavailable; no local run record was saved.";
+            Debug.LogWarning("[GameCoordinator] " + recordError);
         }
 
-        if (Services.Get<PhaseManager>().CurrentLevelMode == LevelMode.Challenge)
+        if (isChallenge)
         {
-            int stars = ChallengeProgression.CalculateStars(Services.Get<PhaseManager>().TotalErrors);
-            string trackPrefix;
-            int challengeIndex = FindChallengeIndex(provider, out trackPrefix);
+            challengeIndex = FindChallengeIndex(provider, out trackPrefix);
             if (challengeIndex >= 0)
             {
                 ChallengeProgression.SaveStarRating(challengeIndex, stars, trackPrefix);
@@ -392,7 +479,24 @@ public class GameCoordinator : MonoBehaviour
 
             string levelName = provider?.DisplayName ?? "Level";
             if (levelCompletePanel != null)
-                levelCompletePanel.Show(levelName, stars, Services.Get<TimerSystem>().TotalElapsedTime, challengeIndex, Services.Get<PhaseManager>().TotalErrors);
+                levelCompletePanel.Show(levelName, stars, time, challengeIndex, errors);
+        }
+
+        var snapshot = new GameRunCompletionSnapshot(
+            localListId, provider, phaseManager.CurrentLanguageMode, phaseManager.CurrentLevelMode,
+            phases, errors, time, stars, isChallenge, trackPrefix, challengeIndex,
+            recordPersisted, recordError, HasAchievementProgressSnapshot, AchievementProgressSnapshot);
+        RaiseRunCompleted(snapshot);
+    }
+
+    private void RaiseRunCompleted(GameRunCompletionSnapshot snapshot)
+    {
+        Action<GameRunCompletionSnapshot> listeners = RunCompleted;
+        if (listeners == null) return;
+        foreach (Delegate listener in listeners.GetInvocationList())
+        {
+            try { ((Action<GameRunCompletionSnapshot>)listener)(snapshot); }
+            catch (Exception ex) { Debug.LogException(ex); }
         }
     }
 
@@ -462,22 +566,12 @@ public class GameCoordinator : MonoBehaviour
 
     private bool CanOpenCustomLists(PhaseManager phaseManager)
     {
-        if (phaseManager == null) return false;
-
-        string trackPrefix = GetPreferredChallengeTrackPrefix(phaseManager.AllowChineseAndMixed);
-        int completedChallenges = ChallengeProgression.GetUnlockedCountForTrack(trackPrefix) - 1;
-        if (phaseManager.ActiveProfile != null)
-            return phaseManager.ActiveProfile.CanOpenCustomLists(completedChallenges);
-
-        LevelPanelController panel = LevelPanelController.Instance;
-        if (panel == null)
-            panel = FindFirstObjectByType<LevelPanelController>(FindObjectsInactive.Include);
-        return panel != null
-            && (panel.LegacyUnlockCustomTab || completedChallenges >= panel.LegacyCustomUnlockThreshold);
+        return phaseManager != null && phaseManager.IsCustomUnlockedForProfile;
     }
 
     private void HandleBackspace()
     {
+        if (hubVisible) return;
         var state = Services.Get<GameStateManager>().CurrentState;
         if (state == GameState.Playing || state == GameState.PhaseFailed)
         {
@@ -494,6 +588,7 @@ public class GameCoordinator : MonoBehaviour
 
     private void HandleEnter()
     {
+        if (hubVisible) return;
         if (Services.Get<GameStateManager>().CurrentState != GameState.PhaseComplete)
             return;
 
@@ -560,8 +655,11 @@ public class GameCoordinator : MonoBehaviour
         }
 
         wordEngine.LoadMixedWord(parsed);
-        uiController.RebuildMixedDisplays(wordEngine.CurrentMixedData);
-        uiController.UpdateTextDisplay();
+        if (uiController != null)
+        {
+            uiController.RebuildMixedDisplays(wordEngine.CurrentMixedData);
+            uiController.UpdateTextDisplay();
+        }
         wordAchievementProgress?.BeginPhaseAttempt();
     }
 
@@ -667,9 +765,28 @@ public class GameCoordinator : MonoBehaviour
 
     private void HandleWordListChanged()
     {
-        Services.Get<TimerSystem>().ResetAll();
+        Services.Get<TimerSystem>()?.ResetAll();
         LoadCurrentPhase();   // refresh display target to match the new word at CurrentPhaseIndex
-        Services.Get<GameStateManager>().TransitionTo(GameState.Playing);
+        Services.Get<GameStateManager>()?.TransitionTo(GameState.Playing);
+    }
+
+    /// <summary>Blocks gameplay keys and suspends only an already-running phase timer.</summary>
+    public void SetHubVisible(bool visible)
+    {
+        if (hubVisible == visible) return;
+        hubVisible = visible;
+        InputHandler input = Services.Get<InputHandler>();
+        if (input != null) input.SetHubGameplayBlocked(visible);
+
+        TimerSystem timer = Services.Get<TimerSystem>();
+        if (timer == null) return;
+        if (visible)
+            hubTimerWasRunning = timer.SuspendForOverlay();
+        else
+        {
+            timer.ResumeFromOverlay(hubTimerWasRunning);
+            hubTimerWasRunning = false;
+        }
     }
 
     // Called from UI button

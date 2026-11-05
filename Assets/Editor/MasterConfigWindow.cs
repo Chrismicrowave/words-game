@@ -17,9 +17,7 @@ public sealed class GameConfigInspector : Editor
     public override VisualElement CreateInspectorGUI()
     {
         var root = new VisualElement();
-        SerializedProperty isDemo = serializedObject.FindProperty("isDemo");
         SerializedProperty activeProfile = serializedObject.FindProperty("activeProfile");
-        root.Add(new PropertyField(isDemo, "Legacy demo flag"));
         root.Add(new PropertyField(activeProfile, "Active profile"));
 
         var note = new HelpBox("Profiles configure defaults and feature access. Switching profiles does not isolate or reset saves.", HelpBoxMessageType.Info);
@@ -228,7 +226,7 @@ public sealed class MasterConfigWindow : EditorWindow
         rootVisualElement.Add(scroll);
 
         scroll.Add(new Label("Master Config") { style = { unityFontStyleAndWeight = FontStyle.Bold, fontSize = 18 } });
-        scroll.Add(new HelpBox("Profiles group runtime defaults, demo limits, and independent unlocks. Profiles share the same local saves and Steam account.", HelpBoxMessageType.Info));
+        scroll.Add(new HelpBox("Profiles group runtime defaults, configured caps, and independent feature access. Profiles share the same local saves and Steam account.", HelpBoxMessageType.Info));
 
         var configRow = new VisualElement();
         configRow.style.flexDirection = FlexDirection.Row;
@@ -370,8 +368,7 @@ public sealed class MasterConfigWindow : EditorWindow
     {
         AddFoldout(root, profileObject, "Profile identity", "profileId");
         AddFoldout(root, profileObject, "Default settings", "defaults");
-        AddFoldout(root, profileObject, "Demo and capacity", "isDemo", "maxChallengeLevels", "maxCustomLists", "maxWordsPerList", "customUnlockLevels", "allowChineseAndMixed");
-        AddFoldout(root, profileObject, "Feature unlocks", "unlockAllFeatures", "unlockAllChallenges", "unlockCustomLists", "unlockCreateLists", "unlockEditLists", "unlockDeleteLists", "unlockDuplicateLists", "unlockImportLists", "unlockExportLists", "unlockAddWords");
+        AddFoldout(root, profileObject, "Access and caps", "customUnlockLevels", "communityEnabled", "communityUnlockLevels", "maxChallengeLevels", "maxCustomLists", "maxWordsPerList", "ignoreProgressionLocks", "unlockAllFeatures", "allowChineseAndMixed");
         AddMasterResetScheduleFoldout(root, profileObject);
         string[] resetProperties = includeResetRecipe
             ? new[] { "resetLocalDataOnFirstRun", "resetRevision", "resetTargets" }

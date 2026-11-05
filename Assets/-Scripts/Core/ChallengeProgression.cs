@@ -31,6 +31,9 @@ public static class ChallengeProgression
     public static int GetUnlockedCountForTrack(string trackPrefix) =>
         Mathf.Max(1, PlayerPrefs.GetInt(GetUnlockedCountKey(trackPrefix), 1));
 
+    public static int GetCompletedChallengesForTrack(string trackPrefix) =>
+        Mathf.Max(0, GetUnlockedCountForTrack(trackPrefix) - 1);
+
     public static void SetUnlockedCountForTrack(string trackPrefix, int value)
     {
         PlayerPrefs.SetInt(GetUnlockedCountKey(trackPrefix), Mathf.Max(1, value));

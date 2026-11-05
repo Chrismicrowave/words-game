@@ -5,8 +5,10 @@ using System.Reflection;
 using NUnit.Framework;
 using TMPro;
 using UnityEditor;
+using UnityEditor.Events;
 using UnityEditor.SceneManagement;
 using UnityEngine;
+using UnityEngine.Events;
 using UnityEngine.EventSystems;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
@@ -59,6 +61,12 @@ namespace Words.UiMockups.WordListHub.Tests
                 Assert.That(bindings.pages.Count(binding => binding.page == page && binding.root != null),
                     Is.EqualTo(1), "Exactly one authored root must be assigned for " + page + ".");
             }
+
+            Type challengeBindingType = typeof(WordListHubSceneBindings.ChallengesPageBinding);
+            Assert.That(challengeBindingType.GetField("trackLabel", BindingFlags.Instance | BindingFlags.Public),
+                Is.Null, "Challenge language/track context belongs in the existing detail metadata, not a separate label binding.");
+            Assert.That(challengeBindingType.GetField("detailMetadata", BindingFlags.Instance | BindingFlags.Public),
+                Is.Not.Null, "The Challenge detail page retains the Library detail metadata field.");
 
             AssertLayoutGroup(bindings.library.listContent, "Library list content");
             AssertLayoutGroup(bindings.community.listContent, "Community list content");
@@ -129,6 +137,132 @@ namespace Words.UiMockups.WordListHub.Tests
             Assert.That(communityRow.recordStars.text, Is.EqualTo("★★★"));
             Assert.That(communityRow.bestTime.text, Is.EqualTo("7.4 s"));
             Assert.That(bindings.community.like.label.text, Does.Contain(discoveryItem.LikeCount.ToString()));
+        }
+
+        [Test]
+        public void OfficialChallengeCopyOpensEditableDraft_whileInPlaceEditIsRejected()
+        {
+            WordListHubMockupController controller = harness.Controller;
+            InvokeAwake(controller);
+            MockupWordListStore store = GetStore(controller);
+            MockupWordList challenge = store.FindById("mock-list-travel-copy");
+            Assert.That(challenge, Is.Not.Null);
+            typeof(MockupWordList).GetProperty("IsChallenge").SetValue(challenge, true);
+            typeof(MockupWordList).GetProperty("IsChallengeUnlocked").SetValue(challenge, true);
+
+            MethodInfo openEdit = typeof(WordListHubMockupController).GetMethod(
+                "OpenEditDialog", BindingFlags.Instance | BindingFlags.NonPublic);
+            Assert.That(openEdit, Is.Not.Null);
+            openEdit.Invoke(controller, new object[] { challenge.Id, true });
+
+            Assert.That(harness.Bindings.modal.root.activeSelf, Is.True);
+            Assert.That(harness.Bindings.modal.editList.root.activeSelf, Is.True);
+            Assert.That(typeof(WordListHubMockupController).GetField(
+                "copyEditingMode", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(controller), Is.True);
+
+            typeof(WordListHubMockupController).GetMethod(
+                "CloseDialog", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(controller, null);
+            openEdit.Invoke(controller, new object[] { challenge.Id, false });
+
+            Assert.That(harness.Bindings.modal.root.activeSelf, Is.False,
+                "An official challenge can only open as a separate copy, never as an in-place edit.");
+            Assert.That(harness.Bindings.library.detailStatus.text, Does.Contain("read-only"));
+        }
+
+        [Test]
+        public void ButtonSoundRelayRebindsAfterRemoveAllListenersAndSurvivesCloseDeactivation()
+        {
+            GameObject buttonObject = new GameObject("Sound relay test button");
+            GameObject audioObject = new GameObject("Sound relay test source");
+            buttonObject.SetActive(false);
+            AudioClip clip = AudioClip.Create("silent click", 4410, 1, 44100, false);
+            try
+            {
+                Button button = buttonObject.AddComponent<Button>();
+                AudioSource source = audioObject.AddComponent<AudioSource>();
+                source.clip = clip;
+                source.mute = true;
+                WordListHubButtonSoundRelay relay = WordListHubButtonSoundRelay.Attach(button, source);
+                Assert.That(relay, Is.Not.Null);
+                Assert.That(relay.IsListening, Is.True,
+                    "An inactive authored Button still needs its runtime listener before the Hub is shown.");
+
+                int runtimeCalls = GetRuntimeUnityCallCount(button.onClick);
+                WordListHubButtonSoundRelay.Attach(button, source);
+                WordListHubButtonSoundRelay.Attach(button, source);
+                Assert.That(GetRuntimeUnityCallCount(button.onClick), Is.EqualTo(runtimeCalls),
+                    "Repeated attachment must retain one owned sound callback.");
+
+                button.onClick.RemoveAllListeners();
+                Assert.That(GetRuntimeUnityCallCount(button.onClick), Is.Zero);
+                WordListHubButtonSoundRelay.Attach(button, source);
+                Assert.That(GetRuntimeUnityCallCount(button.onClick), Is.EqualTo(1),
+                    "The next binding pass must restore the listener cleared by RemoveAllListeners.");
+
+                buttonObject.SetActive(true);
+                bool closeRanAfterSound = false;
+                button.onClick.AddListener(() =>
+                {
+                    closeRanAfterSound = relay.IsListening && source.isPlaying;
+                    buttonObject.SetActive(false);
+                });
+                button.onClick.Invoke();
+                Assert.That(closeRanAfterSound, Is.True,
+                    "The close action must observe the sound listener after it has started the shared source.");
+                Assert.That(relay.IsListening, Is.True,
+                    "Deactivating the Hub during its click must not remove the relay before the event finishes.");
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(buttonObject);
+                UnityEngine.Object.DestroyImmediate(audioObject);
+                UnityEngine.Object.DestroyImmediate(clip);
+            }
+        }
+
+        [Test]
+        public void ButtonSoundRelaySkipsOnlyEnabledPersistentMenuPlayEvents()
+        {
+            GameObject buttonObject = new GameObject("Persistent sound test button");
+            GameObject audioObject = new GameObject("Persistent sound test source");
+            try
+            {
+                Button button = buttonObject.AddComponent<Button>();
+                AudioSource source = audioObject.AddComponent<AudioSource>();
+                UnityEventTools.AddPersistentListener(button.onClick, source.Play);
+
+                WordListHubButtonSoundRelay relay = WordListHubButtonSoundRelay.Attach(button, source);
+                Assert.That(button.onClick.GetPersistentListenerState(0), Is.Not.EqualTo(UnityEventCallState.Off));
+                Assert.That(relay.IsListening, Is.False,
+                    "An enabled persistent Menu.Play call already provides the click sound.");
+
+                SerializedObject serializedButton = new SerializedObject(button);
+                SerializedProperty persistentCall = serializedButton
+                    .FindProperty("m_OnClick.m_PersistentCalls.m_Calls")
+                    .GetArrayElementAtIndex(0);
+                persistentCall.FindPropertyRelative("m_CallState").intValue = (int)UnityEventCallState.Off;
+                serializedButton.ApplyModifiedPropertiesWithoutUndo();
+                WordListHubButtonSoundRelay.Attach(button, source);
+                Assert.That(relay.IsListening, Is.True,
+                    "A disabled persistent call does not provide sound and must not suppress the relay.");
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(buttonObject);
+                UnityEngine.Object.DestroyImmediate(audioObject);
+            }
+        }
+
+        private static int GetRuntimeUnityCallCount(UnityEventBase unityEvent)
+        {
+            FieldInfo callsField = typeof(UnityEventBase).GetField("m_Calls",
+                BindingFlags.Instance | BindingFlags.NonPublic);
+            Assert.That(callsField, Is.Not.Null);
+            object calls = callsField.GetValue(unityEvent);
+            FieldInfo runtimeCallsField = calls.GetType().GetField("m_RuntimeCalls",
+                BindingFlags.Instance | BindingFlags.NonPublic);
+            Assert.That(runtimeCallsField, Is.Not.Null);
+            return ((System.Collections.ICollection)runtimeCallsField.GetValue(calls)).Count;
         }
 
         [Test]
@@ -548,6 +682,95 @@ namespace Words.UiMockups.WordListHub.Tests
                 Is.EqualTo(27f).Within(0.001f));
             Assert.That(customCommunityText.Single(text => text.text == "ping").fontSize,
                 Is.EqualTo(20.28f).Within(0.001f));
+        }
+
+        [Test]
+        public void ProductionChallengeDetailUsesRubyProjectionWhenLegacyTmpIsDisabled()
+        {
+            WordListHubMockupController controller = harness.Controller;
+            InvokeAwake(controller);
+            RectTransform challengeDetailPane = harness.Bindings.challenges.detailPane as RectTransform;
+            if (challengeDetailPane == null)
+            {
+                GameObject paneObject = new GameObject("ChallengeRubyProjectionDetailPane", typeof(RectTransform));
+                paneObject.transform.SetParent(harness.Bindings.challenges.root.transform, false);
+                challengeDetailPane = paneObject.GetComponent<RectTransform>();
+                challengeDetailPane.anchorMin = Vector2.zero;
+                challengeDetailPane.anchorMax = Vector2.one;
+                challengeDetailPane.offsetMin = Vector2.zero;
+                challengeDetailPane.offsetMax = Vector2.zero;
+                harness.Bindings.challenges.detailPane = challengeDetailPane;
+            }
+            TMP_Text challengeStyle = UnityEngine.Object.Instantiate(
+                harness.Bindings.library.detailWords, challengeDetailPane, false);
+            challengeStyle.gameObject.name = "ChallengeLegacyWordsStyle";
+            TMP_Text legacyText = CreateIsolatedRubyTestText(
+                challengeStyle, "ChallengeDetailRubyProjectionTest");
+            UnityEngine.Object.DestroyImmediate(challengeStyle.gameObject);
+            legacyText.text = "legacy text must not be the visible renderer";
+            harness.Bindings.challenges.detailWords = legacyText;
+            harness.Bindings.challenges.rubyWords = new WordListHubSceneBindings.RubyPreviewBinding();
+            typeof(WordListHubMockupController).GetField(
+                "productionMode", BindingFlags.Instance | BindingFlags.NonPublic).SetValue(controller, true);
+
+            MethodInfo initializeRubyViews = typeof(WordListHubMockupController).GetMethod(
+                "InitializeRubyWordsViews", BindingFlags.Instance | BindingFlags.NonPublic);
+            Assert.That(initializeRubyViews, Is.Not.Null);
+            initializeRubyViews.Invoke(controller, null);
+            harness.Bindings.challenges.root.SetActive(true);
+
+            MockupWordList challenge = GetStore(controller).CreateList("Projected challenge",
+                MockupLanguage.Mixed, new[] { "apple", "苹果 | ping guo", "ice 冰 | bing" });
+            MethodInfo renderWords = typeof(WordListHubMockupController).GetMethod(
+                "RefreshChallengeDetailWords", BindingFlags.Instance | BindingFlags.NonPublic);
+            Assert.That(renderWords, Is.Not.Null);
+            renderWords.Invoke(controller, new object[] { challenge.Words, "No words in this challenge." });
+            Canvas.ForceUpdateCanvases();
+
+            Assert.That(legacyText.enabled, Is.False,
+                "The saved legacy TMP projection is disabled; challenge words must use the ruby view.");
+            FieldInfo challengeViewField = typeof(WordListHubMockupController).GetField(
+                "challengeRubyWordsView", BindingFlags.Instance | BindingFlags.NonPublic);
+            MockupRubyWordsView challengeView = (MockupRubyWordsView)challengeViewField.GetValue(controller);
+            Assert.That(challengeView, Is.Not.Null);
+            Assert.That(challengeView.LayoutRoot.IsChildOf(challengeDetailPane), Is.True,
+                "Challenge Ruby rows must render under the right-side Challenge details pane.");
+            Assert.That(challengeView.LayoutRoot.IsChildOf(harness.Bindings.library.detailPane), Is.False,
+                "Challenge words must not mutate or render in the separate Library detail pane.");
+            string[] visibleRubyText = challengeView.LayoutRoot.GetComponentsInChildren<TMP_Text>(true)
+                .Where(text => text.gameObject.activeInHierarchy)
+                .Select(text => text.text).ToArray();
+            Assert.That(visibleRubyText, Does.Contain("apple"));
+            Assert.That(visibleRubyText, Does.Contain("苹"));
+            Assert.That(visibleRubyText, Does.Contain("果"));
+            Assert.That(visibleRubyText, Does.Contain("ping"));
+            Assert.That(visibleRubyText, Does.Contain("guo"));
+            Assert.That(visibleRubyText, Does.Contain("ice "));
+            Assert.That(visibleRubyText, Does.Contain("冰"));
+            Assert.That(visibleRubyText, Does.Contain("bing"));
+
+            renderWords.Invoke(controller, new object[] { new[] { "banana", "北京 | bei jing" }, string.Empty });
+            Canvas.ForceUpdateCanvases();
+            visibleRubyText = challengeView.LayoutRoot.GetComponentsInChildren<TMP_Text>(true)
+                .Where(text => text.gameObject.activeInHierarchy)
+                .Select(text => text.text).ToArray();
+            Assert.That(visibleRubyText, Does.Contain("banana"));
+            Assert.That(visibleRubyText, Does.Contain("bei"));
+            Assert.That(visibleRubyText, Does.Not.Contain("apple"));
+
+            renderWords.Invoke(controller, new object[] { System.Array.Empty<string>(), "No words in this challenge." });
+            Canvas.ForceUpdateCanvases();
+            visibleRubyText = challengeView.LayoutRoot.GetComponentsInChildren<TMP_Text>(true)
+                .Where(text => text.gameObject.activeInHierarchy)
+                .Select(text => text.text).ToArray();
+            Assert.That(visibleRubyText, Does.Contain("No words in this challenge."),
+                "An empty selected challenge must show its fallback through the visible ruby view.");
+
+            renderWords.Invoke(controller, new object[] { null, string.Empty });
+            Canvas.ForceUpdateCanvases();
+            Assert.That(challengeView.LayoutRoot.GetComponentsInChildren<TMP_Text>(true)
+                .Any(text => text.gameObject.activeInHierarchy), Is.False,
+                "Clearing the selected challenge must not leave the prior challenge's words visible.");
         }
 
         [Test]
@@ -3103,6 +3326,918 @@ namespace Words.UiMockups.WordListHub.Tests
                 Assert.That(component, Is.Not.Null, phase + " destroyed a layout component.");
                 Assert.That(EditorJsonUtility.ToJson(component), Is.EqualTo(serializedState),
                     phase + " changed serialized layout settings on " + component.GetType().Name + ".");
+            }
+        }
+    }
+
+    [TestFixture]
+    public sealed class WordListHubPageAccessTests
+    {
+        private readonly List<GameObject> ownedObjects = new List<GameObject>();
+        private string temporaryLibraryRoot;
+
+        [TearDown]
+        public void TearDown()
+        {
+            foreach (GameObject root in ownedObjects.Where(item => item != null).ToArray())
+                UnityEngine.Object.DestroyImmediate(root);
+            ownedObjects.Clear();
+            if (!string.IsNullOrEmpty(temporaryLibraryRoot)
+                && System.IO.Directory.Exists(temporaryLibraryRoot))
+                System.IO.Directory.Delete(temporaryLibraryRoot, true);
+        }
+
+        [Test]
+        public void ProductionLateUpdatePreservesSceneAuthoredCloseAndCardLayout()
+        {
+            GameObject root = NewObject("Static Hub layout test root", null);
+            root.SetActive(false);
+            GameObject cardObject = NewObject("Card", root.transform, typeof(RectTransform));
+            RectTransform card = cardObject.GetComponent<RectTransform>();
+            card.anchorMin = card.anchorMax = new Vector2(0.5f, 0.5f);
+            card.anchoredPosition = new Vector2(23f, -11f);
+            card.sizeDelta = new Vector2(1580f, 780f);
+            card.localScale = new Vector3(0.91f, 0.93f, 1f);
+
+            GameObject closeObject = NewObject("ProductionCloseHubButton", root.transform,
+                typeof(RectTransform), typeof(CanvasRenderer), typeof(Image), typeof(Button));
+            RectTransform close = closeObject.GetComponent<RectTransform>();
+            close.anchorMin = close.anchorMax = new Vector2(0.5f, 0.5f);
+            close.pivot = new Vector2(0.25f, 0.75f);
+            close.anchoredPosition = new Vector2(747f, 427f);
+            close.sizeDelta = new Vector2(52f, 38f);
+            close.localScale = new Vector3(0.9f, 1.1f, 1f);
+
+            WordListHubSceneBindings bindings = NewObject("Hub bindings", root.transform,
+                typeof(WordListHubSceneBindings)).GetComponent<WordListHubSceneBindings>();
+            bindings.card = card;
+            bindings.hostRoot = root;
+            bindings.closeHub = new WordListHubSceneBindings.ButtonBinding
+            {
+                button = closeObject.GetComponent<Button>()
+            };
+            WordListHubMockupController controller = NewObject("Hub controller", root.transform)
+                .AddComponent<WordListHubMockupController>();
+            SetPrivateField(controller, "productionMode", true);
+            SetPrivateField(controller, "sceneBindings", bindings);
+
+            Vector2 closePosition = close.anchoredPosition;
+            Vector2 closeSize = close.sizeDelta;
+            Vector2 closeAnchorMin = close.anchorMin;
+            Vector2 closeAnchorMax = close.anchorMax;
+            Vector2 closePivot = close.pivot;
+            Vector3 closeScale = close.localScale;
+            Vector2 cardPosition = card.anchoredPosition;
+            Vector2 cardSize = card.sizeDelta;
+            Vector3 cardScale = card.localScale;
+
+            InvokePrivate(controller, "LateUpdate");
+
+            Assert.That(close.anchoredPosition, Is.EqualTo(closePosition));
+            Assert.That(close.sizeDelta, Is.EqualTo(closeSize));
+            Assert.That(close.anchorMin, Is.EqualTo(closeAnchorMin));
+            Assert.That(close.anchorMax, Is.EqualTo(closeAnchorMax));
+            Assert.That(close.pivot, Is.EqualTo(closePivot));
+            Assert.That(close.localScale, Is.EqualTo(closeScale));
+            Assert.That(card.anchoredPosition, Is.EqualTo(cardPosition));
+            Assert.That(card.sizeDelta, Is.EqualTo(cardSize));
+            Assert.That(card.localScale, Is.EqualTo(cardScale));
+        }
+
+        [Test]
+        public void EditFormHidesTagsWithoutClearingDraftAndKeepsAuthoredWordsInputRect()
+        {
+            GameObject formRoot = NewObject("Edit form", null);
+            GameObject tagsInputObject = NewObject("Edit tags input", formRoot.transform,
+                typeof(RectTransform), typeof(CanvasRenderer), typeof(TMP_InputField));
+            TMP_InputField tagsInput = tagsInputObject.GetComponent<TMP_InputField>();
+            GameObject tagsLabel = NewObject("EditListFormTagsLabel", formRoot.transform);
+            GameObject wordsInputObject = NewObject("Edit words input", formRoot.transform,
+                typeof(RectTransform), typeof(CanvasRenderer), typeof(TMP_InputField));
+            TMP_InputField wordsInput = wordsInputObject.GetComponent<TMP_InputField>();
+            wordsInput.textComponent = NewText("Edit words text", wordsInputObject.transform);
+            RectTransform wordsRect = wordsInput.GetComponent<RectTransform>();
+            wordsRect.anchorMin = new Vector2(0.25f, 0.75f);
+            wordsRect.anchorMax = new Vector2(0.75f, 0.75f);
+            wordsRect.pivot = new Vector2(0.2f, 0.8f);
+            wordsRect.anchoredPosition = new Vector2(13f, -29f);
+            wordsRect.sizeDelta = new Vector2(417f, 51f);
+            Vector2 expectedPosition = wordsRect.anchoredPosition;
+            Vector2 expectedSize = wordsRect.sizeDelta;
+            GameObject cancelObject = NewObject("Edit cancel button", formRoot.transform,
+                typeof(RectTransform), typeof(CanvasRenderer), typeof(Image), typeof(Button));
+            Button cancelButton = cancelObject.GetComponent<Button>();
+            NewText("Edit cancel label", cancelObject.transform, "Cancel");
+            WordListHubSceneBindings.FormBinding form = new WordListHubSceneBindings.FormBinding
+            {
+                root = formRoot,
+                tagsInput = tagsInput,
+                wordsInput = wordsInput,
+                cancelButton = cancelButton
+            };
+
+            GameObject controllerObject = NewObject("Edit form controller", null);
+            controllerObject.SetActive(false);
+            WordListHubMockupController controller = controllerObject.AddComponent<WordListHubMockupController>();
+            SetPrivateField(controller, "editTagsInput", tagsInput);
+            SetPrivateField(controller, "editDraft", new MockupWordListEdit
+            {
+                Tags = "kept, tags",
+                Words = new List<string> { "apple" }
+            });
+
+            InvokePrivate(controller, "HideEditTagsControls", form);
+            InvokePrivate(controller, "CaptureEditInputs");
+
+            Assert.That(tagsInputObject.activeSelf, Is.False);
+            Assert.That(tagsLabel.activeSelf, Is.False);
+            Assert.That(GetPrivateField(controller, "editTagsInput"), Is.Null);
+            Assert.That(((MockupWordListEdit)GetPrivateField(controller, "editDraft")).Tags,
+                Is.EqualTo("kept, tags"));
+
+            using (var view = new MockupWordListEditorView(form, null, null, null, null))
+            {
+                Assert.That(wordsRect.anchoredPosition, Is.EqualTo(expectedPosition));
+                Assert.That(wordsRect.sizeDelta, Is.EqualTo(expectedSize));
+                view.Render(new MockupWordListEditSession(new[] { "apple", "pear" }), "Enter a word", false);
+                Assert.That(wordsRect.anchoredPosition, Is.EqualTo(expectedPosition));
+                Assert.That(wordsRect.sizeDelta, Is.EqualTo(expectedSize));
+            }
+
+            Assert.That(wordsRect.anchoredPosition, Is.EqualTo(expectedPosition));
+            Assert.That(wordsRect.sizeDelta, Is.EqualTo(expectedSize));
+        }
+
+        [Test]
+        public void LanguageFieldsAreReadOnlyAndDetectLettersIgnoringPinyinDigitsAndPunctuation()
+        {
+            GameObject root = NewObject("Auto language UI test", null);
+            root.SetActive(false);
+            WordListHubSceneBindings bindings = NewObject("Bindings", root.transform,
+                typeof(WordListHubSceneBindings)).GetComponent<WordListHubSceneBindings>();
+            bindings.modal = new WordListHubSceneBindings.ModalBinding();
+
+            GameObject newFormRoot = NewObject("New list form", root.transform);
+            TMP_Dropdown newLanguage = NewObject("New language", newFormRoot.transform,
+                typeof(RectTransform), typeof(CanvasRenderer), typeof(Image), typeof(TMP_Dropdown))
+                .GetComponent<TMP_Dropdown>();
+            TMP_Text newValidation = NewText("New validation", newFormRoot.transform);
+            bindings.modal.newList.root = newFormRoot;
+            bindings.modal.newList.languageDropdown = newLanguage;
+            bindings.modal.newList.validationText = newValidation;
+
+            GameObject editFormRoot = NewObject("Edit list form", root.transform);
+            TMP_Dropdown editLanguage = NewObject("Edit language", editFormRoot.transform,
+                typeof(RectTransform), typeof(CanvasRenderer), typeof(Image), typeof(TMP_Dropdown))
+                .GetComponent<TMP_Dropdown>();
+            bindings.modal.editList.root = editFormRoot;
+            bindings.modal.editList.languageDropdown = editLanguage;
+
+            GameObject controllerObject = NewObject("Controller", root.transform);
+            WordListHubMockupController controller = controllerObject.AddComponent<WordListHubMockupController>();
+            SetPrivateField(controller, "sceneBindings", bindings);
+            SetPrivateField(controller, "dialogValidationText", newValidation);
+            SetPrivateField(controller, "newListLanguageFallback", MockupLanguage.English);
+
+            InvokePrivate(controller, "HandleNewListWordsChanged", "123 !!!");
+            Assert.That(newLanguage.interactable, Is.False);
+            Assert.That(newLanguage.value, Is.EqualTo(0), "No letters use the New List English fallback.");
+
+            InvokePrivate(controller, "HandleNewListWordsChanged", "苹果 | ping guo");
+            Assert.That(newLanguage.value, Is.EqualTo(1), "Pinyin annotation Latin letters must not force Mixed.");
+            InvokePrivate(controller, "HandleNewListWordsChanged", "tea 123 苹果 | ping guo!");
+            Assert.That(newLanguage.value, Is.EqualTo(2));
+            InvokePrivate(controller, "HandleNewListWordsChanged", "こんにちは");
+            Assert.That(newValidation.text, Does.Contain("Only English (Latin) and Chinese (Han)"));
+
+            var editDraft = new MockupWordListEdit
+            {
+                Language = MockupLanguage.Mixed,
+                Words = new List<string> { "12.! | a b" }
+            };
+            SetPrivateField(controller, "editDraft", editDraft);
+            SetPrivateField(controller, "editLanguageFallback", MockupLanguage.Mixed);
+            SetPrivateField(controller, "editLanguage", MockupLanguage.Mixed);
+            SetPrivateField(controller, "editWordSession", new MockupWordListEditSession(editDraft.Words));
+            Assert.That(InvokePrivate(controller, "UpdateEditLanguageDisplay", false), Is.True);
+            Assert.That(editLanguage.interactable, Is.False);
+            Assert.That(editLanguage.value, Is.EqualTo(2), "Neutral-only edit rows keep the stored fallback.");
+
+            SetPrivateField(controller, "editWordSession",
+                new MockupWordListEditSession(new[] { "你 | ni" }));
+            Assert.That(InvokePrivate(controller, "UpdateEditLanguageDisplay", false), Is.True);
+            Assert.That(editLanguage.value, Is.EqualTo(1));
+            SetPrivateField(controller, "editWordSession",
+                new MockupWordListEditSession(new[] { "tea 你 | ni" }));
+            Assert.That(InvokePrivate(controller, "UpdateEditLanguageDisplay", false), Is.True);
+            Assert.That(editLanguage.value, Is.EqualTo(2));
+        }
+
+        [Test]
+        public void ProductionBridgeAwakeHidesActiveHostsWithoutBlockingLaterShow()
+        {
+            Type bridgeType = GetLoadedType("WordListHubGameBridge");
+
+            GameObject activePanel = NewObject("MainPanel active", null);
+            activePanel.SetActive(false);
+            GameObject activeHost = NewObject("Renamed Hub host", activePanel.transform);
+            activeHost.SetActive(true);
+            WordListHubSceneBindings activeBindings = NewObject("Active bindings", activePanel.transform,
+                typeof(WordListHubSceneBindings)).GetComponent<WordListHubSceneBindings>();
+            activeBindings.hostRoot = activeHost;
+            WordListHubMockupController activeController = activePanel.AddComponent<WordListHubMockupController>();
+            SetPrivateField(activeController, "productionMode", true);
+            SetPrivateField(activeController, "sceneBindings", activeBindings);
+            int visibilityEvents = 0;
+            activeController.HubVisibilityChanged += _ => visibilityEvents++;
+
+            activePanel.SetActive(true);
+            Assert.That(activeHost.activeSelf, Is.True,
+                "The fixture starts with the scene-authored host enabled, as an editor-active scene can.");
+
+            GameObject bridgeHost = NewObject("Independent bridge host", null);
+            bridgeHost.SetActive(false);
+            Component bridge = bridgeHost.AddComponent(bridgeType);
+            SetPrivateField(bridge, "hubController", activeController);
+            bridgeHost.SetActive(true);
+            // Plain runtime MonoBehaviours do not receive Awake from an EditMode fixture.
+            InvokePrivate(bridge, "Awake");
+
+            Assert.That(activeHost.activeSelf, Is.False,
+                "Bridge Awake must hide the serialized host reference even when it began active.");
+            Assert.That(visibilityEvents, Is.Zero,
+                "Normalizing an already logically hidden Hub must not raise an input/timer gate event.");
+
+            activeController.ShowHub();
+            Assert.That(activeHost.activeSelf, Is.True);
+            Assert.That(visibilityEvents, Is.EqualTo(1),
+                "The first explicit show should still raise exactly one visibility event.");
+
+            GameObject inactivePanel = NewObject("MainPanel inactive", null);
+            inactivePanel.SetActive(false);
+            GameObject inactiveHost = NewObject("Inactive renamed host", inactivePanel.transform);
+            inactiveHost.SetActive(true);
+            WordListHubSceneBindings inactiveBindings = NewObject("Inactive bindings", inactivePanel.transform,
+                typeof(WordListHubSceneBindings)).GetComponent<WordListHubSceneBindings>();
+            inactiveBindings.hostRoot = inactiveHost;
+            WordListHubMockupController inactiveController = inactivePanel.AddComponent<WordListHubMockupController>();
+            SetPrivateField(inactiveController, "productionMode", true);
+            SetPrivateField(inactiveController, "sceneBindings", inactiveBindings);
+            int inactiveVisibilityEvents = 0;
+            inactiveController.HubVisibilityChanged += _ => inactiveVisibilityEvents++;
+
+            GameObject inactiveBridgeHost = NewObject("Second independent bridge host", null);
+            inactiveBridgeHost.SetActive(false);
+            Component inactiveBridge = inactiveBridgeHost.AddComponent(bridgeType);
+            SetPrivateField(inactiveBridge, "hubController", inactiveController);
+            inactiveBridgeHost.SetActive(true);
+            InvokePrivate(inactiveBridge, "Awake");
+
+            Assert.That(inactiveHost.activeSelf, Is.False,
+                "An inactive controller can still hide its assigned host before its own Awake runs.");
+            Assert.That(inactiveVisibilityEvents, Is.Zero);
+            inactiveController.ShowHub();
+            Assert.That(inactiveHost.activeSelf, Is.True);
+            Assert.That(inactiveVisibilityEvents, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void ProductionDetailRefreshPreservesFixedSceneCaptionsAndUpdatesDynamicLabels()
+        {
+            GameObject root = NewObject("Static button label test root", null);
+            root.SetActive(false);
+            var bindings = NewObject("Hub bindings", root.transform,
+                typeof(WordListHubSceneBindings)).GetComponent<WordListHubSceneBindings>();
+            bindings.library = new WordListHubSceneBindings.LibraryPageBinding
+            {
+                delete = CreateButtonBinding("Delete", root.transform, "Scene Delete"),
+                play = CreateButtonBinding("Play", root.transform, "Scene Play"),
+                edit = CreateButtonBinding("Edit", root.transform, "Scene Edit"),
+                copyEditWords = CreateButtonBinding("Copy", root.transform, "Scene Copy"),
+                publish = CreateButtonBinding("Publish", root.transform, "Scene Publish"),
+                exportList = CreateButtonBinding("Export", root.transform, "Export my words")
+            };
+            bindings.community = new WordListHubSceneBindings.CommunityPageBinding
+            {
+                like = CreateButtonBinding("Like", root.transform, "Scene Like"),
+                download = CreateButtonBinding("Download", root.transform, "Scene Download"),
+                play = CreateButtonBinding("Community play", root.transform, "Community Play"),
+                report = CreateButtonBinding("Community report", root.transform, "Community Report")
+            };
+
+            WordListHubMockupController controller = NewObject("Hub controller", root.transform)
+                .AddComponent<WordListHubMockupController>();
+            MockupWordListStore backend = MockupWordListStore.CreateWithFixtures();
+            SetPrivateField(controller, "sceneBindings", bindings);
+            SetPrivateField(controller, "backend", backend);
+            SetPrivateField(controller, "productionMode", true);
+            SetPrivateField(controller, "selectedListId", "mock-list-shop-signs");
+            SetPrivateField(controller, "selectedDiscoveryId", "mock-ugc-weekend-garden");
+
+            MockupWordList localItem = backend.FindById("mock-list-shop-signs");
+            InvokePrivate(controller, "UpdateLibraryDetail", new List<MockupWordList> { localItem });
+            Assert.That(bindings.library.delete.label.text, Is.EqualTo("Scene Delete"));
+            Assert.That(bindings.library.play.label.text, Is.EqualTo("Scene Play"));
+            Assert.That(bindings.library.edit.label.text, Is.EqualTo("Scene Edit"));
+            Assert.That(bindings.library.copyEditWords.label.text, Is.EqualTo("Scene Copy"));
+            Assert.That(bindings.library.exportList.label.text, Is.EqualTo("Export my words"));
+            Assert.That(bindings.library.publish.label.text, Is.EqualTo("Publish"),
+                "Publication state remains a dynamic label even when the production action is hidden.");
+
+            MockupDiscoveryItem communityItem = backend.FindDiscoveryItem("mock-ugc-weekend-garden");
+            InvokePrivate(controller, "UpdateCommunityDetail",
+                new List<MockupDiscoveryItem> { communityItem });
+            Assert.That(bindings.community.play.label.text, Is.EqualTo("Community Play"));
+            Assert.That(bindings.community.report.label.text, Is.EqualTo("Community Report"));
+            Assert.That(bindings.community.like.label.text, Does.Contain("Like"));
+            Assert.That(bindings.community.download.label.text, Is.EqualTo("Download"));
+
+            SetPrivateField(controller, "productionMode", false);
+            InvokePrivate(controller, "UpdateLibraryDetail", new List<MockupWordList> { localItem });
+            Assert.That(bindings.library.play.label.text, Is.EqualTo("Play"));
+            Assert.That(bindings.library.exportList.label.text, Is.EqualTo("Export entries"));
+            InvokePrivate(controller, "UpdateCommunityDetail",
+                new List<MockupDiscoveryItem> { communityItem });
+            Assert.That(bindings.community.play.label.text, Is.EqualTo("Play"));
+            Assert.That(bindings.community.report.label.text, Is.EqualTo("Report & hide for me"));
+        }
+
+        [Test]
+        public void LockedPagesHideContentAndRestoreControlsWhenUnlocked()
+        {
+            GameObject root = NewObject("Hub page access test", null);
+            WordListHubMockupController controller = NewObject("Hub controller", root.transform)
+                .AddComponent<WordListHubMockupController>();
+            WordListHubSceneBindings bindings = NewObject("Hub bindings", root.transform)
+                .AddComponent<WordListHubSceneBindings>();
+            PageAccessStore backend = new PageAccessStore();
+            backend.LibraryUnlocked = false;
+            backend.CommunityUnlocked = false;
+            ConfigurePageBindings(root.transform, bindings);
+            SetPrivateField(controller, "sceneBindings", bindings);
+            SetPrivateField(controller, "productionMode", true);
+            SetPrivateField(controller, "backend", backend);
+            InvokePrivate(controller, "CacheNavigationColors");
+            InvokePrivate(controller, "RefreshPageAccessIndicators");
+
+            MockupRubyWordsView libraryRubyWords = MockupRubyWordsView.CreateLibrary(
+                bindings.library.detailWords, 1f);
+            libraryRubyWords.SetWords(new[] { "preserved word" });
+            SetPrivateField(controller, "libraryRubyWordsView", libraryRubyWords);
+            Assert.That(libraryRubyWords.LayoutRoot.gameObject.activeSelf, Is.True);
+
+            SetPrivateField(controller, "selectedListId", "retained-list-id");
+            InvokePrivate(controller, "RefreshLockedLibraryPage",
+                backend.GetPageAccess(WordListHubPage.Library));
+            Assert.That(bindings.navLibrary.label.text, Does.Contain("LOCKED"));
+            Assert.That(bindings.library.emptyNotice.text, Does.Contain("2/5"));
+            Assert.That(bindings.library.detailDescription.text, Does.Contain("Select Challenges"));
+            Assert.That(bindings.library.listContent.gameObject.activeSelf, Is.False);
+            Assert.That(bindings.library.createList.button.gameObject.activeSelf, Is.False);
+            Assert.That(bindings.library.searchInput.gameObject.activeSelf, Is.False);
+            Assert.That(bindings.library.play.button.gameObject.activeSelf, Is.False);
+            Assert.That(libraryRubyWords.LayoutRoot.gameObject.activeSelf, Is.False,
+                "The generated Ruby layout is a sibling of the legacy TMP field and must be hidden too.");
+            Assert.That(((List<string>)GetPrivateField(libraryRubyWords, "words")), Is.Empty,
+                "Locking Library must clear the generated Ruby projection.");
+            Assert.That(GetPrivateField(controller, "selectedListId"), Is.Null);
+
+            backend.LibraryUnlocked = true;
+            InvokePrivate(controller, "RefreshPageAccessIndicators");
+            InvokePrivate(controller, "RestoreLibraryPageControls");
+            Assert.That(bindings.navLibrary.label.text, Does.Not.Contain("LOCKED"));
+            Assert.That(bindings.library.emptyNotice.gameObject.activeSelf, Is.False);
+            Assert.That(bindings.library.listContent.gameObject.activeSelf, Is.True);
+            Assert.That(bindings.library.createList.button.gameObject.activeSelf, Is.True);
+            Assert.That(bindings.library.searchInput.gameObject.activeSelf, Is.True);
+            Assert.That(libraryRubyWords.LayoutRoot.gameObject.activeSelf, Is.True,
+                "Unlocking must restore the generated Ruby detail region.");
+            Assert.That(backend.QueryLibrary(new MockupLibraryQuery()), Is.Not.Empty,
+                "Unlocking must reveal the existing local lists rather than replace their data.");
+
+            SetPrivateField(controller, "selectedDiscoveryId", "remote-item-id");
+            InvokePrivate(controller, "RefreshLockedCommunityPage",
+                backend.GetPageAccess(WordListHubPage.Community));
+            Assert.That(bindings.navCommunity.label.text, Does.Contain("LOCKED"));
+            Assert.That(bindings.community.emptyNotice.text, Does.Contain("2/10"));
+            Assert.That(bindings.community.listContent.gameObject.activeSelf, Is.False);
+            Assert.That(bindings.community.searchInput.gameObject.activeSelf, Is.False);
+            Assert.That(bindings.community.download.button.gameObject.activeSelf, Is.False);
+            Assert.That(GetPrivateField(controller, "selectedDiscoveryId"), Is.Null);
+
+            backend.CommunityAvailable = false;
+            MockupHubPageAccess disabledCommunity = backend.GetPageAccess(WordListHubPage.Community);
+            Assert.That(disabledCommunity.IsAvailable, Is.False);
+            Assert.That(disabledCommunity.IsUnlocked, Is.False);
+            InvokePrivate(controller, "RefreshPageAccessIndicators");
+            InvokePrivate(controller, "RefreshLockedCommunityPage", disabledCommunity);
+            Assert.That(bindings.navCommunity.label.text, Does.Contain("UNAVAILABLE"));
+            Assert.That(bindings.navCommunity.label.text, Does.Not.Contain("LOCKED"));
+            Assert.That(bindings.community.emptyNotice.text, Does.Contain("unavailable"));
+            Assert.That(bindings.community.emptyNotice.text, Does.Not.Contain("Complete"));
+            Assert.That(bindings.community.download.button.gameObject.activeSelf, Is.False);
+
+            backend.CommunityAvailable = true;
+            InvokePrivate(controller, "RefreshPageAccessIndicators");
+            InvokePrivate(controller, "RefreshLockedCommunityPage",
+                backend.GetPageAccess(WordListHubPage.Community));
+            Assert.That(bindings.navCommunity.label.text, Does.Contain("LOCKED"));
+            Assert.That(bindings.community.emptyNotice.text, Does.Contain("2/10"));
+
+            backend.CommunityUnlocked = true;
+            InvokePrivate(controller, "RefreshPageAccessIndicators");
+            InvokePrivate(controller, "RestoreCommunityPageControls");
+            List<MockupDiscoveryItem> discovery = backend.QueryDiscoveryWithFilters(
+                new MockupDiscoveryQuery()).ToList();
+            Assert.That(discovery, Is.Not.Empty);
+            SetPrivateField(controller, "selectedDiscoveryId", discovery[0].RemoteItemId);
+            InvokePrivate(controller, "UpdateCommunityDetail", discovery);
+            Assert.That(bindings.navCommunity.label.text, Does.Not.Contain("LOCKED"));
+            Assert.That(bindings.community.emptyNotice.gameObject.activeSelf, Is.False);
+            Assert.That(bindings.community.listContent.gameObject.activeSelf, Is.True);
+            Assert.That(bindings.community.searchInput.gameObject.activeSelf, Is.True);
+            Assert.That(bindings.community.download.button.gameObject.activeSelf, Is.True);
+        }
+
+        [Test]
+        public void ProductionCommunityQueriesAndWritesStayGated()
+        {
+            temporaryLibraryRoot = System.IO.Path.Combine(System.IO.Path.GetTempPath(),
+                "WordListHubPageGate_" + Guid.NewGuid().ToString("N"));
+            Type serviceType = GetLoadedType("WordListLibraryService");
+            Type backendType = GetLoadedType("WordListHubProductionBackend");
+            object isolatedLibrary = Activator.CreateInstance(serviceType, new object[]
+            {
+                System.IO.Path.Combine(temporaryLibraryRoot, "Custom"),
+                System.IO.Path.Combine(temporaryLibraryRoot, "state.json"),
+                null
+            });
+            ConstructorInfo backendConstructor = backendType.GetConstructors()
+                .Single(candidate => candidate.GetParameters().Length == 3);
+            object backend = backendConstructor.Invoke(new[] { isolatedLibrary, null, null });
+
+            MockupHubPageAccess libraryAccess = (MockupHubPageAccess)InvokeBackend(
+                backend, "GetPageAccess", WordListHubPage.Library);
+            MockupHubPageAccess communityAccess = (MockupHubPageAccess)InvokeBackend(
+                backend, "GetPageAccess", WordListHubPage.Community);
+            Assert.That(libraryAccess.IsUnlocked, Is.False);
+            Assert.That(libraryAccess.IsAvailable, Is.False);
+            Assert.That(libraryAccess.RequiredChallenges, Is.EqualTo(5));
+            Assert.That(communityAccess.IsUnlocked, Is.False);
+            Assert.That(communityAccess.IsAvailable, Is.False);
+            Assert.That(communityAccess.RequiredChallenges, Is.EqualTo(10));
+            Assert.That((IReadOnlyList<MockupDiscoveryItem>)InvokeBackend(
+                backend, "QueryDiscoveryWithFilters", new MockupDiscoveryQuery()), Is.Empty);
+            Assert.That(InvokeBackend(backend, "FindDiscoveryItem", "mock-ugc-weekend-garden"), Is.Null);
+            AssertBlockedForCommunity((MockupActionResult)InvokeBackend(
+                backend, "TryToggleLike", "mock-ugc-weekend-garden"));
+            AssertBlockedForCommunity((MockupActionResult)InvokeBackend(
+                backend, "TryDownload", "mock-ugc-weekend-garden"));
+            AssertBlockedForCommunity((MockupActionResult)InvokeBackend(
+                backend, "TryReportAndHide", "mock-ugc-weekend-garden"));
+            AssertBlockedForCommunity((MockupActionResult)InvokeBackend(
+                backend, "TryPublish", "some-local-id"));
+            AssertBlockedForCommunity((MockupActionResult)InvokeBackend(
+                backend, "TryUnpublish", "some-local-id"));
+        }
+
+        [Test]
+        public void ProductionMetadataOnlyEditKeepsLegacyMixedModeRevisionPinyinAndTags()
+        {
+            temporaryLibraryRoot = System.IO.Path.Combine(System.IO.Path.GetTempPath(),
+                "WordListHubAutoLanguageMetadata_" + Guid.NewGuid().ToString("N"));
+            System.IO.Directory.CreateDirectory(temporaryLibraryRoot);
+
+            Type serviceType = GetLoadedType("WordListLibraryService");
+            Type contentType = GetLoadedType("WordListLibraryContent");
+            Type languageType = GetLoadedType("LanguageMode");
+            Type codecType = GetLoadedType("WordListLibraryContentCodec");
+            Type backendType = GetLoadedType("WordListHubProductionBackend");
+            Type profileType = GetLoadedType("GameConfigProfile");
+            Type configType = GetLoadedType("GameConfig");
+            Type levelPanelType = GetLoadedType("LevelPanelController");
+
+            string customDirectory = System.IO.Path.Combine(temporaryLibraryRoot, "Custom");
+            object service = Activator.CreateInstance(serviceType, new object[]
+            {
+                customDirectory,
+                System.IO.Path.Combine(temporaryLibraryRoot, "state.json"),
+                null
+            });
+
+            ScriptableObject profile = ScriptableObject.CreateInstance(profileType);
+            ScriptableObject config = ScriptableObject.CreateInstance(configType);
+            GameObject levelPanelObject = NewObject("Metadata test LevelPanel", null);
+            levelPanelObject.SetActive(false);
+            Component levelPanel = levelPanelObject.AddComponent(levelPanelType);
+            try
+            {
+                profileType.GetField("allowChineseAndMixed").SetValue(profile, true);
+                profileType.GetField("ignoreProgressionLocks").SetValue(profile, true);
+                profileType.GetField("unlockAllFeatures").SetValue(profile, true);
+                profileType.GetField("maxWordsPerList").SetValue(profile, 0);
+                configType.GetField("activeProfile").SetValue(config, profile);
+                SetPrivateField(levelPanel, "config", config);
+
+                MethodInfo parse = codecType.GetMethod("TryParseEditorLines",
+                    BindingFlags.Public | BindingFlags.Static);
+                Assert.That(parse, Is.Not.Null);
+                object[] parseArgs =
+                {
+                    new List<string> { "你1，好! | ni hao" },
+                    Enum.Parse(languageType, "Mixed"),
+                    null,
+                    null,
+                    null
+                };
+                Assert.That((bool)parse.Invoke(null, parseArgs), Is.True,
+                    parseArgs[4] as string);
+                object typedContent = parseArgs[3];
+
+                MethodInfo create = serviceType.GetMethods(BindingFlags.Instance | BindingFlags.Public)
+                    .Single(method => method.Name == "TryCreateList"
+                        && method.GetParameters().Length == 4
+                        && method.GetParameters()[1].ParameterType == contentType);
+                object[] createArgs = { "Legacy mixed Han", typedContent, null, null };
+                Assert.That((bool)create.Invoke(service, createArgs), Is.True, createArgs[3] as string);
+                object canonical = createArgs[2];
+                string localListId = (string)canonical.GetType().GetProperty("LocalListId").GetValue(canonical);
+
+                MethodInfo updateMetadata = serviceType.GetMethod("TryUpdateMetadata",
+                    BindingFlags.Instance | BindingFlags.Public);
+                object[] metadataArgs =
+                {
+                    localListId, "Legacy mixed Han", "", new List<string> { "keep-tag" }, false, null, null
+                };
+                Assert.That((bool)updateMetadata.Invoke(service, metadataArgs), Is.True,
+                    metadataArgs[6] as string);
+                canonical = metadataArgs[5];
+                int originalRevision = (int)canonical.GetType().GetProperty("ContentRevision").GetValue(canonical);
+                Assert.That(Enum.GetName(languageType,
+                    canonical.GetType().GetProperty("LanguageMode").GetValue(canonical)), Is.EqualTo("Mixed"));
+
+                ConstructorInfo backendConstructor = backendType.GetConstructors()
+                    .Single(candidate => candidate.GetParameters().Length == 3);
+                object backend = backendConstructor.Invoke(new[] { service, levelPanel, null });
+                MockupWordList draftSource = (MockupWordList)InvokeBackend(backend, "FindById", localListId);
+                Assert.That(draftSource.Language, Is.EqualTo(MockupLanguage.Mixed));
+                Assert.That(draftSource.DetectedLanguage, Is.EqualTo(MockupLanguage.Chinese));
+                Assert.That(draftSource.Words.Single(), Is.EqualTo("你1，好! | ni hao"));
+
+                MockupWordListEdit draft = (MockupWordListEdit)InvokeBackend(backend, "CreateEditDraft", localListId);
+                draft.Title = "Metadata changed only";
+                draft.Language = MockupLanguage.Chinese;
+                draft.Tags = null;
+                object result = InvokeBackend(backend, "SaveEdit", localListId, draft);
+                Assert.That((bool)result.GetType().GetProperty("Succeeded").GetValue(result), Is.True,
+                    result.GetType().GetProperty("Message").GetValue(result) as string);
+                Assert.That((bool)result.GetType().GetProperty("ContentChanged").GetValue(result), Is.False);
+
+                object saved = serviceType.GetMethod("FindById").Invoke(service, new object[] { localListId });
+                Assert.That((int)saved.GetType().GetProperty("ContentRevision").GetValue(saved),
+                    Is.EqualTo(originalRevision));
+                Assert.That(Enum.GetName(languageType,
+                    saved.GetType().GetProperty("LanguageMode").GetValue(saved)), Is.EqualTo("Mixed"));
+                CollectionAssert.AreEqual(new[] { "keep-tag" },
+                    (IEnumerable<string>)saved.GetType().GetProperty("Tags").GetValue(saved));
+                MockupWordList projected = (MockupWordList)InvokeBackend(backend, "FindById", localListId);
+                Assert.That(projected.DetectedLanguage, Is.EqualTo(MockupLanguage.Chinese));
+                Assert.That(projected.Words.Single(), Is.EqualTo("你1，好! | ni hao"));
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(levelPanelObject);
+                UnityEngine.Object.DestroyImmediate(config);
+                UnityEngine.Object.DestroyImmediate(profile);
+            }
+        }
+
+        [Test]
+        public void CustomEditCapAllowsSameCountAndShrinkButRejectsGrowth()
+        {
+            Type profileType = GetLoadedType("GameConfigProfile");
+            Type configType = GetLoadedType("GameConfig");
+            Type levelPanelType = GetLoadedType("LevelPanelController");
+            UnityEngine.Object profile = ScriptableObject.CreateInstance(profileType);
+            UnityEngine.Object config = ScriptableObject.CreateInstance(configType);
+            try
+            {
+                profileType.GetField("ignoreProgressionLocks").SetValue(profile, false);
+                profileType.GetField("communityEnabled").SetValue(profile, false);
+                profileType.GetField("unlockAllFeatures").SetValue(profile, true);
+                profileType.GetField("communityUnlockLevels").SetValue(profile, int.MaxValue);
+                profileType.GetField("maxWordsPerList").SetValue(profile, 2);
+                configType.GetField("activeProfile").SetValue(config, profile);
+                GameObject levelPanelObject = NewObject("Isolated LevelPanel", null);
+                levelPanelObject.SetActive(false);
+                Component levelPanel = levelPanelObject.AddComponent(levelPanelType);
+                SetPrivateField(levelPanel, "config", config);
+                MethodInfo canEdit = levelPanelType.GetMethod("CanEditListFromHub", BindingFlags.Instance | BindingFlags.Public);
+                Assert.That(canEdit, Is.Not.Null);
+
+                Assert.That((bool)profileType.GetField("communityEnabled").GetValue(profile), Is.False);
+                Assert.That((bool)profileType.GetField("ignoreProgressionLocks").GetValue(profile), Is.False);
+                Assert.That((bool)levelPanelType.GetProperty("IsCommunityEnabledFromHub").GetValue(levelPanel), Is.True,
+                    "The developer master enables Community without changing its raw switch.");
+                Assert.That((bool)levelPanelType.GetProperty("CanOpenCommunityFromHub").GetValue(levelPanel), Is.True,
+                    "The developer master bypasses Community progression but does not change the raw switch.");
+
+                object[] sameCount = { 3, true, null, 3 };
+                Assert.That((bool)canEdit.Invoke(levelPanel, sameCount), Is.True,
+                    "An existing over-cap list can keep its current count.");
+                object[] shrink = { 2, true, null, 3 };
+                Assert.That((bool)canEdit.Invoke(levelPanel, shrink), Is.True,
+                    "An existing over-cap list can be reduced.");
+                object[] growth = { 4, true, null, 3 };
+                Assert.That((bool)canEdit.Invoke(levelPanel, growth), Is.False,
+                    "Progression bypass must not permit growing beyond the numeric cap.");
+                Assert.That((string)growth[2], Does.Contain("word limit"));
+                object[] metadataOnly = { 3, false, null, 3 };
+                Assert.That((bool)canEdit.Invoke(levelPanel, metadataOnly), Is.True,
+                    "Metadata-only edits do not fail because an existing list is over cap.");
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(config);
+                UnityEngine.Object.DestroyImmediate(profile);
+            }
+        }
+
+        [Test]
+        public void ChallengeDetailUsesSeparateStarsAndTimeLineWithoutSelectedDescription()
+        {
+            Assert.That(typeof(WordListHubSceneBindings.ChallengesPageBinding).GetField(
+                "detailDescription", BindingFlags.Instance | BindingFlags.Public), Is.Null);
+            Assert.That(typeof(WordListHubSceneBindings.ChallengesPageBinding).GetField(
+                "detailRecords", BindingFlags.Instance | BindingFlags.Public), Is.Not.Null);
+
+            GameObject owner = NewObject("Challenge details test", null);
+            var binding = new WordListHubSceneBindings.ChallengesPageBinding
+            {
+                detailTitle = NewText("Challenge title", owner.transform),
+                detailMetadata = NewText("Challenge metadata", owner.transform),
+                detailRecords = NewText("Challenge records", owner.transform)
+            };
+            DateTime now = DateTime.UtcNow;
+            MockupWordList selected = MockupWordListProjection.CreateWordList(
+                "challenge-test", "Test challenge", "PRIVATE_DESCRIPTION_MUST_NOT_RENDER", string.Empty,
+                MockupLanguage.English, new[] { "apple" }, false, now, now, now, now,
+                3, 12.5f, 1, 1, isChallenge: true, isChallengeUnlocked: true);
+
+            InvokeStaticPrivate(typeof(WordListHubMockupController), "SetChallengeDetailHeader",
+                binding, selected);
+
+            Assert.That(binding.detailMetadata.text, Does.Contain("UNLOCKED"));
+            Assert.That(binding.detailMetadata.text, Does.Contain("English"));
+            Assert.That(binding.detailMetadata.text, Does.Contain("1 words"));
+            Assert.That(binding.detailMetadata.text, Does.Not.Contain("Best"));
+            Assert.That(binding.detailRecords.text, Does.Contain("★★★"));
+            Assert.That(binding.detailRecords.text, Does.Contain("12.5 s"));
+            Assert.That(binding.detailRecords.text, Does.Not.Contain("PRIVATE_DESCRIPTION_MUST_NOT_RENDER"));
+
+            GameObject rowObject = NewObject("Challenge reward tile", owner.transform, typeof(RectTransform));
+            RectTransform tile = rowObject.GetComponent<RectTransform>();
+            tile.sizeDelta = new Vector2(270f, 270f);
+            WordListHubLibraryRowView row = rowObject.AddComponent<WordListHubLibraryRowView>();
+            row.title = NewText("Reward tile title", rowObject.transform);
+            row.metadata = NewText("Reward metadata", rowObject.transform);
+            row.recordStars = NewText("Reward stars", rowObject.transform);
+            row.bestTime = NewText("Reward tile time", rowObject.transform);
+            row.badgeRoot = NewObject("Existing locked badge", rowObject.transform,
+                typeof(RectTransform), typeof(Image));
+            row.badge = NewText("Existing locked badge label", row.badgeRoot.transform, "LOCKED");
+            GameObject controllerObject = NewObject("Challenge layout controller", owner.transform);
+            controllerObject.SetActive(false);
+            WordListHubMockupController controller = controllerObject.AddComponent<WordListHubMockupController>();
+            SetPrivateField(controller, "productionMode", true);
+
+            MockupWordList bothRewards = MockupWordListProjection.CreateWordList(
+                "challenge-both-rewards", "Both rewards", string.Empty, string.Empty,
+                MockupLanguage.English, new[] { "apple" }, false, now, now, now, null,
+                null, null, 1, 0, isChallenge: true, isChallengeUnlocked: false,
+                unlockRewardLabel: "Unlock Library + Community");
+            InvokePrivate(controller, "UpdateChallengeRow", row, bothRewards, 270f);
+
+            Assert.That(row.metadata.text, Does.Contain("1 words"));
+            Assert.That(row.metadata.text, Does.Not.Contain("Unlock"));
+            Assert.That(row.badgeRoot.activeSelf, Is.True);
+            Assert.That(row.badge.text, Is.EqualTo("LOCKED"));
+            Assert.That(row.badgeRoot.GetComponent<RectTransform>().anchoredPosition.y, Is.EqualTo(-18f));
+            Assert.That(row.badgeRoot.GetComponent<RectTransform>().sizeDelta.y, Is.EqualTo(16f));
+            Assert.That(row.unlockRewardBanner, Is.Not.Null);
+            Assert.That(row.unlockRewardBanner.gameObject.name, Is.EqualTo("UnlockRewardBanner"));
+            Assert.That(row.unlockRewardBanner.transform.parent, Is.EqualTo(rowObject.transform));
+            Assert.That(row.unlockRewardBanner.gameObject.activeSelf, Is.True);
+            Assert.That(row.unlockRewardBanner.text, Is.EqualTo("Unlock Custom List + Community"));
+            Assert.That(row.unlockRewardBanner.rectTransform.anchorMin, Is.EqualTo(new Vector2(0f, 1f)));
+            Assert.That(row.unlockRewardBanner.rectTransform.anchorMax, Is.EqualTo(new Vector2(1f, 1f)));
+            Assert.That(row.unlockRewardBanner.rectTransform.anchoredPosition, Is.EqualTo(Vector2.zero));
+            Assert.That(row.unlockRewardBanner.rectTransform.sizeDelta, Is.EqualTo(new Vector2(-24f, 18f)));
+
+            MockupWordList customReward = MockupWordListProjection.CreateWordList(
+                "challenge-custom-reward", "Custom reward", string.Empty, string.Empty,
+                MockupLanguage.English, new[] { "apple" }, false, now, now, now, null,
+                null, null, 1, 0, isChallenge: true, isChallengeUnlocked: true,
+                unlockRewardLabel: "Unlock Library");
+            InvokePrivate(controller, "UpdateChallengeRow", row, customReward, 270f);
+            Assert.That(row.unlockRewardBanner.text, Is.EqualTo("Unlock Custom List"));
+            Assert.That(row.badgeRoot.activeSelf, Is.False);
+
+            tile.sizeDelta = new Vector2(240f, 240f);
+            InvokePrivate(controller, "ConfigureTileForSize", tile, 240f);
+            Assert.That(row.unlockRewardBanner.gameObject.activeSelf, Is.True,
+                "A reward banner remains visible when the tile is resized.");
+            Assert.That(row.unlockRewardBanner.rectTransform.anchorMin, Is.EqualTo(new Vector2(0f, 1f)));
+            Assert.That(row.unlockRewardBanner.rectTransform.anchorMax, Is.EqualTo(new Vector2(1f, 1f)));
+            Assert.That(row.unlockRewardBanner.rectTransform.anchoredPosition, Is.EqualTo(Vector2.zero));
+            Assert.That(row.unlockRewardBanner.rectTransform.sizeDelta, Is.EqualTo(new Vector2(-24f, 18f)));
+
+            MockupWordList noReward = MockupWordListProjection.CreateWordList(
+                "challenge-no-reward", "No reward", string.Empty, string.Empty,
+                MockupLanguage.English, new[] { "apple" }, false, now, now, now, null,
+                null, null, 1, 0, isChallenge: true, isChallengeUnlocked: false);
+            InvokePrivate(controller, "UpdateChallengeRow", row, noReward, 240f);
+            Assert.That(row.unlockRewardBanner.gameObject.activeSelf, Is.False);
+            Assert.That(row.unlockRewardBanner.text, Is.Empty);
+            Assert.That(row.badgeRoot.activeSelf, Is.True);
+            Assert.That(row.badge.text, Is.EqualTo("LOCKED"));
+            Assert.That(rowObject.transform.Find("UnlockRewardBanner"), Is.EqualTo(row.unlockRewardBanner.transform),
+                "Repeated row updates reuse the single generated banner child.");
+
+            InvokePrivate(controller, "ConfigureTileForSize", tile, 240f);
+            Assert.That(row.unlockRewardBanner.gameObject.activeSelf, Is.False,
+                "Resizing a no-reward challenge does not show the cached reward banner.");
+            float resizedTileScale = 240f < WordListHubTileGridMetrics.MinimumReadableTileSize
+                ? 240f / WordListHubTileGridMetrics.MinimumReadableTileSize : 1f;
+            Assert.That(row.metadata.rectTransform.anchoredPosition.y, Is.EqualTo(-116f * resizedTileScale));
+            Assert.That(row.metadata.rectTransform.sizeDelta.y, Is.EqualTo(28f * resizedTileScale));
+            Assert.That(row.metadata.textWrappingMode, Is.EqualTo(TextWrappingModes.NoWrap));
+            Assert.That(row.recordStars.rectTransform.anchoredPosition.y, Is.EqualTo(-168f * resizedTileScale));
+            Assert.That(row.recordStars.rectTransform.sizeDelta.y, Is.EqualTo(34f * resizedTileScale));
+        }
+
+        private void ConfigurePageBindings(Transform parent, WordListHubSceneBindings bindings)
+        {
+            bindings.navLibrary = CreateButtonBinding("Library", parent, "Library");
+            bindings.navCommunity = CreateButtonBinding("Community", parent, "Community");
+            bindings.navChallenges = CreateButtonBinding("Challenges", parent, "Challenges");
+
+            WordListHubSceneBindings.LibraryPageBinding library = new WordListHubSceneBindings.LibraryPageBinding();
+            GameObject libraryScroll = NewObject("Library scroll", parent, typeof(ScrollRect));
+            library.listScroll = libraryScroll.GetComponent<ScrollRect>();
+            library.listContent = NewObject("Library content", libraryScroll.transform).transform;
+            library.emptyNotice = NewText("Library notice", libraryScroll.transform);
+            library.detailPane = NewObject("Library details", parent).transform;
+            library.detailTitle = NewText("Library detail title", library.detailPane);
+            library.detailDescription = NewText("Library detail description", library.detailPane);
+            library.detailMetadata = NewText("Library detail metadata", library.detailPane);
+            library.detailWordsLabel = NewText("Library detail words label", library.detailPane);
+            library.detailWords = NewText("Library detail words", library.detailPane);
+            library.searchInput = NewObject("Library search", parent, typeof(TMP_InputField)).GetComponent<TMP_InputField>();
+            library.languageFilter = NewObject("Library language filter", parent, typeof(TMP_Dropdown)).GetComponent<TMP_Dropdown>();
+            library.playedFilter = NewObject("Library played filter", parent, typeof(TMP_Dropdown)).GetComponent<TMP_Dropdown>();
+            library.sortFilter = NewObject("Library sort filter", parent, typeof(TMP_Dropdown)).GetComponent<TMP_Dropdown>();
+            library.directionFilter = NewObject("Library direction filter", parent, typeof(TMP_Dropdown)).GetComponent<TMP_Dropdown>();
+            library.filtersMenu.toggleButton = CreateButtonBinding("Library filters", parent, "Filters").button;
+            library.filtersMenu.panel = NewObject("Library filter panel", parent);
+            library.allLists = CreateButtonBinding("All lists", parent, "All lists");
+            library.favorites = CreateButtonBinding("Favorites", parent, "Favorites");
+            library.createList = CreateButtonBinding("Create list", parent, "Create");
+            library.importList = CreateButtonBinding("Import list", parent, "Import");
+            library.exportList = CreateButtonBinding("Export list", parent, "Export");
+            library.delete = CreateButtonBinding("Delete list", parent, "Delete");
+            library.play = CreateButtonBinding("Play list", parent, "Play");
+            library.edit = CreateButtonBinding("Edit list", parent, "Edit");
+            library.copyEditWords = CreateButtonBinding("Copy list", parent, "Copy");
+            library.publish = CreateButtonBinding("Publish list", parent, "Publish");
+            library.unpublish = CreateButtonBinding("Unpublish list", parent, "Unpublish");
+            bindings.library = library;
+
+            WordListHubSceneBindings.CommunityPageBinding community = new WordListHubSceneBindings.CommunityPageBinding();
+            GameObject communityScroll = NewObject("Community scroll", parent, typeof(ScrollRect));
+            community.listScroll = communityScroll.GetComponent<ScrollRect>();
+            community.listContent = NewObject("Community content", communityScroll.transform).transform;
+            community.emptyNotice = NewText("Community notice", communityScroll.transform);
+            community.detailPane = NewObject("Community details", parent).transform;
+            community.detailTitle = NewText("Community detail title", community.detailPane);
+            community.detailAuthor = NewText("Community detail author", community.detailPane);
+            community.detailSummary = NewText("Community detail summary", community.detailPane);
+            community.detailDescription = NewText("Community detail description", community.detailPane);
+            community.detailMetadata = NewText("Community detail metadata", community.detailPane);
+            community.detailTrustNote = NewText("Community detail note", community.detailPane);
+            community.searchInput = NewObject("Community search", parent, typeof(TMP_InputField)).GetComponent<TMP_InputField>();
+            community.connectionState = NewObject("Community connection", parent, typeof(TMP_Dropdown)).GetComponent<TMP_Dropdown>();
+            community.connectionMenu.toggleButton = CreateButtonBinding("Community filters", parent, "Filters").button;
+            community.connectionMenu.panel = NewObject("Community filter panel", parent);
+            community.like = CreateButtonBinding("Like", parent, "Like");
+            community.download = CreateButtonBinding("Download", parent, "Download");
+            community.play = CreateButtonBinding("Community play", parent, "Play");
+            community.report = CreateButtonBinding("Report", parent, "Report");
+            bindings.community = community;
+        }
+
+        private WordListHubSceneBindings.ButtonBinding CreateButtonBinding(
+            string name, Transform parent, string labelText)
+        {
+            GameObject buttonObject = NewObject(name, parent,
+                typeof(RectTransform), typeof(CanvasRenderer), typeof(Image), typeof(Button));
+            Button button = buttonObject.GetComponent<Button>();
+            button.targetGraphic = buttonObject.GetComponent<Image>();
+            return new WordListHubSceneBindings.ButtonBinding
+            {
+                button = button,
+                label = NewText(name + " label", buttonObject.transform, labelText)
+            };
+        }
+
+        private TMP_Text NewText(string name, Transform parent, string text = "")
+        {
+            GameObject textObject = NewObject(name, parent,
+                typeof(RectTransform), typeof(CanvasRenderer), typeof(TextMeshProUGUI));
+            TMP_Text result = textObject.GetComponent<TextMeshProUGUI>();
+            result.text = text;
+            return result;
+        }
+
+        private GameObject NewObject(string name, Transform parent, params Type[] components)
+        {
+            GameObject result = components == null || components.Length == 0
+                ? new GameObject(name)
+                : new GameObject(name, components);
+            if (parent != null)
+                result.transform.SetParent(parent, false);
+            if (parent == null || !ownedObjects.Any(item => item != null
+                && (parent == item.transform || parent.IsChildOf(item.transform))))
+                ownedObjects.Add(result);
+            return result;
+        }
+
+        private static void SetPrivateField(object target, string fieldName, object value)
+        {
+            FieldInfo field = target.GetType().GetField(fieldName, BindingFlags.Instance | BindingFlags.NonPublic);
+            Assert.That(field, Is.Not.Null, fieldName + " should be a private controller field.");
+            field.SetValue(target, value);
+        }
+
+        private static object GetPrivateField(object target, string fieldName)
+        {
+            FieldInfo field = target.GetType().GetField(fieldName, BindingFlags.Instance | BindingFlags.NonPublic);
+            Assert.That(field, Is.Not.Null, fieldName + " should be a private controller field.");
+            return field.GetValue(target);
+        }
+
+        private static object InvokePrivate(object target, string methodName, params object[] arguments)
+        {
+            MethodInfo method = target.GetType().GetMethod(methodName, BindingFlags.Instance | BindingFlags.NonPublic);
+            Assert.That(method, Is.Not.Null, methodName + " should exist.");
+            return method.Invoke(target, arguments);
+        }
+
+        private static void InvokeStaticPrivate(Type type, string methodName, params object[] arguments)
+        {
+            MethodInfo method = type.GetMethod(methodName, BindingFlags.Static | BindingFlags.NonPublic);
+            Assert.That(method, Is.Not.Null, methodName + " should exist.");
+            method.Invoke(null, arguments);
+        }
+
+        private static void AssertBlockedForCommunity(MockupActionResult result)
+        {
+            Assert.That(result, Is.Not.Null);
+            Assert.That(result.Succeeded, Is.False);
+            Assert.That(result.Message, Does.Contain("Community"));
+            Assert.That(result.Message, Does.Contain("unavailable"));
+            Assert.That(result.Message, Does.Not.Contain("Complete"));
+        }
+
+        private static Type GetLoadedType(string typeName)
+        {
+            Type result = AppDomain.CurrentDomain.GetAssemblies()
+                .Select(candidate => candidate.GetType(typeName, false))
+                .FirstOrDefault(candidate => candidate != null);
+            Assert.That(result, Is.Not.Null, typeName + " should exist in a loaded runtime assembly.");
+            return result;
+        }
+
+        private static object InvokeBackend(object backend, string methodName, params object[] arguments)
+        {
+            MethodInfo method = backend.GetType().GetMethod(methodName, BindingFlags.Instance | BindingFlags.Public);
+            Assert.That(method, Is.Not.Null, methodName + " should be public on the production backend.");
+            return method.Invoke(backend, arguments);
+        }
+
+        private sealed class PageAccessStore : MockupWordListStore
+        {
+            public bool LibraryUnlocked;
+            public bool CommunityUnlocked;
+            public bool CommunityAvailable = true;
+
+            public override MockupHubPageAccess GetPageAccess(WordListHubPage page)
+            {
+                if (page == WordListHubPage.Library)
+                    return new MockupHubPageAccess(LibraryUnlocked, 2, 5, "English");
+                if (page == WordListHubPage.Community)
+                    return new MockupHubPageAccess(CommunityUnlocked, 2, 10, "English", CommunityAvailable);
+                return MockupHubPageAccess.OpenPreview;
             }
         }
     }

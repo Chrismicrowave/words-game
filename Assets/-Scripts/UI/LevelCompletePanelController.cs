@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
+using UnityEngine.UI;
 
 /// <summary>
 /// Shows when a challenge level is fully cleared.
@@ -14,6 +15,8 @@ public class LevelCompletePanelController : MonoBehaviour
     [SerializeField] private TextMeshProUGUI starsTMP;       // "★★★"
     [SerializeField] private TextMeshProUGUI timeSpentTMP;   // "Time: 12.34s"
     [SerializeField] private TextMeshProUGUI retriesTMP;     // "retries: 3"
+    [SerializeField] private Button returnToChallengesButton;
+    [SerializeField] private WordListHubGameBridge wordListHubBridge;
 
     private bool panelActive;
 
@@ -21,12 +24,16 @@ public class LevelCompletePanelController : MonoBehaviour
     {
         if (Services.Get<InputHandler>() != null)
             Services.Get<InputHandler>().OnEnterPressed += HandleEnter;
+        if (returnToChallengesButton != null)
+            returnToChallengesButton.onClick.AddListener(ReturnToChallenges);
     }
 
     void OnDisable()
     {
         if (Services.Get<InputHandler>() != null)
             Services.Get<InputHandler>().OnEnterPressed -= HandleEnter;
+        if (returnToChallengesButton != null)
+            returnToChallengesButton.onClick.RemoveListener(ReturnToChallenges);
     }
 
     /// <summary>Called by GameCoordinator when a challenge is completed.</summary>
@@ -48,10 +55,41 @@ public class LevelCompletePanelController : MonoBehaviour
             Services.Get<InputHandler>().SetGameplayBlocked(true);
     }
 
+    public void ShowRecordPersistenceError(string error)
+    {
+        if (levelResultTMP == null) return;
+        string detail = string.IsNullOrWhiteSpace(error)
+            ? "The progress record could not be saved."
+            : "Progress record not saved: " + error.Replace('<', '‹').Replace('>', '›');
+        levelResultTMP.text += "\n" + detail;
+    }
+
     private void HandleEnter()
     {
         if (!panelActive) return;
+        GameCoordinator coordinator = FindAnyObjectByType<GameCoordinator>();
+        InputHandler input = Services.Get<InputHandler>();
+        if ((coordinator != null && coordinator.IsHubVisible)
+            || (input != null && input.IsHubGameplayBlocked))
+            return;
         LoadNextChallenge();
+    }
+
+    /// <summary>Dismisses the legacy completion overlay when the production Hub takes focus.</summary>
+    public void HideForHub()
+    {
+        panelActive = false;
+        if (Services.Get<InputHandler>() != null)
+            Services.Get<InputHandler>().SetGameplayBlocked(false);
+        if (gameObject.activeSelf)
+            gameObject.SetActive(false);
+    }
+
+    public void ReturnToChallenges()
+    {
+        if (!panelActive || wordListHubBridge == null) return;
+        HideForHub();
+        wordListHubBridge.ShowChallenges();
     }
 
     private void LoadNextChallenge()

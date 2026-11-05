@@ -8,6 +8,7 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.Localization.Settings;
+using UnityEngine.Serialization;
 using UnityEngine.UI;
 
 public class UIController : MonoBehaviour
@@ -59,10 +60,13 @@ public class UIController : MonoBehaviour
 
     [Header("Level Panel")]
     [SerializeField] private GameObject levelPanel;
+    [SerializeField] private WordListHubGameBridge wordListHubBridge;
 
-    [Header("Demo Limit Prompt")]
-    [SerializeField] private GameObject demoCustomLimitPrompt;
-    [SerializeField] private float demoPromptDuration = 2f;
+    [Header("Word List Limit Prompt")]
+    [FormerlySerializedAs("demoCustomLimitPrompt")]
+    [SerializeField] private GameObject limitPrompt;
+    [FormerlySerializedAs("demoPromptDuration")]
+    [SerializeField] private float limitPromptDuration = 2f;
 
     private const int    MaxWordLength    = 140;
     private const string WordsPanelPrefKey = "WordsPanelOn";
@@ -105,6 +109,7 @@ public class UIController : MonoBehaviour
     {
         OnDisable();
         OnEnable();
+        AttachHudLevelButtonSounds();
 
         actionPromptSettings = Services.Get<SettingsManager>();
         if (actionPromptSettings != null)
@@ -320,7 +325,7 @@ public class UIController : MonoBehaviour
 
         if (lp != null && lp.IsWordLimitReached(phaseManager.TotalPhases))
         {
-            ShowDemoLimitPrompt($"Max {lp.EffectiveMaxWordsPerList} words per list in demo");
+            ShowLimitPrompt($"Maximum of {lp.EffectiveMaxWordsPerList} words per custom list reached.");
             return;
         }
 
@@ -360,21 +365,21 @@ public class UIController : MonoBehaviour
         }
     }
 
-    private void ShowDemoLimitPrompt(string message)
+    private void ShowLimitPrompt(string message)
     {
-        if (demoCustomLimitPrompt == null) return;
-        var tmp = demoCustomLimitPrompt.GetComponentInChildren<TMPro.TextMeshProUGUI>();
+        if (limitPrompt == null) return;
+        var tmp = limitPrompt.GetComponentInChildren<TMPro.TextMeshProUGUI>();
         if (tmp != null) tmp.text = message;
-        demoCustomLimitPrompt.SetActive(true);
+        limitPrompt.SetActive(true);
         if (this.isActiveAndEnabled)
-            StartCoroutine(HideDemoLimitPrompt());
+            StartCoroutine(HideLimitPrompt());
     }
 
-    private System.Collections.IEnumerator HideDemoLimitPrompt()
+    private System.Collections.IEnumerator HideLimitPrompt()
     {
-        yield return new WaitForSeconds(demoPromptDuration);
-        if (demoCustomLimitPrompt != null)
-            demoCustomLimitPrompt.SetActive(false);
+        yield return new WaitForSeconds(limitPromptDuration);
+        if (limitPrompt != null)
+            limitPrompt.SetActive(false);
     }
 
     public void OnDeletePhaseClicked()
@@ -471,7 +476,23 @@ public class UIController : MonoBehaviour
 
     public void OnPlayBtnClicked()
     {
+        if (wordListHubBridge != null)
+        {
+            wordListHubBridge.ShowChallenges();
+            return;
+        }
         if (levelPanel != null) levelPanel.SetActive(true);
+    }
+
+    private void AttachHudLevelButtonSounds()
+    {
+        if (wordListHubBridge == null) return;
+
+        foreach (Button button in GetComponentsInChildren<Button>(true))
+        {
+            if (button != null && button.gameObject.name == "LevelBtn")
+                wordListHubBridge.AttachMenuClickSound(button);
+        }
     }
 
     public void OnImportClicked()

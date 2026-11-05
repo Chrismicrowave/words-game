@@ -18,22 +18,15 @@ MonoBehaviour:
   resetRevision: 1
   resetAllLocalDataOnNextEditorPlay: 0
   resetAllLocalDataOnFirstBuildRun: 0
-  isDemo: 1
   maxChallengeLevels: 5
   maxCustomLists: 1
   maxWordsPerList: 5
-  customUnlockLevels: 5
   allowChineseAndMixed: 1
   unlockAllFeatures: 0
-  unlockAllChallenges: 0
-  unlockCustomLists: 0
-  unlockCreateLists: 0
-  unlockEditLists: 1
-  unlockDeleteLists: 0
-  unlockDuplicateLists: 0
-  unlockImportLists: 0
-  unlockExportLists: 0
-  unlockAddWords: 1
+  ignoreProgressionLocks: 0
+  customUnlockLevels: 5
+  communityEnabled: 0
+  communityUnlockLevels: 10
   defaults:
     fullscreen: 0
     resolutionIndex: 1
@@ -46,7 +39,7 @@ MonoBehaviour:
     bgmVolume: 0.7
     showPinyin: 1
     uiLanguage: en
-    playerName: "Unnamed User #1234"
+    playerName: Unnamed User #1234
     wordsPanel: 0
     timerPanel: 0
     infoPanel: 1

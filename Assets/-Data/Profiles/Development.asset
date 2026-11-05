@@ -18,22 +18,15 @@ MonoBehaviour:
   resetRevision: 1
   resetAllLocalDataOnNextEditorPlay: 0
   resetAllLocalDataOnFirstBuildRun: 0
-  isDemo: 1
-  maxChallengeLevels: 5
-  maxCustomLists: 1
-  maxWordsPerList: 5
-  customUnlockLevels: 5
+  maxChallengeLevels: 0
+  maxCustomLists: 0
+  maxWordsPerList: 0
   allowChineseAndMixed: 1
-  unlockAllFeatures: 0
-  unlockAllChallenges: 0
-  unlockCustomLists: 1
-  unlockCreateLists: 0
-  unlockEditLists: 1
-  unlockDeleteLists: 0
-  unlockDuplicateLists: 0
-  unlockImportLists: 0
-  unlockExportLists: 0
-  unlockAddWords: 1
+  unlockAllFeatures: 1
+  ignoreProgressionLocks: 1
+  customUnlockLevels: 5
+  communityEnabled: 1
+  communityUnlockLevels: 10
   defaults:
     fullscreen: 0
     resolutionIndex: 1

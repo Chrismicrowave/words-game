@@ -60,60 +60,53 @@ public sealed class GameConfigProfile : ScriptableObject
     [Tooltip("When enabled, each build made with the Master Config build button receives a new reset token and resets local data once on that build's first run. Building does not reset the Editor data.")]
     public bool resetAllLocalDataOnFirstBuildRun;
 
-    [Header("Demo and Capacity")]
-    public bool isDemo;
+    [Header("Feature Access and Caps")]
+    [Tooltip("Maximum challenge levels available. 0 means unlimited; overrides do not bypass this cap.")]
     [Min(0)] public int maxChallengeLevels = 5;
+    [Tooltip("Maximum number of custom lists. 0 means unlimited.")]
     [Min(0)] public int maxCustomLists = 1;
+    [Tooltip("Maximum number of words per custom list. 0 means unlimited.")]
     [Min(0)] public int maxWordsPerList = 5;
-    [Min(0)] public int customUnlockLevels = 5;
 
     [Header("Language Content")]
     [Tooltip("Allow Chinese and mixed Chinese-English gameplay content. This does not change the UI language.")]
     public bool allowChineseAndMixed = true;
 
-    [Header("Feature Unlocks")]
-    [Tooltip("Bypass implemented feature gates and demo caps. This never changes saved challenge progress or Steam achievements.")]
+    [Header("Progression")]
+    [Tooltip("Developer master unlock: bypass progression gates and the Community enabled switch. Numeric caps still apply.")]
     public bool unlockAllFeatures;
-    [Tooltip("Unlock challenge levels and disable the demo level-count cap without recording progress.")]
-    public bool unlockAllChallenges;
-    [Tooltip("Open Custom before its challenge-clear threshold; this does not unlock list actions.")]
-    public bool unlockCustomLists;
-    [Tooltip("In Demo profiles, allow creating custom lists; the demo list-count cap still applies.")]
-    public bool unlockCreateLists;
-    [Tooltip("In Demo profiles, allow moving or deleting words in a list.")]
-    public bool unlockEditLists;
-    [Tooltip("In Demo profiles, allow deleting custom lists.")]
-    public bool unlockDeleteLists;
-    [Tooltip("In Demo profiles, allow duplicating custom lists; the demo list-count cap still applies.")]
-    public bool unlockDuplicateLists;
-    [Tooltip("In Demo profiles, allow importing custom lists; the demo list-count cap still applies.")]
-    public bool unlockImportLists;
-    [Tooltip("In Demo profiles, allow exporting lists.")]
-    public bool unlockExportLists;
-    [Tooltip("In Demo profiles, allow adding words; the demo per-list word cap still applies.")]
-    public bool unlockAddWords;
+    [Tooltip("Bypass challenge, Custom, and enabled Community progression thresholds. Numeric caps and the Community enabled switch still apply.")]
+    public bool ignoreProgressionLocks;
+    [Min(0)] public int customUnlockLevels = 5;
+    [Tooltip("Enable or disable Community independently of its progression threshold.")]
+    public bool communityEnabled = true;
+    [Min(0)] public int communityUnlockLevels = 10;
 
     [Header("Default Settings")]
     public GameDefaultSettings defaults = new GameDefaultSettings();
 
-    /// <summary>True when a feature can be used under this profile's demo policy.</summary>
-    public bool IsFeatureAvailable(bool explicitlyUnlocked)
-    {
-        return !isDemo || unlockAllFeatures || explicitlyUnlocked;
-    }
-
-    /// <summary>Demo challenge cap, or zero when there is no active cap.</summary>
+    /// <summary>Configured challenge cap, or zero when there is no active cap.</summary>
     public int EffectiveChallengeCap
     {
-        get => isDemo && !unlockAllFeatures && !unlockAllChallenges
-            ? Mathf.Max(0, maxChallengeLevels)
-            : 0;
+        get => Mathf.Max(0, maxChallengeLevels);
     }
+
+    public bool IsCommunityAvailable => communityEnabled || unlockAllFeatures;
 
     /// <summary>Returns whether Custom can be opened without changing saved progression.</summary>
     public bool CanOpenCustomLists(int completedChallenges)
     {
-        return unlockAllFeatures || unlockCustomLists || completedChallenges >= Mathf.Max(0, customUnlockLevels);
+        int completed = Mathf.Max(0, completedChallenges);
+        return unlockAllFeatures || ignoreProgressionLocks
+            || completed >= Mathf.Max(0, customUnlockLevels);
+    }
+
+    /// <summary>Returns whether Community can be opened for the completed challenge count.</summary>
+    public bool CanOpenCommunityLists(int completedChallenges)
+    {
+        int completed = Mathf.Max(0, completedChallenges);
+        return unlockAllFeatures || (communityEnabled && (ignoreProgressionLocks
+            || completed >= Mathf.Max(0, communityUnlockLevels)));
     }
 
     private void OnValidate()

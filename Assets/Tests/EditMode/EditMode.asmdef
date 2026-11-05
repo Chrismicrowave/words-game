@@ -2,7 +2,8 @@
     "name": "EditMode",
     "rootNamespace": "",
     "references": [
-        "GUID:d832c127d1c444a3aa7ce0e0bd1b92f7"
+        "GUID:d832c127d1c444a3aa7ce0e0bd1b92f7",
+        "GUID:7025a3360e0821e4baeef2b9a01a513b"
     ],
     "includePlatforms": [
         "Editor"

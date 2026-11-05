@@ -1,9 +1,11 @@
 using System.Collections.Generic;
 using System.IO;
+using System;
 using SFB;
 using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
+using UnityEngine.Serialization;
 using UnityEngine.UI;
 
 public enum LevelTab
@@ -18,22 +20,20 @@ public class LevelPanelController : MonoBehaviour
     [Header("Master Config")]
     [SerializeField] private GameConfig config;
 
-    [Header("Demo Mode")]
-    [Tooltip("Enable demo restrictions: hides custom-list CRUD, caps lists and words per list.")]
-    public bool isDemo = false;
-    [Tooltip("Max number of custom word lists in demo mode.")]
+    [Header("Feature Access and Limits")]
+    [Tooltip("Maximum number of custom word lists. 0 means unlimited.")]
+    [Min(0)]
     public int maxCustomLists = 1;
-    [Tooltip("Max number of words/phases per list in demo mode.")]
+    [Tooltip("Maximum number of words/phases per list. 0 means unlimited.")]
+    [Min(0)]
     public int maxWordsPerList = 3;
-    [Tooltip("Max challenge levels visible and unlockable in demo mode. 0 = no cap.")]
+    [Tooltip("Maximum challenge levels available. 0 means unlimited.")]
+    [Min(0)]
     public int maxChallengeLevels = 5;
 
-    [Header("Debug")]
-    [SerializeField] private bool unlockAllChallenges;  // bypass all challenge level locks
+    [Header("Progression")]
     [SerializeField] private int customUnlockLevels = 5;  // challenges to clear before Custom tab unlocks
     [SerializeField] private int communityUnlockLevels = 10;  // challenges to clear before Community tab unlocks
-    [SerializeField] private bool unlockCustomTab;  // bypass Custom tab lock
-    [SerializeField] private bool unlockCommunityTab;  // bypass Community tab lock
 
     public static LevelPanelController Instance { get; private set; }
 
@@ -42,20 +42,52 @@ public class LevelPanelController : MonoBehaviour
         get => config != null ? config.activeProfile : null;
     }
 
-    public int LegacyChallengeCap => isDemo && !unlockAllChallenges ? Mathf.Max(0, maxChallengeLevels) : 0;
-    public bool LegacyUnlockAllChallenges => unlockAllChallenges;
+    public int LegacyChallengeCap => Mathf.Max(0, maxChallengeLevels);
+    public bool LegacyUnlockAllChallenges => false;
     public int LegacyCustomUnlockThreshold => Mathf.Max(0, customUnlockLevels);
-    public bool LegacyUnlockCustomTab => unlockCustomTab;
+    public bool LegacyUnlockCustomTab => false;
+    public int LegacyCommunityUnlockThreshold => Mathf.Max(0, communityUnlockLevels);
+    public bool LegacyUnlockCommunityTab => false;
 
-    public bool IsDemo => ActiveProfile != null ? ActiveProfile.isDemo : isDemo;
     public int EffectiveMaxWordsPerList => ActiveProfile != null ? ActiveProfile.maxWordsPerList : maxWordsPerList;
-    public bool CanAddWords => ActiveProfile == null || ActiveProfile.IsFeatureAvailable(ActiveProfile.unlockAddWords);
-    public bool CanEditLists => ActiveProfile == null || ActiveProfile.IsFeatureAvailable(ActiveProfile.unlockEditLists);
-    public bool CanImportLists => ActiveProfile == null || ActiveProfile.IsFeatureAvailable(ActiveProfile.unlockImportLists);
-    public bool CanExportLists => ActiveProfile == null || ActiveProfile.IsFeatureAvailable(ActiveProfile.unlockExportLists);
+    public bool CanAddWords => IsCustomUnlocked;
+    public bool CanEditLists => IsCustomUnlocked;
+    public bool CanImportLists => IsCustomUnlocked;
+    public bool CanExportLists => IsCustomUnlocked;
 
-    public bool ShouldShowImportButton => ActiveProfile == null ? !isDemo : CanImportLists;
-    public bool ShouldShowExportButton => ActiveProfile == null ? !isDemo : CanExportLists;
+    public bool CanCreateListsFromHub => IsCustomUnlocked;
+    public bool CanEditListsFromHub => IsCustomUnlocked;
+    public bool CanDeleteListsFromHub => IsCustomUnlocked;
+    public bool CanDuplicateListsFromHub => IsCustomUnlocked;
+    public bool CanImportListsFromHub => IsCustomUnlocked;
+    public bool CanExportListsFromHub => IsCustomUnlocked;
+    public bool CanOpenLibraryFromHub => IsCustomUnlocked;
+    public bool CanOpenCommunityFromHub => IsCommunityEnabledFromHub && IsCommunityUnlocked;
+    public bool HasAccessProfileFromHub => ActiveProfile != null;
+    public bool IsCommunityEnabledFromHub => ActiveProfile != null && ActiveProfile.IsCommunityAvailable;
+    public bool IsLibraryUnlockBypassedFromHub => ActiveProfile != null
+        && (ActiveProfile.unlockAllFeatures || ActiveProfile.ignoreProgressionLocks);
+    public bool IsCommunityUnlockBypassedFromHub => ActiveProfile != null
+        && (ActiveProfile.unlockAllFeatures || ActiveProfile.ignoreProgressionLocks);
+    public int CompletedChallengesForHub
+    {
+        get
+        {
+            var phaseManager = Services.Get<PhaseManager>();
+            return phaseManager != null
+                ? phaseManager.CompletedChallengesForProfile
+                : ChallengeProgression.GetCompletedChallengesForTrack(HubProgressTrackPrefix);
+        }
+    }
+    public int CustomUnlockRequirementForHub => ActiveProfile != null
+        ? Mathf.Max(0, ActiveProfile.customUnlockLevels)
+        : LegacyCustomUnlockThreshold;
+    public int CommunityUnlockRequirementForHub => ActiveProfile != null
+        ? Mathf.Max(0, ActiveProfile.communityUnlockLevels)
+        : LegacyCommunityUnlockThreshold;
+
+    public bool ShouldShowImportButton => CanImportLists;
+    public bool ShouldShowExportButton => CanExportLists;
 
     [Header("Tab Buttons")]
     [SerializeField] private Button challengesTabBtn;
@@ -93,9 +125,11 @@ public class LevelPanelController : MonoBehaviour
     [Header("Scroll")]
     [SerializeField] private ScrollRect levelScrollRect;  // LevelGrid ScrollRect — reset to top on refresh
 
-    [Header("Demo Limit Prompt")]
-    [SerializeField] private GameObject demoCustomLimitPrompt;
-    [SerializeField] private float demoPromptDuration = 2f;
+    [Header("Custom List Limit Prompt")]
+    [FormerlySerializedAs("demoCustomLimitPrompt")]
+    [SerializeField] private GameObject limitPrompt;
+    [FormerlySerializedAs("demoPromptDuration")]
+    [SerializeField] private float limitPromptDuration = 2f;
 
     
 
@@ -210,6 +244,12 @@ public class LevelPanelController : MonoBehaviour
 
     private void SwitchTab(LevelTab tab)
     {
+        if (tab == LevelTab.Community && !IsCommunityUnlocked)
+        {
+            Debug.LogWarning("[LevelPanelController] Community is still locked by the active profile.");
+            return;
+        }
+
         currentTab = tab;
         selectedProvider = null;
         UpdateOkButtonState();
@@ -243,27 +283,30 @@ public class LevelPanelController : MonoBehaviour
             communityTabText.color = isCommunity ? tabActiveTextColor : tabInactiveTextColor;
     }
 
-    private string PreferredProgressTrackPrefix
+    public string HubProgressTrackPrefix
     {
         get
         {
             var phaseManager = Services.Get<PhaseManager>();
-            bool allowChineseAndMixed = phaseManager == null || phaseManager.AllowChineseAndMixed;
-            return allowChineseAndMixed && IsChineseLocale()
-                ? ChallengeTrackResolver.ChineseTrackPrefix
-                : ChallengeTrackResolver.EnglishTrackPrefix;
+            if (phaseManager != null)
+                return phaseManager.PreferredProgressTrackPrefix;
+
+            bool allowChineseAndMixed = ActiveProfile == null || ActiveProfile.allowChineseAndMixed;
+            string localeCode = IsChineseLocale() ? "zh-Hans" : "en";
+            return ChallengeTrackResolver.ResolvePreferredTrackPrefix(allowChineseAndMixed, localeCode);
         }
     }
 
     private bool IsCustomUnlocked
     {
-        get
-        {
-            int completedChallenges = ChallengeProgression.GetUnlockedCountForTrack(PreferredProgressTrackPrefix) - 1;
-            return ActiveProfile != null
-                ? ActiveProfile.CanOpenCustomLists(completedChallenges)
-                : unlockCustomTab || completedChallenges >= customUnlockLevels;
-        }
+        get => ActiveProfile != null
+            && ActiveProfile.CanOpenCustomLists(CompletedChallengesForHub);
+    }
+
+    private bool IsCommunityUnlocked
+    {
+        get => ActiveProfile != null
+            && ActiveProfile.CanOpenCommunityLists(CompletedChallengesForHub);
     }
 
     private bool CanAccessCustomListActions(string actionName)
@@ -275,33 +318,93 @@ public class LevelPanelController : MonoBehaviour
         return false;
     }
 
-    private bool DemoLimitsEnabled => ActiveProfile != null
-        ? ActiveProfile.isDemo && !ActiveProfile.unlockAllFeatures
-        : isDemo;
-
     private int EffectiveMaxCustomLists => ActiveProfile != null ? ActiveProfile.maxCustomLists : maxCustomLists;
 
     private bool IsCustomListLimitReached()
     {
-        if (!DemoLimitsEnabled) return false;
-        if (ActiveProfile != null && EffectiveMaxCustomLists <= 0) return false;
-        return customProviders.Count >= EffectiveMaxCustomLists;
+        return EffectiveMaxCustomLists > 0 && customProviders.Count >= EffectiveMaxCustomLists;
     }
 
     public bool IsWordLimitReached(int totalPhases)
     {
-        if (!DemoLimitsEnabled) return false;
-        if (ActiveProfile != null && EffectiveMaxWordsPerList <= 0) return false;
-        return totalPhases >= EffectiveMaxWordsPerList;
+        return EffectiveMaxWordsPerList > 0 && totalPhases >= EffectiveMaxWordsPerList;
     }
 
-    private bool CanCreateLists => ActiveProfile == null || ActiveProfile.IsFeatureAvailable(ActiveProfile.unlockCreateLists);
-    private bool CanDeleteLists => ActiveProfile == null || ActiveProfile.IsFeatureAvailable(ActiveProfile.unlockDeleteLists);
-    private bool CanDuplicateLists => ActiveProfile == null || ActiveProfile.IsFeatureAvailable(ActiveProfile.unlockDuplicateLists);
-
-    private bool ShouldShowFeature(bool available)
+    public bool CanCreateListFromHub(int wordCount, out string error)
     {
-        return ActiveProfile == null ? !isDemo : available;
+        RefreshProviderCacheForStart();
+        if (!IsCustomUnlocked)
+        {
+            error = "Custom lists are still locked for the active profile.";
+            return false;
+        }
+        if (IsCustomListLimitReached())
+        {
+            error = "The active profile has reached its custom list limit.";
+            return false;
+        }
+        if (EffectiveMaxWordsPerList > 0 && wordCount > EffectiveMaxWordsPerList)
+        {
+            error = "This list exceeds the active profile's word limit.";
+            return false;
+        }
+        error = null;
+        return true;
+    }
+
+    public bool CanEditListFromHub(
+        int wordCount,
+        bool changesContent,
+        out string error,
+        int existingWordCount = 0)
+    {
+        if (!IsCustomUnlocked)
+        {
+            error = "Custom lists are still locked for the active profile.";
+            return false;
+        }
+        if (changesContent && !CanAddWords)
+        {
+            error = "The active profile does not allow changes to custom lists.";
+            return false;
+        }
+        if (changesContent && EffectiveMaxWordsPerList > 0
+            && wordCount > EffectiveMaxWordsPerList
+            && wordCount > Mathf.Max(0, existingWordCount))
+        {
+            error = "This edit exceeds the active profile's word limit.";
+            return false;
+        }
+        error = null;
+        return true;
+    }
+
+    public bool CanImportListFromHub(out string error)
+    {
+        RefreshProviderCacheForStart();
+        if (!IsCustomUnlocked)
+        {
+            error = "Importing custom lists is disabled by the active profile.";
+            return false;
+        }
+        if (IsCustomListLimitReached())
+        {
+            error = "The active profile has reached its custom list limit.";
+            return false;
+        }
+        error = null;
+        return true;
+    }
+
+    public bool CanExportListFromHub(out string error)
+    {
+        if (!IsCustomUnlocked)
+        {
+            error = "Exporting custom lists is disabled by the active profile.";
+            return false;
+        }
+        error = null;
+        return true;
     }
 
     private void UpdateButtonVisibility()
@@ -309,11 +412,11 @@ public class LevelPanelController : MonoBehaviour
         bool isCustom = currentTab == LevelTab.Custom;
         bool unlocked = IsCustomUnlocked;
         bool showCustomActions = isCustom && unlocked;
-        if (importBtn != null) importBtn.gameObject.SetActive(showCustomActions && ShouldShowFeature(CanImportLists));
-        if (exportBtn != null) exportBtn.gameObject.SetActive(showCustomActions && ShouldShowFeature(CanExportLists));
-        if (createListBtn != null) createListBtn.gameObject.SetActive(showCustomActions && ShouldShowFeature(CanCreateLists));
-        if (deleteListBtn != null) deleteListBtn.gameObject.SetActive(showCustomActions && ShouldShowFeature(CanDeleteLists));
-        if (duplicateListBtn != null) duplicateListBtn.gameObject.SetActive(showCustomActions && ShouldShowFeature(CanDuplicateLists));
+        if (importBtn != null) importBtn.gameObject.SetActive(showCustomActions);
+        if (exportBtn != null) exportBtn.gameObject.SetActive(showCustomActions);
+        if (createListBtn != null) createListBtn.gameObject.SetActive(showCustomActions);
+        if (deleteListBtn != null) deleteListBtn.gameObject.SetActive(showCustomActions);
+        if (duplicateListBtn != null) duplicateListBtn.gameObject.SetActive(showCustomActions);
 
         if (customLockedPlaceholder != null)
             customLockedPlaceholder.SetActive(isCustom && !unlocked);
@@ -439,7 +542,7 @@ public class LevelPanelController : MonoBehaviour
 
     private bool IsChallengeUnlocked(List<LevelWordListProvider> providers, LevelWordListProvider provider)
     {
-        int idx = providers.IndexOf(provider);
+        int idx = FindProviderIndex(providers, provider);
         if (idx < 0) return false;
 
         string trackPrefix = ChallengeTrackResolver.GetTrackPrefixForChallengeProvider(provider);
@@ -448,6 +551,62 @@ public class LevelPanelController : MonoBehaviour
         int unlockedCount = ChallengeProgression.GetUnlockedCountForTrack(trackPrefix);
         return ChallengeAccessPolicy.CanEnterChallenge(
             ActiveProfile, idx, unlockedCount, LegacyChallengeCap, LegacyUnlockAllChallenges);
+    }
+
+    private static int FindProviderIndex(List<LevelWordListProvider> providers, LevelWordListProvider provider)
+    {
+        if (providers == null || provider == null) return -1;
+
+        for (int i = 0; i < providers.Count; i++)
+        {
+            LevelWordListProvider candidate = providers[i];
+            if (candidate == provider) return i;
+            if (candidate == null) continue;
+
+            string candidateKey = candidate.GetListKey();
+            string providerKey = provider.GetListKey();
+            if (!string.IsNullOrEmpty(candidateKey)
+                && string.Equals(candidateKey, providerKey, StringComparison.Ordinal))
+                return i;
+
+            if (!string.IsNullOrEmpty(candidate.FilePath) && !string.IsNullOrEmpty(provider.FilePath))
+            {
+                try
+                {
+                    if (string.Equals(Path.GetFullPath(candidate.FilePath), Path.GetFullPath(provider.FilePath),
+                        StringComparison.OrdinalIgnoreCase))
+                        return i;
+                }
+                catch (Exception)
+                {
+                    // Fall through to the remaining identity check.
+                }
+            }
+        }
+
+        return -1;
+    }
+
+    private void RefreshProviderCacheForStart()
+    {
+        // This path is also called on the inactive legacy controller by the production
+        // Hub. It must inspect provider files without enabling the old panel or seeding
+        // default custom lists as OnEnable/RefreshAll does.
+        List<LevelWordListProvider> allChallenges = LevelWordListProvider.ScanDirectory(
+            LevelWordListProvider.GetChallengeDirectory());
+        challengeProviders = new List<LevelWordListProvider>();
+        challengeCnProviders = new List<LevelWordListProvider>();
+        foreach (LevelWordListProvider provider in allChallenges)
+        {
+            string fileName = Path.GetFileName(provider.FilePath);
+            if (fileName.IndexOf("_cn", StringComparison.OrdinalIgnoreCase) >= 0)
+                challengeCnProviders.Add(provider);
+            else
+                challengeProviders.Add(provider);
+        }
+
+        customProviders = LevelWordListProvider.ScanDirectory(
+            LevelWordListProvider.GetCustomDirectory(), true);
     }
 
     private List<LevelWordListProvider> GetCurrentChallengeProviders()
@@ -500,13 +659,12 @@ public class LevelPanelController : MonoBehaviour
 
     private void SetUnlockDisplay(GameObject btnObj, int levelNum)
     {
-        int customUnlockThreshold = ActiveProfile != null
-            ? ActiveProfile.customUnlockLevels
-            : customUnlockLevels;
-        bool customAlwaysUnlocked = ActiveProfile != null
-            && (ActiveProfile.unlockAllFeatures || ActiveProfile.unlockCustomLists);
-        bool isCustomUnlock = !customAlwaysUnlocked && levelNum == customUnlockThreshold;
-        bool isCommunityUnlock = levelNum == communityUnlockLevels;
+        bool customAlwaysUnlocked = ActiveProfile != null && ActiveProfile.ignoreProgressionLocks;
+        bool communityAlwaysUnlocked = IsCommunityEnabledFromHub && ActiveProfile.ignoreProgressionLocks;
+        bool isCustomUnlock = ActiveProfile != null && !customAlwaysUnlocked && CustomUnlockRequirementForHub > 0
+            && levelNum == CustomUnlockRequirementForHub;
+        bool isCommunityUnlock = IsCommunityEnabledFromHub && !communityAlwaysUnlocked && CommunityUnlockRequirementForHub > 0
+            && levelNum == CommunityUnlockRequirementForHub;
 
         foreach (Transform child in btnObj.transform)
         {
@@ -516,12 +674,12 @@ public class LevelPanelController : MonoBehaviour
                 {
                     if (isCommunityUnlock)
                     {
-                        // Level 10+ shows community unlock — switch from default key
+                        // Use the Community milestone text instead of the prefab's Custom default.
                         var localizeText = child.GetComponent<LocalizeText>();
                         if (localizeText != null)
                             localizeText.localizedString.SetReference("UI", "UI.Level.UnlockCommunity");
                     }
-                    // Level 5+ or default: LocalizeText on prefab already resolves "UI.Level.UnlockCustom"
+                    // Otherwise LocalizeText on the prefab resolves "UI.Level.UnlockCustom".
                     child.gameObject.SetActive(true);
                 }
                 else
@@ -667,59 +825,117 @@ public class LevelPanelController : MonoBehaviour
     {
         if (selectedProvider == null) return;
 
-        if (currentTab == LevelTab.Custom && !IsCustomUnlocked)
+        if (!TryStartProvider(selectedProvider, currentTab, out string error))
+            Debug.LogWarning("[LevelPanelController] " + error);
+    }
+
+    /// <summary>
+    /// Starts a provider selected by the production Hub while reusing the same
+    /// eligibility, preferences, reset, and state-transition path as the legacy OK button.
+    /// Safe to call while this legacy panel is inactive; it does not display the panel.
+    /// </summary>
+    public bool TryStartProvider(LevelWordListProvider provider, LevelTab tab, out string error)
+    {
+        error = string.Empty;
+        if (provider == null)
         {
-            Debug.LogWarning("[LevelPanelController] Custom is locked; the selection was not loaded.");
-            return;
+            error = "No word list was selected.";
+            return false;
         }
-        if (currentTab == LevelTab.Challenges
-            && !IsChallengeUnlocked(GetCurrentChallengeProviders(), selectedProvider))
+
+        RefreshProviderCacheForStart();
+
+        if (!provider.IsValid || string.IsNullOrWhiteSpace(provider.FilePath)
+            || !File.Exists(provider.FilePath))
         {
-            Debug.LogWarning("[LevelPanelController] The selected challenge is still locked; the selection was not loaded.");
-            return;
+            error = "The selected word list is invalid or its file is missing.";
+            return false;
+        }
+
+        if (tab == LevelTab.Custom)
+        {
+            if (!IsCustomUnlocked)
+            {
+                error = "Custom lists are still locked for the active profile.";
+                return false;
+            }
+            if (FindProviderIndex(customProviders, provider) < 0)
+            {
+                error = "The selected provider is not an available custom list.";
+                return false;
+            }
+        }
+        else if (tab == LevelTab.Challenges)
+        {
+            List<LevelWordListProvider> currentChallenges = GetCurrentChallengeProviders();
+            if (FindProviderIndex(currentChallenges, provider) < 0)
+            {
+                error = "The selected challenge is not available for the current language settings.";
+                return false;
+            }
+            if (!IsChallengeUnlocked(currentChallenges, provider))
+            {
+                error = "The selected challenge is locked by the active profile or progression.";
+                return false;
+            }
+        }
+        else
+        {
+            error = "Community entries cannot start a local game.";
+            return false;
         }
 
         var phaseManager = Services.Get<PhaseManager>();
-        if (phaseManager == null || !phaseManager.CanLoadWordList(selectedProvider))
+        if (phaseManager == null || !phaseManager.CanLoadWordList(provider))
         {
-            Debug.LogWarning("[LevelPanelController] The selected word list could not be loaded; selection was not saved.");
-            return;
+            error = "The selected word list cannot be loaded with the current language settings.";
+            return false;
+        }
+
+        TimerSystem timerSystem = Services.Get<TimerSystem>();
+        GameStateManager gameStateManager = Services.Get<GameStateManager>();
+        if (timerSystem == null || gameStateManager == null)
+        {
+            error = "Game services are unavailable; the selected list was not started.";
+            return false;
         }
 
         LevelMode previousMode = phaseManager.CurrentLevelMode;
-        phaseManager.CurrentLevelMode = currentTab == LevelTab.Challenges
+        phaseManager.CurrentLevelMode = tab == LevelTab.Challenges
             ? LevelMode.Challenge
             : LevelMode.Custom;
-        if (!phaseManager.LoadWordList(selectedProvider))
+        if (!phaseManager.LoadWordList(provider))
         {
             phaseManager.CurrentLevelMode = previousMode;
-            Debug.LogWarning("[LevelPanelController] The selected word list could not be loaded; selection was not saved.");
-            return;
+            error = "The selected word list could not be loaded.";
+            return false;
         }
 
         // Persist selection across sessions
-        PlayerPrefs.SetString(LastLevelPathPrefKey, selectedProvider.FilePath);
-        PlayerPrefs.SetString(LastLevelTabPrefKey, currentTab.ToString());
+        PlayerPrefs.SetString(LastLevelPathPrefKey, provider.FilePath);
+        PlayerPrefs.SetString(LastLevelTabPrefKey, tab.ToString());
         PlayerPrefs.Save();
 
         // Restart timer and transition to playing
-        Services.Get<TimerSystem>().ResetAll();
-        Services.Get<GameStateManager>().RaiseGameReset();
-        Services.Get<GameStateManager>().TransitionTo(GameState.Playing);
-        gameObject.SetActive(false);
+        timerSystem.ResetAll();
+        gameStateManager.RaiseGameReset();
+        gameStateManager.TransitionTo(GameState.Playing);
+        if (gameObject.activeSelf)
+            gameObject.SetActive(false);
+        return true;
     }
 
     public void OnImport()
     {
         if (!CanAccessCustomListActions("Importing")) return;
-        if (ActiveProfile != null && !CanImportLists)
+        if (!CanImportLists)
         {
-            Debug.LogWarning("[LevelPanelController] Importing custom lists is disabled by the active profile.");
+            Debug.LogWarning("[LevelPanelController] Importing custom lists is not enabled by the active profile.");
             return;
         }
         if (IsCustomListLimitReached())
         {
-            ShowDemoLimitPrompt($"Max {EffectiveMaxCustomLists} custom list in demo");
+            ShowLimitPrompt($"Maximum of {EffectiveMaxCustomLists} custom lists reached.");
             return;
         }
 
@@ -730,7 +946,7 @@ public class LevelPanelController : MonoBehaviour
             if (!CanAccessCustomListActions("Importing") || !CanImportLists) return;
             if (IsCustomListLimitReached())
             {
-                ShowDemoLimitPrompt($"Max {EffectiveMaxCustomLists} custom list in demo");
+                ShowLimitPrompt($"Maximum of {EffectiveMaxCustomLists} custom lists reached.");
                 return;
             }
 
@@ -777,9 +993,9 @@ public class LevelPanelController : MonoBehaviour
     public void OnExport()
     {
         if (!CanAccessCustomListActions("Exporting")) return;
-        if (ActiveProfile != null && !CanExportLists)
+        if (!CanExportLists)
         {
-            Debug.LogWarning("[LevelPanelController] Exporting custom lists is disabled by the active profile.");
+            Debug.LogWarning("[LevelPanelController] Exporting custom lists is not enabled by the active profile.");
             return;
         }
         if (selectedProvider == null) return;
@@ -800,14 +1016,14 @@ public class LevelPanelController : MonoBehaviour
     public void OnCreateList()
     {
         if (!CanAccessCustomListActions("Creating a list")) return;
-        if (ActiveProfile != null && !CanCreateLists)
+        if (!IsCustomUnlocked)
         {
-            Debug.LogWarning("[LevelPanelController] Creating custom lists is disabled by the active profile.");
+            Debug.LogWarning("[LevelPanelController] Creating custom lists is not enabled by the active profile.");
             return;
         }
         if (IsCustomListLimitReached())
         {
-            ShowDemoLimitPrompt($"Max {EffectiveMaxCustomLists} custom list in demo");
+            ShowLimitPrompt($"Maximum of {EffectiveMaxCustomLists} custom lists reached.");
             return;
         }
 
@@ -827,9 +1043,9 @@ public class LevelPanelController : MonoBehaviour
     public void OnDeleteList()
     {
         if (!CanAccessCustomListActions("Deleting a list")) return;
-        if (ActiveProfile != null && !CanDeleteLists)
+        if (!IsCustomUnlocked)
         {
-            Debug.LogWarning("[LevelPanelController] Deleting custom lists is disabled by the active profile.");
+            Debug.LogWarning("[LevelPanelController] Deleting custom lists is not enabled by the active profile.");
             return;
         }
         if (selectedProvider == null || currentTab != LevelTab.Custom) return;
@@ -845,16 +1061,16 @@ public class LevelPanelController : MonoBehaviour
     public void OnDuplicateList()
     {
         if (!CanAccessCustomListActions("Duplicating a list")) return;
-        if (ActiveProfile != null && !CanDuplicateLists)
+        if (!IsCustomUnlocked)
         {
-            Debug.LogWarning("[LevelPanelController] Duplicating custom lists is disabled by the active profile.");
+            Debug.LogWarning("[LevelPanelController] Duplicating custom lists is not enabled by the active profile.");
             return;
         }
         if (selectedProvider == null || currentTab != LevelTab.Custom) return;
 
         if (IsCustomListLimitReached())
         {
-            ShowDemoLimitPrompt($"Max {EffectiveMaxCustomLists} custom list in demo");
+            ShowLimitPrompt($"Maximum of {EffectiveMaxCustomLists} custom lists reached.");
             return;
         }
 
@@ -873,20 +1089,20 @@ public class LevelPanelController : MonoBehaviour
         }
     }
 
-    private void ShowDemoLimitPrompt(string message)
+    private void ShowLimitPrompt(string message)
     {
-        if (demoCustomLimitPrompt == null) return;
-        var tmp = demoCustomLimitPrompt.GetComponentInChildren<TMPro.TextMeshProUGUI>();
+        if (limitPrompt == null) return;
+        var tmp = limitPrompt.GetComponentInChildren<TMPro.TextMeshProUGUI>();
         if (tmp != null) tmp.text = message;
-        demoCustomLimitPrompt.SetActive(true);
+        limitPrompt.SetActive(true);
         if (this.isActiveAndEnabled)
-            StartCoroutine(HideDemoLimitPrompt());
+            StartCoroutine(HideLimitPrompt());
     }
 
-    private System.Collections.IEnumerator HideDemoLimitPrompt()
+    private System.Collections.IEnumerator HideLimitPrompt()
     {
-        yield return new WaitForSeconds(demoPromptDuration);
-        if (demoCustomLimitPrompt != null)
-            demoCustomLimitPrompt.SetActive(false);
+        yield return new WaitForSeconds(limitPromptDuration);
+        if (limitPrompt != null)
+            limitPrompt.SetActive(false);
     }
 }

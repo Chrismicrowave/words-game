@@ -51,6 +51,7 @@ namespace Words.UiMockups.WordListHub
         private readonly Action addWord;
         private readonly Action<int> moveWord;
         private readonly Action deleteWord;
+        private readonly Action<Button> ensureButtonSound;
         private readonly Button buttonTemplate;
         private readonly TMP_Text textTemplate;
         private GameObject runtimeRoot;
@@ -73,7 +74,8 @@ namespace Words.UiMockups.WordListHub
             Action<int> selectWord,
             Action addWord,
             Action<int> moveWord,
-            Action deleteWord)
+            Action deleteWord,
+            Action<Button> ensureButtonSound = null)
         {
             this.form = form ?? throw new ArgumentNullException(nameof(form));
             layoutBinding = form.wordEditorLayout ?? (form.wordEditorLayout =
@@ -86,6 +88,7 @@ namespace Words.UiMockups.WordListHub
             this.addWord = addWord;
             this.moveWord = moveWord;
             this.deleteWord = deleteWord;
+            this.ensureButtonSound = ensureButtonSound;
             buttonTemplate = form.cancelButton;
             textTemplate = buttonTemplate != null
                 ? buttonTemplate.GetComponentInChildren<TMP_Text>(true)
@@ -128,6 +131,11 @@ namespace Words.UiMockups.WordListHub
             layoutBinding.addButton = addButton;
             BindAuthoredRows();
 
+            ensureButtonSound?.Invoke(moveUpButton);
+            ensureButtonSound?.Invoke(moveDownButton);
+            ensureButtonSound?.Invoke(deleteButton);
+            ensureButtonSound?.Invoke(addButton);
+
             moveUpAction = () => this.moveWord?.Invoke(-1);
             moveDownAction = () => this.moveWord?.Invoke(1);
             deleteAction = () => this.deleteWord?.Invoke();
@@ -137,7 +145,7 @@ namespace Words.UiMockups.WordListHub
             deleteButton.onClick.AddListener(deleteAction);
             addButton.onClick.AddListener(addAction);
 
-            ConfigureInputForPicker();
+            ConfigureInputForPicker(form);
         }
 
         /// <summary>
@@ -189,6 +197,7 @@ namespace Words.UiMockups.WordListHub
                 bool selected = session.HasSelection && session.SelectedIndex == i;
                 row.background.color = selected ? SelectedRowColor : Color.clear;
                 RemoveRowListener(row);
+                ensureButtonSound?.Invoke(row.button);
                 row.onClick = () => selectWord?.Invoke(index);
                 row.button.onClick.AddListener(row.onClick);
             }
@@ -280,11 +289,9 @@ namespace Words.UiMockups.WordListHub
             }
         }
 
-        private void ConfigureInputForPicker()
+        private static void ConfigureInputForPicker(WordListHubSceneBindings.FormBinding form)
         {
             EnsureAuthoredInputStyle(form);
-            inputRect.anchoredPosition = new Vector2(0f, -196f);
-            inputRect.sizeDelta = new Vector2(RegionWidth, InputHeight);
         }
 
         private RectTransform ResolveRoot()

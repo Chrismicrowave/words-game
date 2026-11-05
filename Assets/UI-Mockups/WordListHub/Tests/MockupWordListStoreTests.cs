@@ -24,6 +24,20 @@ namespace Words.UiMockups.WordListHub.Tests
         }
 
         [Test]
+        public void CommunityPreviewFixtures_excludeLocalLibraryFixtures_andRetainDiscoveryData()
+        {
+            MockupWordListStore community = MockupWordListStore.CreateCommunityPreviewFixtures();
+
+            Assert.That(community.QueryLibrary(new MockupLibraryQuery()), Is.Empty);
+            Assert.That(community.FindById("mock-list-everyday-english"), Is.Null);
+            Assert.That(community.QueryDiscoveryWithFilters(new MockupDiscoveryQuery()), Is.Not.Empty);
+
+            community.ResetFixtures();
+            Assert.That(community.QueryLibrary(new MockupLibraryQuery()), Is.Empty,
+                "Resetting Community Preview must not reseed local Library fixtures.");
+        }
+
+        [Test]
         public void WordListHubMockupScene_hasSerializedBindingsAndInactiveSceneTemplates()
         {
             Scene scene = SceneManager.GetSceneByPath(MockupScenePath);
@@ -175,6 +189,42 @@ namespace Words.UiMockups.WordListHub.Tests
             Assert.That(results.Select(item => item.Id), Is.EquivalentTo(new[] { "mock-list-mini-hsk" }));
             Assert.That(results.All(item => item.Language == MockupLanguage.Chinese), Is.True);
             Assert.That(results.All(item => !item.HasBeenPlayed), Is.True);
+        }
+
+        [Test]
+        public void LocalListLanguageIsDetectedFromDisplayLettersAndModeOnlyChangesDoNotCreateRevisions()
+        {
+            Assert.That(store.TryCreateList("Neutral input", MockupLanguage.Chinese,
+                new[] { "123 !!!" }, string.Empty, string.Empty,
+                out MockupWordList item, out string createError), Is.True, createError);
+            Assert.That(item.Language, Is.EqualTo(MockupLanguage.English),
+                "A new neutral-only list falls back to English instead of honoring a manual mode choice.");
+            Assert.That(item.DetectedLanguage, Is.EqualTo(MockupLanguage.English));
+
+            MockupWordListEdit chinese = store.CreateEditDraft(item.Id);
+            chinese.Language = MockupLanguage.English;
+            chinese.Words = new List<string> { "苹果 | ping guo" };
+            MockupEditResult chineseResult = store.SaveEdit(item.Id, chinese);
+            Assert.That(chineseResult.ContentChanged, Is.True);
+            Assert.That(item.Language, Is.EqualTo(MockupLanguage.Chinese));
+            Assert.That(item.DetectedLanguage, Is.EqualTo(MockupLanguage.Chinese),
+                "Latin pinyin after a valid annotation is not display-language evidence.");
+
+            MockupWordListEdit mixed = store.CreateEditDraft(item.Id);
+            mixed.Language = MockupLanguage.Chinese;
+            mixed.Words = new List<string> { "tea 你 | ni" };
+            MockupEditResult mixedResult = store.SaveEdit(item.Id, mixed);
+            Assert.That(mixedResult.ContentChanged, Is.True);
+            Assert.That(item.Language, Is.EqualTo(MockupLanguage.Mixed));
+            int revision = item.ContentRevision;
+
+            MockupWordListEdit metadataOnly = store.CreateEditDraft(item.Id);
+            metadataOnly.Language = MockupLanguage.Chinese;
+            metadataOnly.Title = "Detected mode is advisory";
+            MockupEditResult metadataResult = store.SaveEdit(item.Id, metadataOnly);
+            Assert.That(metadataResult.ContentChanged, Is.False);
+            Assert.That(item.Language, Is.EqualTo(MockupLanguage.Mixed));
+            Assert.That(item.ContentRevision, Is.EqualTo(revision));
         }
 
         [Test]
@@ -1357,7 +1407,10 @@ namespace Words.UiMockups.WordListHub.Tests
 
             MockupWordListEdit languageDraft = store.CreateEditDraft(item.Id);
             languageDraft.Language = MockupLanguage.Chinese;
-            Assert.Throws<System.InvalidOperationException>(() => store.SaveEdit(item.Id, languageDraft));
+            MockupEditResult languageOnlyResult = store.SaveEdit(item.Id, languageDraft);
+            Assert.That(languageOnlyResult.ContentChanged, Is.False,
+                "The read-only language display cannot change stored content by itself.");
+            Assert.That(item.Language, Is.Not.EqualTo(MockupLanguage.Chinese));
         }
 
         private static void SetDiscoveryProperty<T>(MockupDiscoveryItem item, string propertyName, T value)

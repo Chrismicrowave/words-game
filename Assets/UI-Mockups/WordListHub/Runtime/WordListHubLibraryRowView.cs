@@ -18,5 +18,7 @@ namespace Words.UiMockups.WordListHub
         public TMP_Text recordStars;
         public GameObject badgeRoot;
         public TMP_Text badge;
+        [System.NonSerialized] public string unlockRewardLabel;
+        [System.NonSerialized] public TMP_Text unlockRewardBanner;
     }
 }

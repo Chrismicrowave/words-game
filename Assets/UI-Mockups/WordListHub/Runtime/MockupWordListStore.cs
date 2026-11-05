@@ -9,11 +9,12 @@ namespace Words.UiMockups.WordListHub
     /// Disposable mock-only state. It uses no files, PlayerPrefs, Steam APIs, or game
     /// managers. Construct a new store (or call ResetFixtures) when the mock scene opens.
     /// </summary>
-    public sealed class MockupWordListStore
+    public class MockupWordListStore : IWordListHubBackend
     {
         private readonly List<MockupWordList> libraryEntries = new List<MockupWordList>();
         private readonly List<MockupDiscoveryItem> discoveryItems = new List<MockupDiscoveryItem>();
         private readonly List<MockupAchievement> achievements = new List<MockupAchievement>();
+        private readonly bool seedLibraryFixtures;
         private int nextMockListNumber;
         private int nextPublishedNumber;
         private int completedRuns;
@@ -25,14 +26,35 @@ namespace Words.UiMockups.WordListHub
                 .ToList().AsReadOnly();
         public IReadOnlyList<MockupAchievement> Achievements => achievements.AsReadOnly();
         public bool IsOnline => isOnline;
+        public bool CanCreateLists => true;
+        public bool CanEditLists => true;
+        public bool CanDeleteLists => true;
+        public bool CanDuplicateLists => true;
+        public bool CanImportLists => false;
+        public bool CanExportLists => false;
+
+        public virtual MockupHubPageAccess GetPageAccess(WordListHubPage page) =>
+            MockupHubPageAccess.OpenPreview;
 
         public static MockupWordListStore CreateWithFixtures()
         {
             return new MockupWordListStore();
         }
 
-        public MockupWordListStore()
+        /// <summary>Creates isolated Community sample data without seeding local Library lists.</summary>
+        public static MockupWordListStore CreateCommunityPreviewFixtures()
         {
+            return new MockupWordListStore(false);
+        }
+
+        public MockupWordListStore()
+            : this(true)
+        {
+        }
+
+        private MockupWordListStore(bool seedLibraryFixtures)
+        {
+            this.seedLibraryFixtures = seedLibraryFixtures;
             ResetFixtures();
         }
 
@@ -45,7 +67,8 @@ namespace Words.UiMockups.WordListHub
             nextPublishedNumber = 1;
             completedRuns = 1;
             isOnline = true;
-            SeedLibraryFixtures();
+            if (seedLibraryFixtures)
+                SeedLibraryFixtures();
             SeedDiscoveryFixtures();
             SeedAchievementFixtures();
         }
@@ -79,7 +102,7 @@ namespace Words.UiMockups.WordListHub
             }
 
             if (query.LanguageFilter != MockupLanguageFilter.All)
-                results = results.Where(item => item.Language.ToString() == query.LanguageFilter.ToString());
+                results = results.Where(item => item.DetectedLanguage.ToString() == query.LanguageFilter.ToString());
 
             if (query.PlayedFilter == MockupPlayedFilter.Played)
                 results = results.Where(item => item.HasBeenPlayed);
@@ -87,6 +110,12 @@ namespace Words.UiMockups.WordListHub
                 results = results.Where(item => !item.HasBeenPlayed);
 
             return Sort(results, query.SortMode, query.SortDirection).ToList().AsReadOnly();
+        }
+
+        public IReadOnlyList<MockupWordList> QueryChallenges()
+        {
+            // The isolated preview does not simulate the production challenge catalog.
+            return new List<MockupWordList>().AsReadOnly();
         }
 
         public IReadOnlyList<MockupDiscoveryItem> QueryDiscovery(string searchText = null)
@@ -509,6 +538,61 @@ namespace Words.UiMockups.WordListHub
             return created;
         }
 
+        public bool TryCreateList(
+            string title,
+            MockupLanguage language,
+            IEnumerable<string> displayWords,
+            string description,
+            string tags,
+            out MockupWordList item,
+            out string error)
+        {
+            item = null;
+            error = null;
+            try
+            {
+                List<string> rows = NormalizeWords(displayWords);
+                if (!TryDetectEditorLanguage(rows, MockupLanguage.English,
+                    out MockupLanguage detected, out error))
+                    return false;
+                item = CreateList(title, detected, rows);
+                item.DetectedLanguage = detected;
+                MockupWordListEdit edit = CreateEditDraft(item.Id);
+                edit.Description = description ?? string.Empty;
+                edit.Tags = tags ?? string.Empty;
+                SaveEdit(item.Id, edit);
+                return true;
+            }
+            catch (InvalidOperationException exception)
+            {
+                error = exception.Message;
+                return false;
+            }
+        }
+
+        public bool TryPrepareImport(string sourcePath, out string importToken,
+            out MockupWordListEdit draft, out string error)
+        {
+            importToken = null;
+            draft = null;
+            error = "Import is not part of the isolated mock preview.";
+            return false;
+        }
+
+        public bool TryCommitImport(string importToken, MockupWordListEdit draft,
+            out MockupWordList item, out string error)
+        {
+            item = null;
+            error = "Import is not part of the isolated mock preview.";
+            return false;
+        }
+
+        public bool TryExportList(string localListId, string destinationPath, out string error)
+        {
+            error = "Export is not part of the isolated mock preview.";
+            return false;
+        }
+
         public bool CompleteRun(string mockId, int stars, float bestTimeSeconds)
         {
             MockupWordList item = RequireList(mockId);
@@ -590,10 +674,13 @@ namespace Words.UiMockups.WordListHub
 
             List<string> nextWords = ResolveEditedWords(item, edit);
             RequireValidWordPinyin(nextWords, item.Words);
-            bool contentChanged = item.Language != edit.Language
-                || !WordsEqual(item.Words, nextWords);
+            bool contentChanged = !WordsEqual(item.Words, nextWords);
             if (contentChanged)
                 RequireAtLeastOneWord(nextWords);
+            MockupLanguage detectedLanguage = item.Language;
+            if (!TryDetectEditorLanguage(nextWords, item.Language,
+                out detectedLanguage, out string detectionError) && contentChanged)
+                throw new InvalidOperationException(detectionError);
 
             string nextTitle = string.IsNullOrWhiteSpace(edit.Title) ? item.Title : edit.Title.Trim();
             string nextDescription = edit.Description ?? item.Description;
@@ -620,7 +707,7 @@ namespace Words.UiMockups.WordListHub
             if (contentChanged)
             {
                 item.ArchiveCurrentRecord();
-                item.Language = edit.Language;
+                item.Language = detectedLanguage;
                 item.Words = nextWords;
                 item.WordCount = nextWords.Count;
                 item.ContentRevision++;
@@ -628,6 +715,7 @@ namespace Words.UiMockups.WordListHub
                 item.PersonalStars = null;
                 item.BestTimeSeconds = null;
             }
+            item.DetectedLanguage = detectedLanguage;
 
             return new MockupEditResult(item, contentChanged);
         }
@@ -661,9 +749,11 @@ namespace Words.UiMockups.WordListHub
 
             List<string> nextWords = ResolveEditedWords(source, edit);
             RequireValidWordPinyin(nextWords, source.Words);
-            bool contentChanged = source.Language != edit.Language
-                || !WordsEqual(source.Words, nextWords);
+            bool contentChanged = !WordsEqual(source.Words, nextWords);
             RequireAtLeastOneWord(nextWords);
+            if (!TryDetectEditorLanguage(nextWords, source.Language,
+                out MockupLanguage detectedLanguage, out string detectionError))
+                throw new InvalidOperationException(detectionError);
 
             DateTime now = DateTime.UtcNow;
             var version = new MockupWordList
@@ -672,7 +762,8 @@ namespace Words.UiMockups.WordListHub
                 Title = string.IsNullOrWhiteSpace(edit.Title) ? source.Title : edit.Title.Trim(),
                 Description = edit.Description ?? source.Description,
                 Tags = edit.Tags ?? source.Tags,
-                Language = edit.Language,
+                Language = detectedLanguage,
+                DetectedLanguage = detectedLanguage,
                 Words = nextWords,
                 WordCount = nextWords.Count,
                 AddedAt = now,
@@ -1058,6 +1149,23 @@ namespace Words.UiMockups.WordListHub
         {
             if (!MockupWordContent.TryValidateWordLines(words, unchangedLegacyWords, out string error))
                 throw new ArgumentException(error, nameof(words));
+        }
+
+        private static bool TryDetectEditorLanguage(IEnumerable<string> rows,
+            MockupLanguage fallback, out MockupLanguage detected, out string error)
+        {
+            LanguageMode fallbackMode = fallback == MockupLanguage.Chinese ? LanguageMode.Chinese
+                : fallback == MockupLanguage.Mixed ? LanguageMode.Mixed : LanguageMode.English;
+            if (WordListLanguageDetector.TryDetectEditorLines(rows, fallbackMode,
+                out LanguageMode detectedMode, out _, out error))
+            {
+                detected = detectedMode == LanguageMode.Chinese ? MockupLanguage.Chinese
+                    : detectedMode == LanguageMode.Mixed ? MockupLanguage.Mixed
+                    : MockupLanguage.English;
+                return true;
+            }
+            detected = fallback;
+            return false;
         }
 
         private static List<string> ResolveEditedWords(MockupWordList item, MockupWordListEdit edit)

@@ -12,5 +12,4 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5b49f8cfe30f53844a9c23bea6c62581, type: 3}
   m_Name: GameConfig
   m_EditorClassIdentifier: Core::GameConfig
-  isDemo: 0
   activeProfile: {fileID: 11400000, guid: b68cf1580f794c4b8db4a520cc8ec54c, type: 2}
