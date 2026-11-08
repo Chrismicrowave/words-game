@@ -3698,6 +3698,7 @@ namespace Words.UiMockups.WordListHub
                 if (library.emptyNotice != null)
                     return library.emptyNotice;
             }
+            bool createdNotice = false;
             if (library.emptyNotice == null)
             {
                 var noticeObject = new GameObject("LibraryEmptyNotice",
@@ -3709,6 +3710,7 @@ namespace Words.UiMockups.WordListHub
                 noticeRect.sizeDelta = new Vector2(0f, 56f);
                 noticeRect.anchoredPosition = Vector2.zero;
                 library.emptyNotice = noticeObject.GetComponent<TextMeshProUGUI>();
+                createdNotice = true;
             }
 
             TMP_Text styleSource = library.detailMetadata != null
@@ -3724,6 +3726,13 @@ namespace Words.UiMockups.WordListHub
                     library.emptyNotice.fontSize = styleSource.fontSize;
                     library.emptyNotice.fontStyle = styleSource.fontStyle;
                     library.emptyNotice.color = styleSource.color;
+                }
+                TMP_Text chromeFontSource = sceneBindings != null
+                    ? sceneBindings.navLibrary.label : null;
+                if (createdNotice && chromeFontSource != null)
+                {
+                    library.emptyNotice.font = chromeFontSource.font;
+                    library.emptyNotice.fontSharedMaterial = chromeFontSource.fontSharedMaterial;
                 }
                 library.emptyNotice.alignment = TextAlignmentOptions.Center;
                 library.emptyNotice.raycastTarget = false;

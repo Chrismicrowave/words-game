@@ -559,7 +559,7 @@ namespace Words.UiMockups.WordListHub
                 labelRect.offsetMin = new Vector2(8f, 0f);
                 labelRect.offsetMax = new Vector2(-8f, 0f);
                 TMP_Text labelText = labelObject.GetComponent<TMP_Text>();
-                ConfigureText(labelText, string.Empty, textTemplate, 18f,
+                ConfigureText(labelText, string.Empty, input.textComponent, 18f,
                     TextAlignmentOptions.MidlineLeft, input.textComponent.color);
                 labelText.fontStyle = FontStyles.Bold;
             }

@@ -3561,11 +3561,26 @@ namespace Words.UiMockups.WordListHub.Tests
                 typeof(RectTransform), typeof(CanvasRenderer), typeof(TMP_InputField));
             TMP_InputField input = inputObject.GetComponent<TMP_InputField>();
             input.textComponent = NewText("Edit words text", inputObject.transform);
+            TMP_FontAsset highwayFont = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(
+                AssetDatabase.GUIDToAssetPath("dc36b3fdc14f47ebb36fd484a67e268a"));
+            TMP_FontAsset wordFont = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(
+                AssetDatabase.GUIDToAssetPath("790db52db469a9641a494c319808aed3"));
+            TMP_FontAsset symbolFallbackFont = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(
+                AssetDatabase.GUIDToAssetPath("401fd8374cb8f0747b71fbd498c78d4e"));
+            Assert.That(highwayFont, Is.Not.Null, "The EHS action font should be available to the fixture.");
+            Assert.That(wordFont, Is.Not.Null, "The CJK data font should be available to the fixture.");
+            Assert.That(symbolFallbackFont, Is.Not.Null, "The Noto Primary fallback font should be available to the fixture.");
+            CollectionAssert.Contains(highwayFont.fallbackFontAssetTable, symbolFallbackFont,
+                "The EHS action font needs the Noto fallback for arrow button labels.");
+            input.textComponent.font = wordFont;
+            input.textComponent.fontSharedMaterial = wordFont.material;
             GameObject cancelObject = NewObject("Edit cancel", editRoot.transform,
                 typeof(RectTransform), typeof(CanvasRenderer), typeof(Image), typeof(Button));
             Button cancelButton = cancelObject.GetComponent<Button>();
             cancelButton.targetGraphic = cancelObject.GetComponent<Image>();
-            NewText("Edit cancel label", cancelObject.transform, "Cancel");
+            TMP_Text cancelLabel = NewText("Edit cancel label", cancelObject.transform, "Cancel");
+            cancelLabel.font = highwayFont;
+            cancelLabel.fontSharedMaterial = highwayFont.material;
             var editForm = new WordListHubSceneBindings.FormBinding
             {
                 root = editRoot,
@@ -3578,6 +3593,51 @@ namespace Words.UiMockups.WordListHub.Tests
                 TMP_Text addLabel = editForm.wordEditorLayout.addButton.GetComponentInChildren<TMP_Text>(true);
                 Assert.That(addLabel, Is.Not.Null);
                 Assert.That(addLabel.text, Is.EqualTo("New Word"));
+                Assert.That(addLabel.font, Is.SameAs(highwayFont));
+                Assert.That(addLabel.fontSharedMaterial, Is.SameAs(highwayFont.material));
+
+                view.Render(new MockupWordListEditSession(new[] { "测试" }), "Enter a word", false);
+
+                foreach (string actionName in new[] { "MoveWordUp", "MoveWordDown", "DeleteWord", "AddWord" })
+                {
+                    TMP_Text actionLabel = editForm.wordEditorLayout.root.transform
+                        .Find(actionName).GetComponentInChildren<TMP_Text>(true);
+                    Assert.That(actionLabel, Is.Not.Null, actionName + " should have a label.");
+                    Assert.That(actionLabel.font, Is.SameAs(highwayFont), actionName + " should use the action font.");
+                    Assert.That(actionLabel.fontSharedMaterial, Is.SameAs(highwayFont.material),
+                        actionName + " should use the action material.");
+                }
+
+                TMP_Text generatedWordLabel = editForm.wordEditorLayout.content
+                    .GetComponentInChildren<TMP_Text>(true);
+                Assert.That(generatedWordLabel.text, Is.EqualTo("测试"));
+                Assert.That(generatedWordLabel.font, Is.SameAs(wordFont),
+                    "A generated fallback row must keep the user-word font instead of inheriting the action font.");
+                Assert.That(generatedWordLabel.fontSharedMaterial, Is.SameAs(wordFont.material));
+                Assert.That(editForm.wordEditorLayout.emptyNotice.font, Is.SameAs(highwayFont),
+                    "The short empty-state notice should use the UI chrome font.");
+                Assert.That(editForm.wordEditorLayout.emptyNotice.fontSharedMaterial, Is.SameAs(highwayFont.material));
+                Assert.That(input.textComponent.font, Is.SameAs(wordFont),
+                    "The input field must retain its authored data font.");
+                Assert.That(input.textComponent.fontSharedMaterial, Is.SameAs(wordFont.material));
+            }
+
+            using (var authoredRowsView = new MockupWordListEditorView(editForm, null, null, null, null))
+            {
+                authoredRowsView.Render(
+                    new MockupWordListEditSession(new[] { "测试", "词语" }), "Enter a word", false);
+
+                TMP_Text[] authoredRowLabels = editForm.wordEditorLayout.content
+                    .GetComponentsInChildren<TMP_Text>(true)
+                    .Where(text => text.gameObject.name == "WordLabel")
+                    .ToArray();
+                Assert.That(authoredRowLabels, Has.Length.EqualTo(2));
+                foreach (TMP_Text rowLabel in authoredRowLabels)
+                {
+                    Assert.That(rowLabel.font, Is.SameAs(wordFont),
+                        "Authored/cloned word rows should preserve their data font when action labels use EHS.");
+                    Assert.That(rowLabel.fontSharedMaterial, Is.SameAs(wordFont.material));
+                }
             }
         }
 
