@@ -2,9 +2,10 @@ using System;
 
 /// <summary>
 /// Platform boundary for reporting locally persisted word-achievement progress.
-/// Implementations own their platform initialization, callback pump, and shutdown.
-/// SubmitProgress must reject a profile ID that does not match the platform's current user.
-/// StatsStored reports the profile ID captured when the platform write was submitted.
+/// The shared Steam client session owns native initialization, callback pumping, and shutdown.
+/// Implementations bind only after that session is initialized. SubmitProgress must reject a
+/// profile ID that does not match the platform's current user. StatsStored reports the profile
+/// ID captured when the platform write was submitted.
 /// </summary>
 public interface IWordAchievementPlatform
 {
@@ -13,9 +14,12 @@ public interface IWordAchievementPlatform
 
     event Action<string, bool> StatsStored;
 
+    // TryInitialize only binds adapter callbacks to an already initialized session.
     bool TryInitialize();
+    // Retained for compatibility; callback pumping is owned by ISteamClientSession.
     void RunCallbacks();
     bool SubmitProgress(string expectedUserId, WordAchievementProgressSnapshot snapshot);
+    // Disposes adapter callbacks only; it must not shut down the shared native session.
     void Shutdown();
 }
 
@@ -25,17 +29,20 @@ public interface IWordAchievementPlatform
 /// </summary>
 public static class WordAchievementPlatformRegistry
 {
-    private static Func<IWordAchievementPlatform> factory;
+    private static Func<ISteamClientSession, IWordAchievementPlatform> factory;
 
-    public static void RegisterFactory(Func<IWordAchievementPlatform> platformFactory)
+    public static void RegisterFactory(Func<ISteamClientSession, IWordAchievementPlatform> platformFactory)
     {
         if (platformFactory != null)
             factory = platformFactory;
     }
 
-    public static IWordAchievementPlatform CreateOrLocalOnly()
+    public static IWordAchievementPlatform CreateOrLocalOnly(ISteamClientSession session)
     {
-        return factory != null ? factory() : new LocalOnlyWordAchievementPlatform();
+        IWordAchievementPlatform platform = factory != null ? factory(session) : null;
+        if (platform == null)
+            platform = new LocalOnlyWordAchievementPlatform();
+        return platform;
     }
 
     public static IWordAchievementPlatform CreateLocalOnly()

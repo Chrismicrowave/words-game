@@ -140,4 +140,72 @@ public class WordEngineTests
         Assert.AreEqual(KeyCode.Alpha1, engine.Steps[1].Key);
         Assert.AreEqual(KeyCode.B, engine.Steps[2].Key);
     }
+
+    [Test]
+    public void DebugCompletion_CompletesEnglishOnceAndResetsForNextWord()
+    {
+        engine.LoadWord("Hi");
+        engine.ProcessInput(KeyCode.X, isPressed: true);
+
+        Assert.IsTrue(engine.TryCompleteCurrentWordForDebug());
+        Assert.AreEqual(engine.TotalSteps, engine.CurrentStep);
+        Assert.IsTrue(engine.IsComplete);
+        Assert.IsEmpty(engine.LastFailureMessage);
+        Assert.IsEmpty(engine.FailedExpectedAction);
+        Assert.IsEmpty(engine.FailedExpectedKey);
+        Assert.IsEmpty(engine.FailedGotKey);
+        Assert.IsFalse(engine.TryCompleteCurrentWordForDebug());
+
+        engine.LoadWord("Go");
+        Assert.AreEqual(0, engine.CurrentStep);
+        Assert.IsTrue(engine.TryCompleteCurrentWordForDebug());
+    }
+
+    [Test]
+    public void DebugCompletion_WorksForChineseAndMixedStepLists()
+    {
+        var chineseWord = new ChineseWordEntry
+        {
+            display = "你",
+            entries = new System.Collections.Generic.List<ChinesePhaseEntry>
+            {
+                new ChinesePhaseEntry { character = "你", pinyin = "ni" }
+            }
+        };
+
+        engine.LoadChineseWord(chineseWord);
+        Assert.IsTrue(engine.IsChinesePhase);
+        Assert.IsTrue(engine.TryCompleteCurrentWordForDebug());
+        Assert.AreEqual(engine.TotalSteps, engine.CurrentStep);
+
+        engine.LoadMixedWord(MixedPhaseParser.FromChinese(chineseWord));
+        Assert.IsTrue(engine.IsMixedPhase);
+        Assert.IsTrue(engine.TryCompleteCurrentWordForDebug());
+        Assert.AreEqual(engine.TotalSteps, engine.CurrentStep);
+    }
+
+    [Test]
+    public void DebugCompletion_AllowsNonemptyZeroStepTargetOnlyOnce()
+    {
+        engine.LoadWord("!? ");
+        Assert.AreEqual(0, engine.TotalSteps);
+        Assert.IsTrue(engine.TryCompleteCurrentWordForDebug());
+        Assert.IsFalse(engine.TryCompleteCurrentWordForDebug());
+
+        engine.LoadWord("");
+        Assert.IsFalse(engine.TryCompleteCurrentWordForDebug());
+    }
+
+    [Test]
+    public void DebugCompletion_DoesNotRecompleteNormallyCompletedWordOrChangeNormalInput()
+    {
+        engine.LoadWord("A");
+        Assert.AreEqual(StepResult.PhaseComplete, engine.ProcessInput(KeyCode.A, isPressed: true));
+        Assert.IsFalse(engine.TryCompleteCurrentWordForDebug());
+
+        engine.LoadWord("B");
+        Assert.IsFalse(engine.IsComplete);
+        Assert.AreEqual(StepResult.PhaseComplete, engine.ProcessInput(KeyCode.B, isPressed: true));
+        Assert.IsTrue(engine.IsComplete);
+    }
 }

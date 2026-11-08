@@ -106,6 +106,169 @@ public sealed class GameDataResetServiceTests
     }
 
     [Test]
+    public void Preview_ChallengeProgressIncludesSavedCursorBeyondCurrentContentCount()
+    {
+        preferences.SetInt("ChallengeUnlockedCount_", 151);
+        preferences.SetInt("ChallengeUnlockedCount_cn_", 131);
+        GameResetPlan plan = GameDataResetService.Preview(
+            GameResetTargets.EnglishChallengeProgress | GameResetTargets.ChineseChallengeProgress,
+            persistentRoot,
+            preferences,
+            new GameResetChallengeCounts(2, 2),
+            files);
+
+        Assert.IsTrue(plan.IsValid, plan.Error);
+        string[] keys = plan.Preferences.Select(item => item.key).ToArray();
+        CollectionAssert.Contains(keys, "ChallengeStar_150");
+        CollectionAssert.Contains(keys, "ChallengeStar_cn_130");
+        CollectionAssert.DoesNotContain(keys, "ChallengeStar_151");
+        CollectionAssert.DoesNotContain(keys, "ChallengeStar_cn_131");
+    }
+
+    [Test]
+    public void Execute_EnglishChallengeResetClearsOnlyEnglishLibraryHistoryAndKeepsRecoveryBackup()
+    {
+        string challengeDirectory = Path.Combine(persistentRoot, "StreamingAssets", "Levels");
+        string customDirectory = Path.Combine(persistentRoot, "Levels", "Custom");
+        Directory.CreateDirectory(challengeDirectory);
+        Directory.CreateDirectory(customDirectory);
+        string sidecarPath = Path.Combine(persistentRoot, "WordListLibrary.json");
+        var state = new WordListLibraryState();
+        state.lists.Add(CreateProgressEntry("en-id", Path.Combine(challengeDirectory, "challenge_01.txt"), 3));
+        state.lists.Add(CreateProgressEntry("cn-id", Path.Combine(challengeDirectory, "challenge_cn_01.txt"), 2));
+        state.lists.Add(CreateProgressEntry("custom-id", Path.Combine(customDirectory, "challenge_cn_notes.txt"), 1));
+        string originalJson = JsonUtility.ToJson(state, true);
+        File.WriteAllText(sidecarPath, originalJson);
+        File.WriteAllText(sidecarPath + ".bak", originalJson);
+
+        var library = new WordListLibraryService(customDirectory, sidecarPath);
+        GameResetPlan plan = GameDataResetService.Preview(
+            GameResetTargets.EnglishChallengeProgress,
+            persistentRoot,
+            preferences,
+            new GameResetChallengeCounts(1, 1),
+            files,
+            library,
+            challengeDirectory);
+
+        Assert.IsTrue(plan.IsValid, plan.Error);
+        Assert.IsTrue(plan.Preferences.All(item => !item.existed), "The Library sidecar alone must be enough to plan this reset.");
+        CollectionAssert.Contains(plan.MetadataFiles.Select(item => Path.GetFileName(item.originalPath)).ToArray(), "WordListLibrary.json");
+        Assert.IsFalse(plan.Paths.Any(item => item.originalPath == sidecarPath), "Selective reset must preserve the active sidecar path.");
+
+        GameResetResult result = GameDataResetService.Execute(plan);
+        Assert.IsTrue(result.Succeeded, result.Message);
+        Assert.IsTrue(File.Exists(sidecarPath));
+        GameResetManifest manifest = JsonUtility.FromJson<GameResetManifest>(
+            File.ReadAllText(Path.Combine(result.BackupDirectory, "manifest.json")));
+        Assert.IsTrue(manifest.metadataFiles.Any(item => item.originalPath == sidecarPath));
+        Assert.AreEqual(originalJson, File.ReadAllText(Path.Combine(
+            result.BackupDirectory, "LibraryMetadata", "WordListLibrary.json")), "The original metadata remains recoverable.");
+
+        WordListLibraryState reset = JsonUtility.FromJson<WordListLibraryState>(File.ReadAllText(sidecarPath));
+        WordListLibraryEntry english = reset.lists.Single(item => item.localListId == "en-id");
+        WordListLibraryEntry chinese = reset.lists.Single(item => item.localListId == "cn-id");
+        WordListLibraryEntry custom = reset.lists.Single(item => item.localListId == "custom-id");
+        AssertEntryProgressCleared(english);
+        AssertEntryProgressPresent(chinese, 2);
+        AssertEntryProgressPresent(custom, 1);
+        Assert.AreEqual("title-en-id", english.title);
+        Assert.AreEqual("description-en-id", english.description);
+        Assert.IsTrue(english.isFavorite);
+        Assert.AreEqual("modified-en-id", english.modifiedAtUtc, "Selective reset preserves metadata timestamps.");
+        Assert.AreEqual(1, english.contentRevision);
+        Assert.AreEqual("hash-en-id", english.contentHash);
+        Assert.AreEqual(File.ReadAllText(sidecarPath), File.ReadAllText(sidecarPath + ".bak"),
+            "The old primary backup must not restore reset history.");
+    }
+
+    [Test]
+    public void Preview_AllLocalIncludesLibrarySidecarAndKnownRecoveryFilesWithoutChangingLegacyBits()
+    {
+        Assert.AreEqual(1 << 14, (int)GameResetTargets.LocalAchievements);
+        Assert.AreEqual(1 << 15, (int)GameResetTargets.WordListLibraryMetadata);
+        Assert.AreEqual((1 << 16) - 1, (int)GameResetTargets.AllLocal);
+
+        File.WriteAllText(Path.Combine(persistentRoot, "WordListLibrary.json.bak"), "backup");
+        File.WriteAllText(Path.Combine(persistentRoot, "WordListLibrary.json.replaced.20261108120000"), "replaced");
+        File.WriteAllText(Path.Combine(persistentRoot, "WordListLibrary.json.recovered-corrupt.20261108120000"), "recovery");
+        File.WriteAllText(Path.Combine(persistentRoot, "WordListLibrary.json.user-copy"), "unrelated");
+
+        GameResetPlan plan = GameDataResetService.Preview(
+            GameResetTargets.AllLocal,
+            persistentRoot,
+            preferences,
+            new GameResetChallengeCounts(19, 20),
+            files);
+
+        Assert.IsTrue(plan.IsValid, plan.Error);
+        string[] libraryPaths = plan.Paths
+            .Select(item => item.originalPath)
+            .Where(path => Path.GetFileName(path).StartsWith("WordListLibrary.json", StringComparison.Ordinal))
+            .Select(path => Path.GetFileName(path))
+            .ToArray();
+        CollectionAssert.AreEquivalent(
+            new[]
+            {
+                "WordListLibrary.json",
+                "WordListLibrary.json.bak",
+                "WordListLibrary.json.tmp",
+                "WordListLibrary.json.replaced",
+                "WordListLibrary.json.replaced.20261108120000",
+                "WordListLibrary.json.recovered-corrupt.20261108120000"
+            },
+            libraryPaths);
+        Assert.IsFalse(libraryPaths.Contains("WordListLibrary.json.user-copy"));
+    }
+
+    [TestCase(false)]
+    [TestCase(true)]
+    public void Execute_AllLocalMovesLibrarySidecarsAndRollbackRestoresThem(bool injectMoveFailure)
+    {
+        string[] names =
+        {
+            "WordListLibrary.json",
+            "WordListLibrary.json.bak",
+            "WordListLibrary.json.tmp",
+            "WordListLibrary.json.replaced",
+            "WordListLibrary.json.replaced.20261108120000",
+            "WordListLibrary.json.recovered-corrupt.20261108120000"
+        };
+        foreach (string name in names)
+            File.WriteAllText(Path.Combine(persistentRoot, name), "contents for " + name);
+        string unrelatedPath = Path.Combine(persistentRoot, "WordListLibrary.json.user-copy");
+        File.WriteAllText(unrelatedPath, "leave unrelated files untouched");
+        files.ThrowAfterFileMove = injectMoveFailure;
+
+        GameResetPlan plan = GameDataResetService.Preview(
+            GameResetTargets.AllLocal,
+            persistentRoot,
+            preferences,
+            new GameResetChallengeCounts(19, 20),
+            files);
+        GameResetResult result = GameDataResetService.Execute(plan);
+
+        Assert.AreEqual(!injectMoveFailure, result.Succeeded, result.Message);
+        Assert.IsTrue(result.RollbackSucceeded, result.RollbackError);
+        Assert.IsTrue(File.Exists(unrelatedPath));
+        foreach (string name in names)
+        {
+            string source = Path.Combine(persistentRoot, name);
+            string backup = Path.Combine(result.BackupDirectory, name);
+            if (injectMoveFailure)
+            {
+                Assert.IsTrue(File.Exists(source), name + " should be restored after rollback.");
+                Assert.AreEqual("contents for " + name, File.ReadAllText(source));
+            }
+            else
+            {
+                Assert.IsFalse(File.Exists(source), name + " should be moved out of the active persistent root.");
+                Assert.IsTrue(File.Exists(backup), name + " should have a recoverable backup.");
+            }
+        }
+    }
+
+    [Test]
     public void Execute_MovesSelectedDataAndBacksUpTypedPreferenceManifest()
     {
         string listsDirectory = Path.Combine(persistentRoot, "WordLists");
@@ -303,6 +466,73 @@ public sealed class GameDataResetServiceTests
         public void Save() { }
     }
 
+    private static WordListLibraryEntry CreateProgressEntry(string id, string path, int stars)
+    {
+        var summary = new WordListRunSummary
+        {
+            hasResult = true,
+            totalTimeSeconds = 25f,
+            phaseCount = 2,
+            errors = 1,
+            stars = stars,
+            completedAtUtc = "2026-11-01T00:00:00.0000000Z"
+        };
+        return new WordListLibraryEntry
+        {
+            localListId = id,
+            filePath = path,
+            title = "title-" + id,
+            description = "description-" + id,
+            tags = new List<string> { "keep" },
+            isFavorite = true,
+            addedAtUtc = "added-" + id,
+            modifiedAtUtc = "modified-" + id,
+            contentModifiedAtUtc = "content-modified-" + id,
+            lastPlayedAtUtc = "played-" + id,
+            playCount = 4,
+            contentHash = "hash-" + id,
+            contentRevision = 1,
+            currentRecord = new WordListRevisionRecord
+            {
+                contentRevision = 1,
+                contentHash = "hash-" + id,
+                highestStars = stars,
+                latest = summary,
+                best = summary
+            },
+            archivedRecords = new List<WordListRevisionRecord>
+            {
+                new WordListRevisionRecord
+                {
+                    contentRevision = 0,
+                    contentHash = "old-hash-" + id,
+                    highestStars = 1,
+                    latest = summary,
+                    best = summary
+                }
+            }
+        };
+    }
+
+    private static void AssertEntryProgressCleared(WordListLibraryEntry entry)
+    {
+        Assert.IsNull(entry.lastPlayedAtUtc);
+        Assert.AreEqual(0, entry.playCount);
+        Assert.AreEqual(0, entry.currentRecord.highestStars);
+        Assert.IsNull(entry.currentRecord.latest);
+        Assert.IsNull(entry.currentRecord.best);
+        Assert.IsEmpty(entry.archivedRecords);
+    }
+
+    private static void AssertEntryProgressPresent(WordListLibraryEntry entry, int stars)
+    {
+        Assert.AreEqual("played-" + entry.localListId, entry.lastPlayedAtUtc);
+        Assert.AreEqual(4, entry.playCount);
+        Assert.AreEqual(stars, entry.currentRecord.highestStars);
+        Assert.IsTrue(entry.currentRecord.latest.hasResult);
+        Assert.AreEqual(1, entry.archivedRecords.Count);
+    }
+
     private sealed class ResetFileOperations : IGameResetFileOperations
     {
         public bool ThrowAfterMarkerMove { get; set; }
@@ -345,6 +575,7 @@ public sealed class GameDataResetServiceTests
         }
         public void WriteAllText(string path, string text) => File.WriteAllText(path, text);
         public string ReadAllText(string path) => File.ReadAllText(path);
+        public string[] GetFiles(string directory, string searchPattern) => Directory.Exists(directory) ? Directory.GetFiles(directory, searchPattern) : Array.Empty<string>();
         public void DeleteFile(string path) => File.Delete(path);
     }
 }

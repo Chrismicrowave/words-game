@@ -3,7 +3,9 @@
     "rootNamespace": "",
     "references": [
         "Core",
-        "com.rlabrecque.steamworks.net"
+        "com.rlabrecque.steamworks.net",
+        "Community",
+        "WordList"
     ],
     "includePlatforms": [
         "Editor",

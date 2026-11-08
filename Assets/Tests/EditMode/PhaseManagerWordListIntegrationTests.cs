@@ -63,7 +63,7 @@ public sealed class PhaseManagerWordListIntegrationTests
     public void CustomMutationCommitsBeforeSingleChangeEventAndResetListenerRuns()
     {
         profile = ScriptableObject.CreateInstance<GameConfigProfile>();
-        profile.ignoreProgressionLocks = true;
+        profile.unlockAllFeatures = true;
         profile.maxWordsPerList = 0;
         config = ScriptableObject.CreateInstance<GameConfig>();
         config.activeProfile = profile;
@@ -148,7 +148,7 @@ public sealed class PhaseManagerWordListIntegrationTests
     public void WordLimitUsesConfiguredCapacityEvenWithProgressionBypass()
     {
         profile = ScriptableObject.CreateInstance<GameConfigProfile>();
-        profile.ignoreProgressionLocks = true;
+        profile.unlockAllFeatures = true;
         profile.maxWordsPerList = 2;
         config = ScriptableObject.CreateInstance<GameConfig>();
         config.activeProfile = profile;
@@ -172,7 +172,7 @@ public sealed class PhaseManagerWordListIntegrationTests
     {
         profile = ScriptableObject.CreateInstance<GameConfigProfile>();
         profile.allowChineseAndMixed = true;
-        profile.ignoreProgressionLocks = true;
+        profile.unlockAllFeatures = true;
         profile.maxWordsPerList = 0;
         config = ScriptableObject.CreateInstance<GameConfig>();
         config.activeProfile = profile;
@@ -227,7 +227,7 @@ public sealed class PhaseManagerWordListIntegrationTests
     {
         profile = ScriptableObject.CreateInstance<GameConfigProfile>();
         profile.allowChineseAndMixed = true;
-        profile.ignoreProgressionLocks = true;
+        profile.unlockAllFeatures = true;
         profile.maxWordsPerList = 0;
         config = ScriptableObject.CreateInstance<GameConfig>();
         config.activeProfile = profile;
@@ -259,7 +259,7 @@ public sealed class PhaseManagerWordListIntegrationTests
     public void FailedLibraryCommitRestoresPhaseArraysAndDoesNotPublishChange()
     {
         profile = ScriptableObject.CreateInstance<GameConfigProfile>();
-        profile.ignoreProgressionLocks = true;
+        profile.unlockAllFeatures = true;
         profile.maxWordsPerList = 0;
         config = ScriptableObject.CreateInstance<GameConfig>();
         config.activeProfile = profile;

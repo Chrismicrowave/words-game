@@ -13,6 +13,9 @@ MonoBehaviour:
   m_Name: Development
   m_EditorClassIdentifier: Core::GameConfigProfile
   profileId: development
+  buildPurpose: 0
+  enableSteamDiagnostics: 1
+  allowEditorSteamTestTools: 0
   resetTargets: 0
   resetLocalDataOnFirstRun: 0
   resetRevision: 1
@@ -22,11 +25,12 @@ MonoBehaviour:
   maxCustomLists: 0
   maxWordsPerList: 0
   allowChineseAndMixed: 1
-  unlockAllFeatures: 1
+  unlockAllFeatures: 0
   ignoreProgressionLocks: 1
   customUnlockLevels: 5
   communityEnabled: 1
   communityUnlockLevels: 10
+  debugAnyKeyCompletesWord: 1
   defaults:
     fullscreen: 0
     resolutionIndex: 1

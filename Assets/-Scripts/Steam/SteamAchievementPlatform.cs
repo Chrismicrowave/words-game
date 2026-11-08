@@ -9,19 +9,20 @@ internal static class SteamAchievementPlatformBootstrap
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
     private static void RegisterPlatformFactory()
     {
-        WordAchievementPlatformRegistry.RegisterFactory(() => new SteamAchievementPlatform());
+        WordAchievementPlatformRegistry.RegisterFactory(session => new SteamAchievementPlatform(session));
     }
 }
 
 /// <summary>
-/// Owns the Steamworks.NET client lifecycle and retries locally saved, monotonic achievement state.
-/// GameCoordinator is the sole callback pump and shutdown owner for this instance.
+/// Binds achievement callbacks to the shared Steam client session and retries locally saved,
+/// monotonic achievement state. It never initializes, pumps, or shuts down the Steam API.
 /// </summary>
 internal sealed class SteamAchievementPlatform : IWordAchievementPlatform
 {
     private const uint ExpectedAppId = 4966870;
     private const float StoreRetryIntervalSeconds = 10f;
 
+    private readonly ISteamClientSession session;
     private readonly Dictionary<string, WordAchievementProgressSnapshot> pendingSnapshots =
         new Dictionary<string, WordAchievementProgressSnapshot>();
     private readonly Dictionary<string, HashSet<string>> dirtyAchievementNames =
@@ -30,20 +31,29 @@ internal sealed class SteamAchievementPlatform : IWordAchievementPlatform
     private Callback<UserStatsStored_t> userStatsStoredCallback;
     private List<string> pendingStoreAchievementNames;
     private string pendingStoreSteamId;
+    private ulong boundSteamAccountId;
+    private long boundSessionGeneration;
     private float retryStoreAt;
     private bool initialized;
     private string lastInitializationWarning;
 
-    public bool IsInitialized => initialized;
+    public SteamAchievementPlatform(ISteamClientSession session)
+    {
+        this.session = session;
+    }
+
+    public bool IsInitialized => initialized
+        && SteamClientSessionIdentity.IsCurrentAccount(session, ExpectedAppId,
+            boundSteamAccountId, boundSessionGeneration);
 
     public string CurrentUserId
     {
         get
         {
-            if (!initialized)
+            if (!IsInitialized)
                 return null;
 
-            ulong steamId = SteamUser.GetSteamID().m_SteamID;
+            ulong steamId = session.CurrentAccountId;
             return steamId == 0 ? null : steamId.ToString(CultureInfo.InvariantCulture);
         }
     }
@@ -52,37 +62,34 @@ internal sealed class SteamAchievementPlatform : IWordAchievementPlatform
 
     public bool TryInitialize()
     {
-        if (initialized)
+        if (IsInitialized)
             return true;
+
+        if (initialized)
+            DisposeBoundCallbacks();
+
+        if (session == null || !session.IsInitialized || session.CurrentAppId != ExpectedAppId)
+            return false;
+
+        ulong currentAccountId = session.CurrentAccountId;
+        if (currentAccountId == 0)
+        {
+            WarnInitializationIfChanged("Steam is initialized, but no signed-in Steam account is available; local achievements remain available.");
+            return false;
+        }
 
         try
         {
-            ESteamAPIInitResult initResult = SteamAPI.InitEx(out string initError);
-            if (initResult != ESteamAPIInitResult.k_ESteamAPIInitResult_OK)
-            {
-                bool appIdFilePresent = System.IO.File.Exists("steam_appid.txt");
-                WarnInitializationIfChanged("SteamAPI.InitEx failed (" + initResult + "): " + initError
-                    + ". steam_appid.txt in the process current working directory exists: " + appIdFilePresent
-                    + "; local achievements remain available.");
-                return false;
-            }
-
-            initialized = true;
-            uint actualAppId = SteamUtils.GetAppID().m_AppId;
-            if (actualAppId != ExpectedAppId)
-            {
-                WarnInitializationIfChanged("Steam AppID mismatch; Steam achievements are disabled for this process.");
-                Shutdown();
-                return false;
-            }
-
             userStatsStoredCallback = Callback<UserStatsStored_t>.Create(OnUserStatsStored);
+            boundSteamAccountId = currentAccountId;
+            boundSessionGeneration = session.InitializationGeneration;
+            initialized = true;
             lastInitializationWarning = null;
             return true;
         }
         catch (Exception exception)
         {
-            WarnInitializationIfChanged("Steamworks initialization failed; local achievements remain available. "
+            WarnInitializationIfChanged("Steam achievement callbacks could not bind; local achievements remain available. "
                 + exception.GetType().Name + ": " + exception.Message);
             Shutdown();
             return false;
@@ -91,10 +98,13 @@ internal sealed class SteamAchievementPlatform : IWordAchievementPlatform
 
     public void RunCallbacks()
     {
-        if (!initialized)
+        if (!IsInitialized)
+        {
+            if (initialized)
+                DisposeBoundCallbacks();
             return;
+        }
 
-        SteamAPI.RunCallbacks();
         ProcessCurrentUserSnapshot();
     }
 
@@ -114,16 +124,18 @@ internal sealed class SteamAchievementPlatform : IWordAchievementPlatform
 
     public void Shutdown()
     {
+        DisposeBoundCallbacks();
+    }
+
+    private void DisposeBoundCallbacks()
+    {
         userStatsStoredCallback?.Dispose();
         userStatsStoredCallback = null;
+        initialized = false;
+        boundSteamAccountId = 0;
+        boundSessionGeneration = 0;
         pendingStoreSteamId = null;
         pendingStoreAchievementNames = null;
-
-        if (initialized)
-        {
-            initialized = false;
-            SteamAPI.Shutdown();
-        }
     }
 
     private void ProcessCurrentUserSnapshot()
@@ -141,7 +153,7 @@ internal sealed class SteamAchievementPlatform : IWordAchievementPlatform
 
     private bool ProcessSnapshot(string steamId, WordAchievementProgressSnapshot snapshot)
     {
-        if (!initialized || !string.Equals(CurrentUserId, steamId, StringComparison.Ordinal))
+        if (!IsInitialized || !string.Equals(CurrentUserId, steamId, StringComparison.Ordinal))
             return false;
 
         if (!dirtyAchievementNames.TryGetValue(steamId, out HashSet<string> dirtyNames))
@@ -201,7 +213,7 @@ internal sealed class SteamAchievementPlatform : IWordAchievementPlatform
 
     private void OnUserStatsStored(UserStatsStored_t callback)
     {
-        if (!initialized || pendingStoreSteamId == null
+        if (!IsInitialized || pendingStoreSteamId == null
             || (uint)(callback.m_nGameID & 0x00FFFFFFUL) != ExpectedAppId)
             return;
 

@@ -311,6 +311,34 @@ public sealed class WordListLibraryServiceTests
         Assert.AreEqual(0, afterRetry.PlayCount);
     }
 
+    [Test]
+    public void ReloadAfterExternalResetInvalidatesExistingServiceAndDropsCachedRunHistory()
+    {
+        Assert.IsTrue(service.TryCreateList("Reset cache", English("one", "two"), out WordListLibraryItem created, out string error), error);
+        Assert.IsTrue(service.TryRecordRun(created.Provider, 24f, 2, 0, 3, out error), error);
+        WordListLibraryItem beforeReset = service.FindById(created.LocalListId);
+        Assert.AreEqual(1, beforeReset.PlayCount);
+        Assert.IsTrue(beforeReset.CurrentRecord.HasRecord);
+
+        // Simulate the reset service moving the canonical sidecar into its recoverable backup.
+        string movedSidecar = Path.Combine(testRoot, ".GameDataResetBackups", "WordListLibrary.json");
+        Directory.CreateDirectory(Path.GetDirectoryName(movedSidecar));
+        File.Move(sidecarPath, movedSidecar);
+        if (File.Exists(sidecarPath + ".bak"))
+            File.Move(sidecarPath + ".bak", movedSidecar + ".bak");
+        if (File.Exists(sidecarPath + ".replaced"))
+            File.Move(sidecarPath + ".replaced", movedSidecar + ".replaced");
+
+        service.ReloadAfterExternalReset();
+        WordListLibraryItem afterReset = service.FindById(created.LocalListId);
+
+        Assert.IsNotNull(afterReset);
+        Assert.AreEqual(0, afterReset.PlayCount);
+        Assert.IsFalse(afterReset.CurrentRecord.HasRecord);
+        Assert.IsEmpty(afterReset.ArchivedRecords);
+        Assert.IsTrue(File.Exists(movedSidecar), "Reset history remains in the recoverable backup.");
+    }
+
     private WordListLibraryService NewService()
     {
         return new WordListLibraryService(customDirectory, sidecarPath, () => new DateTime(2026, 11, 3, 0, 0, 0, DateTimeKind.Utc));

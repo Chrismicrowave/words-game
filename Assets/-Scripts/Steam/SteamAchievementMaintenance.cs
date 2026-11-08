@@ -10,7 +10,7 @@ using UnityEngine;
 
 /// <summary>
 /// Editor-only, explicit maintenance for this game's three Steam achievements.
-/// This class owns Steamworks.NET initialization and callback pumping while active.
+/// It takes the shared session's exclusive runtime lease only while no other owner is active.
 /// </summary>
 public static class SteamAchievementMaintenance
 {
@@ -92,23 +92,17 @@ public static class SteamAchievementMaintenance
 
         try
         {
-            ESteamAPIInitResult initResult = SteamAPI.InitEx(out string initError);
-            if (initResult != ESteamAPIInitResult.k_ESteamAPIInitResult_OK)
+            operation.SessionLease = SteamClientSessionRegistry.AcquireRuntime();
+            operation.Session = operation.SessionLease.Session;
+            if (!operation.Session.TryInitialize())
             {
-                Finish(operation, false, "Steam could not be initialized: " + SafeText(initError));
+                Finish(operation, false, "Steam could not be initialized: "
+                    + SafeText(operation.Session.LastError));
                 return;
             }
+            operation.SessionGeneration = operation.Session.InitializationGeneration;
 
-            if (!CallbackDispatcher.IsInitialized)
-            {
-                Finish(operation, false,
-                    "Steamworks.NET reported successful initialization, but its callback dispatcher is not initialized. Reload the Editor scripts before retrying Steam maintenance.");
-                return;
-            }
-
-            operation.OwnsSteamApiInitialization = true;
-
-            uint appId = SteamUtils.GetAppID().m_AppId;
+            uint appId = operation.Session.CurrentAppId;
             if (appId != ExpectedAppId)
             {
                 Finish(operation, false, "Steam is connected to AppID " + appId.ToString(CultureInfo.InvariantCulture)
@@ -116,7 +110,7 @@ public static class SteamAchievementMaintenance
                 return;
             }
 
-            string steamId = GetCurrentSteamId();
+            string steamId = GetCurrentSteamId(operation);
             if (string.IsNullOrEmpty(steamId))
             {
                 Finish(operation, false, "Steam did not provide a valid current account.");
@@ -137,8 +131,6 @@ public static class SteamAchievementMaintenance
         }
         catch (Exception exception)
         {
-            if (CallbackDispatcher.IsInitialized)
-                operation.OwnsSteamApiInitialization = true;
             Finish(operation, false, "Steam initialization failed: " + DescribeException(exception));
         }
     }
@@ -166,7 +158,13 @@ public static class SteamAchievementMaintenance
             if (!VerifyCurrentAccount(operation))
                 return;
 
-            SteamAPI.RunCallbacks();
+            operation.Session.RunCallbacks();
+            if (!operation.Session.IsInitialized)
+            {
+                Finish(operation, false, "The shared Steam session stopped during maintenance: "
+                    + SafeText(operation.Session.LastError));
+                return;
+            }
             if (!IsCurrentOperation(operation))
                 return;
 
@@ -239,7 +237,7 @@ public static class SteamAchievementMaintenance
 
     private static void BeginReset(Operation operation)
     {
-        if (!string.Equals(GetCurrentSteamId(), operation.ExpectedSteamId, StringComparison.Ordinal))
+        if (!string.Equals(GetCurrentSteamId(operation), operation.ExpectedSteamId, StringComparison.Ordinal))
         {
             Finish(operation, false, "The connected Steam account no longer matches the account confirmed in the Editor UI.");
             return;
@@ -283,7 +281,8 @@ public static class SteamAchievementMaintenance
         if (operation == null || operation.Kind != OperationKind.Reset || !operation.StoreRequested)
             return;
 
-        if (!string.Equals(GetCurrentSteamId(), operation.SteamId, StringComparison.Ordinal))
+        if (!IsSessionIdentityCurrent(operation)
+            || !string.Equals(GetCurrentSteamId(operation), operation.SteamId, StringComparison.Ordinal))
             return;
 
         uint callbackAppId = (uint)(callback.m_nGameID & 0x00FFFFFFUL);
@@ -330,20 +329,44 @@ public static class SteamAchievementMaintenance
         return achieved ? "unlocked" : "locked";
     }
 
-    private static string GetCurrentSteamId()
+    private static string GetCurrentSteamId(Operation operation)
     {
-        ulong steamId = SteamUser.GetSteamID().m_SteamID;
+        ulong steamId = IsSessionGenerationCurrent(operation)
+            ? operation.Session.CurrentAccountId
+            : 0;
         return steamId == 0 ? null : steamId.ToString(CultureInfo.InvariantCulture);
     }
 
     private static bool VerifyCurrentAccount(Operation operation)
     {
-        string currentSteamId = GetCurrentSteamId();
+        if (!IsSessionIdentityCurrent(operation))
+        {
+            Finish(operation, false, "The shared Steam session changed during maintenance.");
+            return false;
+        }
+
+        string currentSteamId = GetCurrentSteamId(operation);
         if (string.Equals(operation.SteamId, currentSteamId, StringComparison.Ordinal))
             return true;
 
         Finish(operation, false, "The connected Steam account changed during maintenance.");
         return false;
+    }
+
+    private static bool IsSessionIdentityCurrent(Operation operation)
+    {
+        return operation != null
+            && ulong.TryParse(operation.SteamId, NumberStyles.None, CultureInfo.InvariantCulture, out ulong accountId)
+            && SteamClientSessionIdentity.IsCurrentAccount(
+                operation.Session, ExpectedAppId, accountId, operation.SessionGeneration);
+    }
+
+    private static bool IsSessionGenerationCurrent(Operation operation)
+    {
+        return operation != null && operation.Session != null
+            && operation.Session.IsInitialized
+            && operation.Session.InitializationGeneration == operation.SessionGeneration
+            && operation.Session.CurrentAppId == ExpectedAppId;
     }
 
     private static string GetAccountName()
@@ -611,16 +634,18 @@ public static class SteamAchievementMaintenance
             operation.UserStatsStoredCallback = null;
         }
 
-        if (operation.OwnsSteamApiInitialization)
+        if (operation.SessionLease != null)
         {
-            operation.OwnsSteamApiInitialization = false;
+            SteamClientSessionLease lease = operation.SessionLease;
+            operation.SessionLease = null;
+            operation.Session = null;
             try
             {
-                SteamAPI.Shutdown();
+                lease.Dispose();
             }
             catch (Exception exception)
             {
-                finalMessage += " Steam API shutdown reported: " + DescribeException(exception) + ".";
+                finalMessage += " Steam session shutdown reported: " + DescribeException(exception) + ".";
                 success = false;
             }
         }
@@ -712,7 +737,9 @@ public static class SteamAchievementMaintenance
         public string BackupFilePath;
         public string BackupDirectory;
         public DateTime ZeroProfileLastWriteTimeUtc;
-        public bool OwnsSteamApiInitialization;
+        public SteamClientSessionLease SessionLease;
+        public ISteamClientSession Session;
+        public long SessionGeneration;
         public bool Finished;
         public bool LocalMutationStarted;
         public bool LocalMutationCompleted;

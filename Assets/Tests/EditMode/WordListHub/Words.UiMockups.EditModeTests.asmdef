@@ -1,0 +1,28 @@
+{
+    "name": "Words.UiMockups.EditModeTests",
+    "rootNamespace": "Words.UiMockups.WordListHub.Tests",
+    "references": [
+        "Words.UiMockups",
+        "Community",
+        "Core",
+        "WordList",
+        "Unity.TextMeshPro",
+        "UnityEngine.UI"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": false,
+    "defineConstraints": [
+        "UNITY_INCLUDE_TESTS"
+    ],
+    "versionDefines": [],
+    "noEngineReferences": false,
+    "optionalUnityReferences": [
+        "TestAssemblies"
+    ]
+}

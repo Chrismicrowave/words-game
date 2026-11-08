@@ -35,6 +35,7 @@ public interface IGameResetFileOperations
     void MoveDirectory(string source, string destination);
     void WriteAllText(string path, string text);
     string ReadAllText(string path);
+    string[] GetFiles(string directory, string searchPattern);
     void DeleteFile(string path);
 }
 
@@ -59,6 +60,15 @@ public sealed class GameResetPathSnapshot
 }
 
 [Serializable]
+public sealed class GameResetMetadataFileSnapshot
+{
+    public string originalPath;
+    public string backupPath;
+    public bool existed;
+    public string expectedHash;
+}
+
+[Serializable]
 public sealed class GameResetManifest
 {
     public int schemaVersion = 1;
@@ -66,6 +76,7 @@ public sealed class GameResetManifest
     public string targets;
     public List<GameResetPreferenceSnapshot> preferences = new List<GameResetPreferenceSnapshot>();
     public List<GameResetPathSnapshot> paths = new List<GameResetPathSnapshot>();
+    public List<GameResetMetadataFileSnapshot> metadataFiles = new List<GameResetMetadataFileSnapshot>();
 }
 
 public sealed class GameResetPlan
@@ -95,12 +106,32 @@ public sealed class GameResetPlan
             return copies.AsReadOnly();
         }
     }
+    public IReadOnlyList<GameResetMetadataFileSnapshot> MetadataFiles
+    {
+        get
+        {
+            var copies = new List<GameResetMetadataFileSnapshot>(metadataFiles.Count);
+            foreach (GameResetMetadataFileSnapshot item in metadataFiles)
+                copies.Add(new GameResetMetadataFileSnapshot
+                {
+                    originalPath = item.originalPath,
+                    backupPath = item.backupPath,
+                    existed = item.existed,
+                    expectedHash = item.expectedHash
+                });
+            return copies.AsReadOnly();
+        }
+    }
     public bool IsValid => string.IsNullOrEmpty(Error) && Targets != GameResetTargets.None;
 
     internal readonly List<GameResetPreferenceSnapshot> preferences = new List<GameResetPreferenceSnapshot>();
     internal readonly List<GameResetPathSnapshot> paths = new List<GameResetPathSnapshot>();
+    internal readonly List<GameResetMetadataFileSnapshot> metadataFiles = new List<GameResetMetadataFileSnapshot>();
+    internal readonly List<string> challengeProgressTracks = new List<string>();
     internal IGameResetPreferenceStore preferenceStore;
     internal IGameResetFileOperations fileOperations;
+    internal WordListLibraryService wordListLibraryService;
+    internal string challengeDirectory;
     internal string markerPath;
     internal string markerContent;
 }
@@ -145,13 +176,17 @@ public static class GameDataResetService
         string persistentRoot,
         IGameResetPreferenceStore preferences,
         GameResetChallengeCounts challengeCounts,
-        IGameResetFileOperations fileOperations = null)
+        IGameResetFileOperations fileOperations = null,
+        WordListLibraryService wordListLibraryService = null,
+        string challengeDirectory = null)
     {
         var plan = new GameResetPlan
         {
             Targets = targets,
             preferenceStore = preferences,
-            fileOperations = fileOperations ?? SystemFiles
+            fileOperations = fileOperations ?? SystemFiles,
+            wordListLibraryService = wordListLibraryService,
+            challengeDirectory = challengeDirectory ?? LevelWordListProvider.GetChallengeDirectory()
         };
 
         try
@@ -166,6 +201,7 @@ public static class GameDataResetService
             ValidateRoot(plan.PersistentRoot, plan.fileOperations);
             plan.BackupDirectory = CreateBackupDirectoryPath(plan.PersistentRoot);
             AddSelectedPreferences(plan, challengeCounts);
+            AddSelectiveLibraryMetadata(plan);
             AddSelectedPaths(plan);
             ValidatePlanPaths(plan);
         }
@@ -301,7 +337,18 @@ public static class GameDataResetService
             foreach (GameResetPathSnapshot path in plan.paths)
                 if (path.existed)
                     manifest.paths.Add(new GameResetPathSnapshot { originalPath = path.originalPath, backupPath = path.backupPath, isDirectory = path.isDirectory, existed = true });
+            foreach (GameResetMetadataFileSnapshot file in plan.metadataFiles)
+                if (file.existed)
+                    manifest.metadataFiles.Add(new GameResetMetadataFileSnapshot
+                    {
+                        originalPath = file.originalPath,
+                        backupPath = file.backupPath,
+                        existed = true,
+                        expectedHash = file.expectedHash
+                    });
             plan.fileOperations.WriteAllText(Path.Combine(plan.BackupDirectory, "manifest.json"), JsonUtility.ToJson(manifest, true));
+
+            BackupSelectiveLibraryMetadata(plan);
 
             foreach (GameResetPathSnapshot path in plan.paths)
             {
@@ -324,6 +371,9 @@ public static class GameDataResetService
             }
             plan.preferenceStore.Save();
             afterLocalMutations?.Invoke();
+            ExecuteSelectiveLibraryMetadataReset(plan);
+            if (Includes(plan.Targets, GameResetTargets.WordListLibraryMetadata))
+                WordListLibraryService.NotifySharedStateReset();
 
             return new GameResetResult
             {
@@ -400,6 +450,37 @@ public static class GameDataResetService
             catch (Exception exception) { errors.Add(path.originalPath + ": " + exception.Message); }
         }
 
+        if (plan.metadataFiles.Count > 0)
+        {
+            foreach (GameResetMetadataFileSnapshot file in plan.metadataFiles)
+            {
+                try
+                {
+                    if (file.existed)
+                    {
+                        if (!plan.fileOperations.FileExists(file.backupPath))
+                            continue;
+                        string parent = Path.GetDirectoryName(file.originalPath);
+                        if (!string.IsNullOrEmpty(parent))
+                            plan.fileOperations.CreateDirectory(parent);
+                        plan.fileOperations.WriteAllText(file.originalPath,
+                            plan.fileOperations.ReadAllText(file.backupPath));
+                    }
+                    else if (plan.fileOperations.FileExists(file.originalPath))
+                    {
+                        plan.fileOperations.DeleteFile(file.originalPath);
+                    }
+                }
+                catch (Exception exception)
+                {
+                    errors.Add(file.originalPath + ": " + exception.Message);
+                }
+            }
+
+            try { WordListLibraryService.NotifySharedStateReset(); }
+            catch (Exception exception) { errors.Add("Library metadata reload: " + exception.Message); }
+        }
+
         return errors.Count == 0 ? "" : string.Join(" | ", errors);
     }
 
@@ -430,8 +511,12 @@ public static class GameDataResetService
             Pref("MyListPath", GameResetPreferenceKind.String));
         AddPreferenceGroup(plan, GameResetTargets.MyLists, Pref("MyListPath", GameResetPreferenceKind.String));
 
-        int englishMaxIndex = Math.Max(MinimumLegacyChallengeStarIndex, challengeCounts.englishCount - 1);
-        int chineseMaxIndex = Math.Max(MinimumLegacyChallengeStarIndex, challengeCounts.chineseCount - 1);
+        int englishUnlockedCount = ReadIntPreference(plan.preferenceStore, "ChallengeUnlockedCount_");
+        int chineseUnlockedCount = ReadIntPreference(plan.preferenceStore, "ChallengeUnlockedCount_cn_");
+        int englishMaxIndex = Math.Max(MinimumLegacyChallengeStarIndex,
+            Math.Max(challengeCounts.englishCount - 1, englishUnlockedCount - 1));
+        int chineseMaxIndex = Math.Max(MinimumLegacyChallengeStarIndex,
+            Math.Max(challengeCounts.chineseCount - 1, chineseUnlockedCount - 1));
         AddChallengeProgress(plan, GameResetTargets.EnglishChallengeProgress, "", englishMaxIndex);
         AddChallengeProgress(plan, GameResetTargets.ChineseChallengeProgress, "cn_", chineseMaxIndex);
     }
@@ -443,6 +528,11 @@ public static class GameDataResetService
         AddPreference(plan, Pref("ChallengeUnlockedCount_" + prefix, GameResetPreferenceKind.Int));
         for (int index = 0; index <= maxIndex; index++)
             AddPreference(plan, Pref("ChallengeStar_" + prefix + index, GameResetPreferenceKind.Int));
+    }
+
+    private static int ReadIntPreference(IGameResetPreferenceStore preferences, string key)
+    {
+        return preferences.HasKey(key) ? Math.Max(1, preferences.GetInt(key)) : 1;
     }
 
     private static void AddPreferenceGroup(GameResetPlan plan, GameResetTargets target, params PreferenceKey[] keys)
@@ -483,6 +573,126 @@ public static class GameDataResetService
             AddPath(plan, Path.Combine("Levels", "Custom"), true);
         if (Includes(plan.Targets, GameResetTargets.LocalAchievements))
             AddPath(plan, "WordAchievementProfiles", true);
+        if (Includes(plan.Targets, GameResetTargets.WordListLibraryMetadata))
+            AddWordListLibraryStatePaths(plan);
+    }
+
+    private static void AddSelectiveLibraryMetadata(GameResetPlan plan)
+    {
+        // AllLocal already moves the complete sidecar and every supported recovery
+        // candidate as one recoverable unit. Track resets must edit the sidecar in
+        // place so unrelated list metadata remains available.
+        if (Includes(plan.Targets, GameResetTargets.WordListLibraryMetadata))
+            return;
+
+        if (Includes(plan.Targets, GameResetTargets.EnglishChallengeProgress))
+            plan.challengeProgressTracks.Add(ChallengeTrackResolver.EnglishTrackPrefix);
+        if (Includes(plan.Targets, GameResetTargets.ChineseChallengeProgress))
+            plan.challengeProgressTracks.Add(ChallengeTrackResolver.ChineseTrackPrefix);
+        if (plan.challengeProgressTracks.Count == 0)
+            return;
+
+        const string primaryName = "WordListLibrary.json";
+        AddMetadataFile(plan, primaryName);
+        AddMetadataFile(plan, primaryName + ".bak");
+        AddMetadataFile(plan, primaryName + ".tmp");
+        AddMetadataFile(plan, primaryName + ".replaced");
+
+        string[] recoveryPatterns =
+        {
+            primaryName + ".replaced.*",
+            primaryName + ".recovered-corrupt.*"
+        };
+        foreach (string pattern in recoveryPatterns)
+        {
+            foreach (string candidate in plan.fileOperations.GetFiles(plan.PersistentRoot, pattern) ?? Array.Empty<string>())
+            {
+                string name = Path.GetFileName(candidate);
+                if (!string.IsNullOrEmpty(name))
+                    AddMetadataFile(plan, name);
+            }
+        }
+    }
+
+    private static void AddMetadataFile(GameResetPlan plan, string fileName)
+    {
+        if (plan.metadataFiles.Exists(item => string.Equals(
+            Path.GetFileName(item.originalPath), fileName, StringComparison.OrdinalIgnoreCase)))
+            return;
+
+        string originalPath = Path.GetFullPath(Path.Combine(plan.PersistentRoot, fileName));
+        string backupPath = Path.GetFullPath(Path.Combine(
+            plan.BackupDirectory, "LibraryMetadata", fileName));
+        bool existed = plan.fileOperations.FileExists(originalPath);
+        string expectedHash = existed
+            ? ComputeIdentityHash(plan.fileOperations.ReadAllText(originalPath))
+            : null;
+        plan.metadataFiles.Add(new GameResetMetadataFileSnapshot
+        {
+            originalPath = originalPath,
+            backupPath = backupPath,
+            existed = existed,
+            expectedHash = expectedHash
+        });
+    }
+
+    private static void BackupSelectiveLibraryMetadata(GameResetPlan plan)
+    {
+        foreach (GameResetMetadataFileSnapshot file in plan.metadataFiles)
+        {
+            if (!file.existed)
+                continue;
+            plan.fileOperations.CreateDirectory(Path.GetDirectoryName(file.backupPath));
+            plan.fileOperations.WriteAllText(file.backupPath,
+                plan.fileOperations.ReadAllText(file.originalPath));
+        }
+    }
+
+    private static void ExecuteSelectiveLibraryMetadataReset(GameResetPlan plan)
+    {
+        if (plan.challengeProgressTracks.Count == 0
+            || Includes(plan.Targets, GameResetTargets.WordListLibraryMetadata))
+            return;
+
+        WordListLibraryService service = plan.wordListLibraryService ?? WordListLibraryService.Shared;
+        service.ReloadAfterExternalReset();
+        if (plan.metadataFiles.Exists(item => item.existed))
+        {
+            foreach (string prefix in plan.challengeProgressTracks)
+            {
+                if (!service.ResetChallengeProgressForTrack(prefix, plan.challengeDirectory, out string error))
+                    throw new IOException("Could not reset " + (prefix == ChallengeTrackResolver.ChineseTrackPrefix ? "Chinese" : "English")
+                        + " challenge metadata: " + error);
+            }
+        }
+        WordListLibraryService.NotifySharedStateReset();
+    }
+
+    private static void AddWordListLibraryStatePaths(GameResetPlan plan)
+    {
+        const string primaryName = "WordListLibrary.json";
+        AddPath(plan, primaryName, false);
+        AddPath(plan, primaryName + ".bak", false);
+        AddPath(plan, primaryName + ".tmp", false);
+        AddPath(plan, primaryName + ".replaced", false);
+
+        // Include only recovery files created by WordListLibraryService.PersistState.
+        // The basename is kept relative to the injected persistent root so test and
+        // production plans cannot accidentally adopt a path returned outside it.
+        string[] recoveryPatterns =
+        {
+            primaryName + ".replaced.*",
+            primaryName + ".recovered-corrupt.*"
+        };
+        foreach (string pattern in recoveryPatterns)
+        {
+            foreach (string candidate in plan.fileOperations.GetFiles(plan.PersistentRoot, pattern) ?? Array.Empty<string>())
+            {
+                string fileName = Path.GetFileName(candidate);
+                if (!string.IsNullOrEmpty(fileName))
+                    AddPath(plan, fileName, false);
+            }
+        }
     }
 
     private static void AddPath(GameResetPlan plan, string relativePath, bool isDirectory)
@@ -517,6 +727,15 @@ public static class GameDataResetService
                 throw new IOException("A file exists where a reset directory is expected: " + path.originalPath);
             if (!path.isDirectory && plan.fileOperations.DirectoryExists(path.originalPath))
                 throw new IOException("A directory exists where a reset file is expected: " + path.originalPath);
+        }
+        foreach (GameResetMetadataFileSnapshot file in plan.metadataFiles)
+        {
+            ValidatePathWithinRoot(plan.PersistentRoot, file.originalPath, plan.fileOperations, true);
+            if (IsWithinPath(file.originalPath, backupRoot))
+                throw new InvalidOperationException("A metadata reset target intersects the backup directory.");
+            ValidatePathWithinRoot(plan.PersistentRoot, file.backupPath, plan.fileOperations, false);
+            if (plan.fileOperations.DirectoryExists(file.originalPath))
+                throw new IOException("A directory exists where a Library metadata file is expected: " + file.originalPath);
         }
         if (!string.IsNullOrEmpty(plan.markerPath))
             ValidatePathWithinRoot(plan.PersistentRoot, plan.markerPath, plan.fileOperations, false);
@@ -586,6 +805,19 @@ public static class GameDataResetService
                 : plan.fileOperations.FileExists(item.originalPath);
             bool snapshotted = plan.fileOperations.FileExists(item.backupPath) || plan.fileOperations.DirectoryExists(item.backupPath);
             if (current != item.existed || snapshotted)
+                return false;
+        }
+
+        foreach (GameResetMetadataFileSnapshot file in plan.metadataFiles)
+        {
+            bool current = plan.fileOperations.FileExists(file.originalPath);
+            if (current != file.existed)
+                return false;
+            if (current && !string.Equals(
+                ComputeIdentityHash(plan.fileOperations.ReadAllText(file.originalPath)),
+                file.expectedHash, StringComparison.Ordinal))
+                return false;
+            if (plan.fileOperations.FileExists(file.backupPath))
                 return false;
         }
         return true;
@@ -720,6 +952,7 @@ public static class GameDataResetService
         public void MoveDirectory(string source, string destination) => Directory.Move(source, destination);
         public void WriteAllText(string path, string text) => File.WriteAllText(path, text);
         public string ReadAllText(string path) => File.ReadAllText(path);
+        public string[] GetFiles(string directory, string searchPattern) => Directory.Exists(directory) ? Directory.GetFiles(directory, searchPattern) : Array.Empty<string>();
         public void DeleteFile(string path) => File.Delete(path);
     }
 }

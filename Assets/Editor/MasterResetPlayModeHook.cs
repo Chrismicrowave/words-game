@@ -12,7 +12,8 @@ using UnityEngine;
 public static class MasterResetPlayModeHook
 {
     private const string GameConfigAssetPath = "Assets/-Data/GameConfig.asset";
-    private const string MockupScenePathPrefix = "Assets/Scenes/UI-Mockups/";
+    private const string MockupScenePath = "Assets/Scenes/WordListHubMockup.unity";
+    private const string LegacyMockupScenePathPrefix = "Assets/Scenes/UI-Mockups/";
     private const string SteamMaintenanceTypeName = "SteamAchievementMaintenance, SteamAchievementIntegration";
     private const string ArmedTokenPrefix = "Words.MasterReset.NextEditorPlay.Armed.";
     private const string ConsumedTokenPrefix = "Words.MasterReset.NextEditorPlay.Consumed.";
@@ -135,7 +136,8 @@ public static class MasterResetPlayModeHook
     public static bool ShouldIgnoreScenePath(string scenePath)
     {
         return !string.IsNullOrEmpty(scenePath)
-            && scenePath.StartsWith(MockupScenePathPrefix, StringComparison.Ordinal);
+            && (string.Equals(scenePath, MockupScenePath, StringComparison.Ordinal)
+                || scenePath.StartsWith(LegacyMockupScenePathPrefix, StringComparison.Ordinal));
     }
 
     private static bool TryReadSteamMaintenanceBusy(out bool busy, out string error)

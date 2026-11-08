@@ -17,7 +17,7 @@ namespace Words.UiMockups.Editor
     /// </summary>
     public static class WordListHubFiltersMenuAuthoring
     {
-        private const string ScenePath = "Assets/Scenes/UI-Mockups/WordListHubMockup.unity";
+        private const string ScenePath = "Assets/Scenes/WordListHubMockup.unity";
         private const string PopupName = "LibraryFiltersPopup";
         private const string ToggleName = "FiltersToggle";
         private const string ViewportName = "Viewport";

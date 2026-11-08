@@ -15,7 +15,7 @@ public class MasterResetPlayModeHookTests
     {
         Assert.IsTrue((bool)GetPathGuard().Invoke(null, new object[]
         {
-            "Assets/Scenes/UI-Mockups/WordListHubMockup.unity"
+            "Assets/Scenes/WordListHubMockup.unity"
         }));
     }
 

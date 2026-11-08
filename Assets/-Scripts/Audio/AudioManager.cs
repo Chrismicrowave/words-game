@@ -18,22 +18,62 @@ public class AudioManager : MonoBehaviour
 
     private AudioSource audioSource;
 
+    private static AudioMixerGroup sharedSfxMixerGroup;
+
+    public static bool TryRouteToSfx(AudioSource source)
+    {
+        if (source == null)
+            return false;
+        if (source.outputAudioMixerGroup != null)
+            return true;
+
+        AudioMixerGroup group = sharedSfxMixerGroup;
+        if (group == null)
+        {
+            AudioManager manager = FindAnyObjectByType<AudioManager>(FindObjectsInactive.Include);
+            if (manager != null && manager.mixerGroup != null)
+            {
+                group = manager.mixerGroup;
+                sharedSfxMixerGroup = group;
+            }
+        }
+        if (group == null)
+            return false;
+
+        source.outputAudioMixerGroup = group;
+        return source.outputAudioMixerGroup != null;
+    }
+
     void Awake()
     {
+        if (mixerGroup != null)
+            sharedSfxMixerGroup = mixerGroup;
+
         audioSource = GetComponent<AudioSource>();
         if (audioSource == null)
+        {
             Debug.LogError("AudioManager: no AudioSource on " + gameObject.name);
+            return;
+        }
+
+        TryRouteToSfx(audioSource);
     }
 
     void Start()
     {
-        if (audioSource != null && mixerGroup != null)
-            audioSource.outputAudioMixerGroup = mixerGroup;
+        if (audioSource != null && !TryRouteToSfx(audioSource))
+            Debug.LogWarning("AudioManager: no SFX mixer group is available; sounds will remain silent.", this);
+    }
+
+    void OnDestroy()
+    {
+        if (object.ReferenceEquals(sharedSfxMixerGroup, mixerGroup))
+            sharedSfxMixerGroup = null;
     }
 
     public virtual void PlaySound(AudioClip clip)
     {
-        if (audioSource == null || clip == null) return;
+        if (audioSource == null || clip == null || !TryRouteToSfx(audioSource)) return;
         audioSource.clip = clip;
         if (!audioSource.isPlaying) audioSource.Play();
     }

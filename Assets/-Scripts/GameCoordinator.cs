@@ -2,7 +2,16 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Reflection;
 using UnityEngine;
+using Words.Community;
+
+public enum GameRunSourceKind
+{
+    Challenge,
+    Custom,
+    Community
+}
 
 public sealed class GameRunCompletionSnapshot
 {
@@ -21,12 +30,32 @@ public sealed class GameRunCompletionSnapshot
     public string RecordError { get; }
     public bool HasAchievementProgressSnapshot { get; }
     public WordAchievementProgressSnapshot AchievementProgressSnapshot { get; }
+    public GameRunSourceKind SourceKind => Provider is CommunityWordListProvider
+        ? GameRunSourceKind.Community
+        : IsChallenge ? GameRunSourceKind.Challenge : GameRunSourceKind.Custom;
+    public CommunityItemKey CommunityKey => communityRunIdentity?.Key;
+    public string CommunityContentHash => communityRunIdentity?.Version?.ContentHash ?? string.Empty;
+    public ulong CommunityAccountId => communityRunIdentity != null ? communityRunIdentity.AccountId : 0;
+
+    private readonly CommunityGameplayRunIdentity communityRunIdentity;
 
     public GameRunCompletionSnapshot(string localListId, IWordListProvider provider,
         LanguageMode languageMode, LevelMode mode, int phaseCount, int errors,
         float totalTimeSeconds, int stars, bool isChallenge, string challengeTrackPrefix,
         int challengeIndex, bool recordPersisted, string recordError, bool hasAchievementProgressSnapshot,
         WordAchievementProgressSnapshot achievementProgressSnapshot)
+        : this(localListId, provider, languageMode, mode, phaseCount, errors, totalTimeSeconds,
+            stars, isChallenge, challengeTrackPrefix, challengeIndex, recordPersisted, recordError,
+            hasAchievementProgressSnapshot, achievementProgressSnapshot, null)
+    {
+    }
+
+    public GameRunCompletionSnapshot(string localListId, IWordListProvider provider,
+        LanguageMode languageMode, LevelMode mode, int phaseCount, int errors,
+        float totalTimeSeconds, int stars, bool isChallenge, string challengeTrackPrefix,
+        int challengeIndex, bool recordPersisted, string recordError, bool hasAchievementProgressSnapshot,
+        WordAchievementProgressSnapshot achievementProgressSnapshot,
+        CommunityGameplayRunIdentity communityRunIdentity)
     {
         LocalListId = localListId;
         Provider = provider;
@@ -43,6 +72,7 @@ public sealed class GameRunCompletionSnapshot
         RecordError = recordError ?? string.Empty;
         HasAchievementProgressSnapshot = hasAchievementProgressSnapshot;
         AchievementProgressSnapshot = achievementProgressSnapshot;
+        this.communityRunIdentity = communityRunIdentity;
     }
 }
 
@@ -70,6 +100,8 @@ public class GameCoordinator : MonoBehaviour
     private UIController uiController;
     private WordAchievementProgress wordAchievementProgress;
     private IWordAchievementPlatform wordAchievementPlatform;
+    private SteamClientSessionLease steamClientSessionLease;
+    private ISteamClientSession steamClientSession;
     private bool wordAchievementProfileReady;
     private bool wordAchievementStorageWarningLogged;
     private bool wordAchievementStatsCallbackSubscribed;
@@ -79,6 +111,8 @@ public class GameCoordinator : MonoBehaviour
     private float nextWordAchievementPersistenceRetryTime;
     private bool hubVisible;
     private bool hubTimerWasRunning;
+    private Func<bool> debugKeyDownCallback;
+    private CommunityGameplayRunIdentity activeCommunityRunIdentity;
 
     public event Action<GameRunCompletionSnapshot> RunCompleted;
     public bool IsHubVisible => hubVisible;
@@ -101,11 +135,26 @@ public class GameCoordinator : MonoBehaviour
             return;
         }
 
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        TryAttachSteamDiagnostics(phaseManager.ActiveProfile);
+#endif
+
         try
         {
-            wordAchievementPlatform = WordAchievementPlatformRegistry.CreateOrLocalOnly();
-            if (wordAchievementPlatform == null)
-                wordAchievementPlatform = WordAchievementPlatformRegistry.CreateLocalOnly();
+            steamClientSessionLease = SteamClientSessionRegistry.AcquireRuntime();
+            steamClientSession = steamClientSessionLease.Session;
+        }
+        catch (System.Exception exception)
+        {
+            LogWordAchievementStorageWarning("Steam client session is already owned or unavailable; continuing locally. "
+                + exception.Message);
+        }
+
+        try
+        {
+            wordAchievementPlatform = steamClientSession != null
+                ? WordAchievementPlatformRegistry.CreateOrLocalOnly(steamClientSession)
+                : WordAchievementPlatformRegistry.CreateLocalOnly();
         }
         catch (System.Exception exception)
         {
@@ -214,9 +263,17 @@ public class GameCoordinator : MonoBehaviour
         }
 
         // Subscribe to input events
-        Services.Get<InputHandler>().OnKeyAction += HandleKeyAction;
-        Services.Get<InputHandler>().OnBackspacePressed += HandleBackspace;
-        Services.Get<InputHandler>().OnEnterPressed += HandleEnter;
+        InputHandler inputHandler = Services.Get<InputHandler>();
+        if (inputHandler != null)
+        {
+            inputHandler.OnKeyAction += HandleKeyAction;
+            inputHandler.OnBackspacePressed += HandleBackspace;
+            inputHandler.OnEnterPressed += HandleEnter;
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            debugKeyDownCallback = TryConsumeDebugAnyKeyDown;
+            inputHandler.RegisterDebugKeyDownConsumer(debugKeyDownCallback);
+#endif
+        }
 
         // Subscribe to phase changes
         Services.Get<PhaseManager>().OnPhaseWordChanged += HandlePhaseWordChanged;
@@ -239,6 +296,7 @@ public class GameCoordinator : MonoBehaviour
 
         LoadCurrentPhase();
         Services.Get<GameStateManager>().TransitionTo(GameState.Playing);
+        MarkActiveLocalListPlayed(phaseManager);
     }
 
     void OnDestroy()
@@ -261,9 +319,14 @@ public class GameCoordinator : MonoBehaviour
 
         if (Services.Get<InputHandler>() != null)
         {
-            Services.Get<InputHandler>().OnKeyAction -= HandleKeyAction;
-            Services.Get<InputHandler>().OnBackspacePressed -= HandleBackspace;
-            Services.Get<InputHandler>().OnEnterPressed -= HandleEnter;
+            InputHandler inputHandler = Services.Get<InputHandler>();
+            inputHandler.OnKeyAction -= HandleKeyAction;
+            inputHandler.OnBackspacePressed -= HandleBackspace;
+            inputHandler.OnEnterPressed -= HandleEnter;
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            inputHandler.UnregisterDebugKeyDownConsumer(debugKeyDownCallback);
+            debugKeyDownCallback = null;
+#endif
         }
         if (Services.Get<PhaseManager>() != null)
         {
@@ -280,7 +343,29 @@ public class GameCoordinator : MonoBehaviour
         {
             if (wordAchievementStatsCallbackSubscribed)
                 wordAchievementPlatform.StatsStored -= HandleWordAchievementStatsStored;
-            wordAchievementPlatform.Shutdown();
+            try
+            {
+                wordAchievementPlatform.Shutdown();
+            }
+            catch (System.Exception exception)
+            {
+                LogWordAchievementStorageWarning("Steam achievement callback cleanup failed. " + exception.Message);
+            }
+        }
+
+        if (steamClientSessionLease != null)
+        {
+            SteamClientSessionLease lease = steamClientSessionLease;
+            steamClientSessionLease = null;
+            steamClientSession = null;
+            try
+            {
+                lease.Dispose();
+            }
+            catch (System.Exception exception)
+            {
+                LogWordAchievementStorageWarning("Steam client session shutdown failed. " + exception.Message);
+            }
         }
     }
 
@@ -288,16 +373,54 @@ public class GameCoordinator : MonoBehaviour
     {
         TryInitializeWordAchievementPlatform();
 
-        if (wordAchievementPlatform != null && wordAchievementPlatform.IsInitialized)
+        if (steamClientSession != null && steamClientSession.IsInitialized)
         {
             try
             {
-                wordAchievementPlatform.RunCallbacks();
+                steamClientSession.RunCallbacks();
             }
             catch (System.Exception exception)
             {
-                LogWordAchievementStorageWarning("Steam achievement callback processing failed; gameplay continues. "
+                LogWordAchievementStorageWarning("Steam callback processing failed; gameplay continues. "
                     + exception.Message);
+            }
+
+            if (!steamClientSession.IsInitialized)
+            {
+                if (wordAchievementPlatform != null)
+                {
+                    if (wordAchievementStatsCallbackSubscribed)
+                    {
+                        wordAchievementPlatform.StatsStored -= HandleWordAchievementStatsStored;
+                        wordAchievementStatsCallbackSubscribed = false;
+                    }
+                    try
+                    {
+                        wordAchievementPlatform.Shutdown();
+                    }
+                    catch (System.Exception exception)
+                    {
+                        LogWordAchievementStorageWarning("Steam achievement callback cleanup failed. "
+                            + exception.Message);
+                    }
+                }
+
+                LogWordAchievementStorageWarning("Steam disconnected. Local achievement progress remains available. "
+                    + steamClientSession.LastError);
+                nextWordAchievementInitRetryTime = Time.unscaledTime + 10f;
+            }
+            else if (wordAchievementPlatform != null && wordAchievementPlatform.IsInitialized)
+            {
+                try
+                {
+                    // Processes pending snapshots after the session has pumped SDK callbacks.
+                    wordAchievementPlatform.RunCallbacks();
+                }
+                catch (System.Exception exception)
+                {
+                    LogWordAchievementStorageWarning("Steam achievement callback processing failed; gameplay continues. "
+                        + exception.Message);
+                }
             }
         }
 
@@ -368,41 +491,101 @@ public class GameCoordinator : MonoBehaviour
             case StepResult.Correct:
                 break;
             case StepResult.PhaseComplete:
-                Services.Get<TimerSystem>().StopAndAccumulate();
-                if (wordAchievementProgress != null && wordAchievementProfileReady)
-                {
-                    WordAchievementProgressRecordResult progressResult =
-                        wordAchievementProgress.RecordCompletedWord(wordEngine.TargetText);
-                    if (!progressResult.PersistenceSucceeded)
-                    {
-                        LogWordAchievementStorageWarning("Progress is pending local persistence and will be retried. "
-                            + progressResult.StorageError);
-                        nextWordAchievementPersistenceRetryTime = Time.unscaledTime + 5f;
-                    }
-                    else
-                    {
-                        nextWordAchievementPersistenceRetryTime = 0f;
-                        SubmitWordAchievementProgress();
-                    }
-                }
-                // Always play the word-complete sound via the PhaseComplete event,
-                // even for the last word. Then go straight to AllComplete if done.
-                Services.Get<GameStateManager>().TransitionTo(GameState.PhaseComplete);
-                if (!Services.Get<PhaseManager>().HasMorePhases)
-                {
-                    leaderboardService.SubmitScore(
-                        Services.Get<PhaseManager>().ActiveProvider?.DisplayName ?? "Unknown",
-                        Services.Get<TimerSystem>().TotalElapsedTime,
-                        Services.Get<PhaseManager>().TotalPhases
-                    );
-                    Debug.Log($"[TimeDebug] TransitionTo AllComplete");
-                    Services.Get<GameStateManager>().TransitionTo(GameState.AllComplete);
-                }
+                CompleteCurrentWord();
                 break;
             case StepResult.Failed:
                 Services.Get<TimerSystem>().PauseTimer();
                 Services.Get<GameStateManager>().TransitionTo(GameState.PhaseFailed);
                 break;
+        }
+    }
+
+    private bool TryConsumeDebugAnyKeyDown()
+    {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        GameConfigProfile profile = Services.Get<PhaseManager>()?.ActiveProfile;
+        GameStateManager gameState = Services.Get<GameStateManager>();
+        if (profile == null || !profile.debugAnyKeyCompletesWord
+            || hubVisible || gameState == null || gameState.CurrentState != GameState.Playing
+            || wordEngine == null || !wordEngine.TryCompleteCurrentWordForDebug())
+            return false;
+
+        Step completedStep = wordEngine.Steps.Count > 0
+            ? wordEngine.Steps[wordEngine.Steps.Count - 1]
+            : default;
+        if (wordEngine.Steps.Count > 0)
+            gameState.RaiseStepProcessed(StepResult.PhaseComplete, completedStep);
+        CompleteCurrentWord();
+
+        // Debug completion consumes this keydown and advances immediately, but leaves
+        // the final word in AllComplete instead of starting another list.
+        if (gameState.CurrentState == GameState.PhaseComplete)
+            HandleEnter();
+        return true;
+#else
+        return false;
+#endif
+    }
+
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+    private void TryAttachSteamDiagnostics(GameConfigProfile profile)
+    {
+        if (profile == null || profile.buildPurpose != BuildPurpose.LocalTesting || !profile.enableSteamDiagnostics)
+            return;
+
+        try
+        {
+            Type diagnosticsType = Type.GetType("SteamDiagnosticsOverlay, SteamAchievementIntegration", false);
+            MethodInfo attachDiagnostics = diagnosticsType?.GetMethod("Attach", BindingFlags.Public | BindingFlags.Static,
+                null, new[] { typeof(GameObject), typeof(GameConfigProfile) }, null);
+            if (attachDiagnostics == null)
+            {
+                Debug.LogWarning("[GameCoordinator] Steam diagnostics are enabled, but the optional Steam diagnostics assembly is unavailable.");
+                return;
+            }
+
+            attachDiagnostics.Invoke(null, new object[] { gameObject, profile });
+        }
+        catch (Exception exception)
+        {
+            Exception rootCause = exception is TargetInvocationException invocation && invocation.InnerException != null
+                ? invocation.InnerException
+                : exception;
+            Debug.LogWarning("[GameCoordinator] Optional Steam diagnostics could not attach: " + rootCause.GetType().Name);
+        }
+    }
+#endif
+
+    private void CompleteCurrentWord()
+    {
+        Services.Get<TimerSystem>().StopAndAccumulate();
+        if (wordAchievementProgress != null && wordAchievementProfileReady)
+        {
+            WordAchievementProgressRecordResult progressResult =
+                wordAchievementProgress.RecordCompletedWord(wordEngine.TargetText);
+            if (!progressResult.PersistenceSucceeded)
+            {
+                LogWordAchievementStorageWarning("Progress is pending local persistence and will be retried. "
+                    + progressResult.StorageError);
+                nextWordAchievementPersistenceRetryTime = Time.unscaledTime + 5f;
+            }
+            else
+            {
+                nextWordAchievementPersistenceRetryTime = 0f;
+                SubmitWordAchievementProgress();
+            }
+        }
+
+        Services.Get<GameStateManager>().TransitionTo(GameState.PhaseComplete);
+        if (!Services.Get<PhaseManager>().HasMorePhases)
+        {
+            leaderboardService.SubmitScore(
+                Services.Get<PhaseManager>().ActiveProvider?.DisplayName ?? "Unknown",
+                Services.Get<TimerSystem>().TotalElapsedTime,
+                Services.Get<PhaseManager>().TotalPhases
+            );
+            Debug.Log("[TimeDebug] TransitionTo AllComplete");
+            Services.Get<GameStateManager>().TransitionTo(GameState.AllComplete);
         }
     }
 
@@ -435,9 +618,46 @@ public class GameCoordinator : MonoBehaviour
         string recordError = null;
         string trackPrefix = null;
         int challengeIndex = -1;
-        bool isChallenge = phaseManager.CurrentLevelMode == LevelMode.Challenge;
+        bool isChallenge = provider is LevelWordListProvider
+            && phaseManager.CurrentLevelMode == LevelMode.Challenge;
         Debug.Log($"[TimeDebug] HandleAllPhasesCompleted, provider type={provider?.GetType()?.Name}, mode={Services.Get<PhaseManager>().CurrentLevelMode}");
-        if (provider is LevelWordListProvider lvlProvider && File.Exists(lvlProvider.FilePath))
+        CommunityGameplayRunIdentity completedCommunityRun = null;
+        if (provider is CommunityWordListProvider communityProvider)
+        {
+            if (activeCommunityRunIdentity != null
+                && ReferenceEquals(activeCommunityRunIdentity.Provider, communityProvider)
+                && activeCommunityRunIdentity.Key.Equals(communityProvider.Key)
+                && activeCommunityRunIdentity.Version.Equals(communityProvider.Version))
+            {
+                completedCommunityRun = activeCommunityRunIdentity;
+                try
+                {
+                    recordPersisted = CommunityServiceRegistry.GetShared().TryRecordRun(
+                        completedCommunityRun.Key,
+                        completedCommunityRun.Version.ContentHash,
+                        completedCommunityRun.AccountId,
+                        time, errors, stars,
+                        out _, out CommunityError communityRecordError);
+                    if (!recordPersisted)
+                        recordError = communityRecordError != null
+                            ? communityRecordError.Message
+                            : "The Community record could not be saved for the run-start account.";
+                }
+                catch (Exception exception)
+                {
+                    recordError = exception.Message;
+                    recordPersisted = false;
+                }
+            }
+            else
+            {
+                recordError = "The Community run source or run-start account could not be verified; no record was saved.";
+            }
+
+            if (!recordPersisted)
+                Debug.LogWarning("[GameCoordinator] " + recordError);
+        }
+        else if (provider is LevelWordListProvider lvlProvider && File.Exists(lvlProvider.FilePath))
         {
             localListId = lvlProvider.GetListKey();
             try
@@ -485,8 +705,10 @@ public class GameCoordinator : MonoBehaviour
         var snapshot = new GameRunCompletionSnapshot(
             localListId, provider, phaseManager.CurrentLanguageMode, phaseManager.CurrentLevelMode,
             phases, errors, time, stars, isChallenge, trackPrefix, challengeIndex,
-            recordPersisted, recordError, HasAchievementProgressSnapshot, AchievementProgressSnapshot);
+            recordPersisted, recordError, HasAchievementProgressSnapshot, AchievementProgressSnapshot,
+            completedCommunityRun);
         RaiseRunCompleted(snapshot);
+        activeCommunityRunIdentity = null;
     }
 
     private void RaiseRunCompleted(GameRunCompletionSnapshot snapshot)
@@ -694,6 +916,30 @@ public class GameCoordinator : MonoBehaviour
             || Time.unscaledTime < nextWordAchievementInitRetryTime)
             return;
 
+        if (steamClientSession != null && !steamClientSession.IsInitialized)
+        {
+            bool sessionInitialized;
+            try
+            {
+                sessionInitialized = steamClientSession.TryInitialize();
+            }
+            catch (System.Exception exception)
+            {
+                sessionInitialized = false;
+                LogWordAchievementStorageWarning("Steam client session initialization failed; local achievements remain available. "
+                    + exception.Message);
+            }
+
+            if (!sessionInitialized)
+            {
+                if (!string.IsNullOrEmpty(steamClientSession.LastError))
+                    LogWordAchievementStorageWarning("Steam client session is unavailable; local achievements remain available. "
+                        + steamClientSession.LastError);
+                nextWordAchievementInitRetryTime = Time.unscaledTime + 10f;
+                return;
+            }
+        }
+
         if (WordAchievementPlatformRegistry.TryInitialize(
                 wordAchievementPlatform, LogWordAchievementStorageWarning))
         {
@@ -765,9 +1011,36 @@ public class GameCoordinator : MonoBehaviour
 
     private void HandleWordListChanged()
     {
+        PhaseManager phaseManager = Services.Get<PhaseManager>();
+        IWordListProvider provider = phaseManager?.ActiveProvider;
+        if (provider is CommunityWordListProvider communityProvider)
+        {
+            if (!CommunityGameplayRunContext.TryConsume(
+                communityProvider, out activeCommunityRunIdentity))
+                activeCommunityRunIdentity = null;
+        }
+        else
+        {
+            activeCommunityRunIdentity = null;
+            CommunityGameplayRunContext.ClearPending();
+        }
+
         Services.Get<TimerSystem>()?.ResetAll();
         LoadCurrentPhase();   // refresh display target to match the new word at CurrentPhaseIndex
         Services.Get<GameStateManager>()?.TransitionTo(GameState.Playing);
+        MarkActiveLocalListPlayed(phaseManager);
+    }
+
+    private static void MarkActiveLocalListPlayed(PhaseManager phaseManager)
+    {
+        LevelWordListProvider provider = phaseManager?.ActiveProvider as LevelWordListProvider;
+        if (provider == null
+            || ChallengeTrackResolver.GetTrackPrefixForChallengeProvider(provider) == null)
+            return;
+
+        if (!WordListLibraryService.Shared.MarkPlayed(provider, out string error))
+            Debug.LogWarning("[GameCoordinator] Challenge gameplay started, but last-played metadata was not saved: "
+                + error);
     }
 
     /// <summary>Blocks gameplay keys and suspends only an already-running phase timer.</summary>

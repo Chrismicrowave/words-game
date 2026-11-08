@@ -121,6 +121,8 @@ public sealed class WordListRunSummary
 public sealed class WordListLibraryService
 {
     private static readonly UTF8Encoding Utf8NoBom = new UTF8Encoding(false);
+    private const string EnglishChallengeTrackPrefix = "";
+    private const string ChineseChallengeTrackPrefix = "cn_";
     private static WordListLibraryService shared;
 
     public static WordListLibraryService Shared
@@ -133,6 +135,13 @@ public sealed class WordListLibraryService
                     Path.Combine(Application.persistentDataPath, "WordListLibrary.json"));
             return shared;
         }
+    }
+
+    /// <summary>Reloads the existing shared sidecar cache after an external reset without creating a service or writing files.</summary>
+    public static void NotifySharedStateReset()
+    {
+        if (shared != null)
+            shared.ReloadAfterExternalReset();
     }
 
     private readonly string customDirectory;
@@ -159,6 +168,25 @@ public sealed class WordListLibraryService
         this.statePath = Path.GetFullPath(statePath);
         this.utcNow = utcNow ?? (() => DateTime.UtcNow);
         state = LoadState();
+    }
+
+    /// <summary>Invalidates cached metadata after the reset service has moved sidecar files to its recoverable backup.</summary>
+    public void ReloadAfterExternalReset()
+    {
+        providers.Clear();
+        stateWritable = true;
+        sidecarLoadError = null;
+        recoverySourcePath = null;
+        try
+        {
+            state = LoadState();
+        }
+        catch (Exception exception)
+        {
+            state = NewState();
+            stateWritable = false;
+            sidecarLoadError = "Could not reload Library metadata after reset: " + exception.Message;
+        }
     }
 
     /// <summary>Returns only owned custom lists, scanned in deterministic filename order.</summary>
@@ -664,6 +692,134 @@ public sealed class WordListLibraryService
         }
         error = null;
         return true;
+    }
+
+    /// <summary>
+    /// Clears saved play and completion history for challenge providers on one track.
+    /// Custom-list metadata is not selected, even when a custom filename contains "_cn".
+    /// </summary>
+    public bool ResetChallengeProgressForTrack(string trackPrefix, out string error)
+    {
+        return ResetChallengeProgressForTrack(trackPrefix,
+            LevelWordListProvider.GetChallengeDirectory(), out error);
+    }
+
+    /// <summary>Testable overload that accepts the canonical challenge directory.</summary>
+    public bool ResetChallengeProgressForTrack(
+        string trackPrefix, string challengeDirectory, out string error)
+    {
+        if (!CanWriteState(out error)) return false;
+        if (string.IsNullOrWhiteSpace(challengeDirectory))
+        {
+            error = "The challenge directory is required to reset challenge history.";
+            return false;
+        }
+
+        string normalizedTrack = string.Equals(trackPrefix, ChineseChallengeTrackPrefix, StringComparison.Ordinal)
+            ? ChineseChallengeTrackPrefix
+            : EnglishChallengeTrackPrefix;
+        var changedEntries = new List<WordListLibraryEntry>();
+        foreach (WordListLibraryEntry entry in state.lists)
+        {
+            if (entry == null || !string.Equals(
+                GetChallengeTrackForReset(entry.filePath, challengeDirectory),
+                normalizedTrack, StringComparison.Ordinal))
+                continue;
+
+            WordListLibraryEntry before = CloneEntry(entry);
+            entry.lastPlayedAtUtc = null;
+            entry.playCount = 0;
+            if (entry.currentRecord != null)
+            {
+                entry.currentRecord.highestStars = 0;
+                entry.currentRecord.latest = null;
+                entry.currentRecord.best = null;
+            }
+            if (entry.archivedRecords != null)
+                entry.archivedRecords.Clear();
+
+            if (!EntriesEqual(before, entry))
+                changedEntries.Add(before);
+        }
+
+        if (changedEntries.Count == 0)
+        {
+            // Keep valid recovery copies aligned even when the primary already has
+            // no selected-track records; otherwise a later recovery could resurrect
+            // history from an older backup.
+            if (File.Exists(statePath))
+                return RefreshRecoveryCandidatesAfterChallengeReset(out error);
+            error = null;
+            return true;
+        }
+
+        if (!PersistState())
+        {
+            for (int i = changedEntries.Count - 1; i >= 0; i--)
+                ReplaceEntry(changedEntries[i]);
+            error = sidecarLoadError ?? "Could not save reset challenge history.";
+            return false;
+        }
+
+        if (!RefreshRecoveryCandidatesAfterChallengeReset(out error))
+            return false;
+
+        error = null;
+        return true;
+    }
+
+    private static string GetChallengeTrackForReset(string filePath, string challengeDirectory)
+    {
+        if (string.IsNullOrWhiteSpace(filePath)) return null;
+        try
+        {
+            string canonicalDirectory = Path.GetFullPath(challengeDirectory)
+                .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+            string canonicalPath = Path.GetFullPath(filePath);
+            if (!string.Equals(Path.GetDirectoryName(canonicalPath), canonicalDirectory,
+                StringComparison.OrdinalIgnoreCase))
+                return null;
+
+            string name = Path.GetFileNameWithoutExtension(canonicalPath);
+            if (name.StartsWith("challenge_cn_", StringComparison.OrdinalIgnoreCase))
+                return ChineseChallengeTrackPrefix;
+            if (name.StartsWith("challenge_", StringComparison.OrdinalIgnoreCase))
+                return EnglishChallengeTrackPrefix;
+        }
+        catch
+        {
+            // Malformed or inaccessible paths are not challenge entries for reset purposes.
+        }
+        return null;
+    }
+
+    private bool RefreshRecoveryCandidatesAfterChallengeReset(out string error)
+    {
+        try
+        {
+            string resetJson = File.ReadAllText(statePath);
+            string directory = Path.GetDirectoryName(statePath);
+            if (string.IsNullOrEmpty(directory) || !Directory.Exists(directory))
+            {
+                error = null;
+                return true;
+            }
+
+            var candidates = new List<string> { statePath + ".bak", statePath + ".replaced" };
+            candidates.AddRange(Directory.GetFiles(directory, Path.GetFileName(statePath) + ".replaced.*"));
+            foreach (string candidate in candidates.Distinct(StringComparer.OrdinalIgnoreCase))
+                if (File.Exists(candidate))
+                    File.WriteAllText(candidate, resetJson, Utf8NoBom);
+
+            error = null;
+            return true;
+        }
+        catch (Exception exception)
+        {
+            error = "Challenge history was reset, but stale Library recovery metadata could not be refreshed: "
+                + exception.Message;
+            return false;
+        }
     }
 
     private void RaiseContentChanged(WordListLibraryItem item)

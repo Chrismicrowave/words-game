@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using SFB;
 using UnityEngine;
 using UnityEngine.UI;
+using Words.Community;
 using Words.UiMockups.WordListHub;
 
 /// <summary>
@@ -19,8 +20,12 @@ public sealed class WordListHubGameBridge : MonoBehaviour
     [SerializeField] private AudioSource menuClickAudioSource;
 
     private WordListHubProductionBackend backend;
+    private WordListHubCommunityFacade communityFacade;
+    private IDisposable publicationResolverLease;
+    private Action<string> openExternalUrl;
     private readonly ConcurrentQueue<Action> mainThreadActions = new ConcurrentQueue<Action>();
     private volatile bool isShuttingDown;
+    private float nextCommunityPollTime;
 
     public WordListHubMockupController HubController => hubController;
     public AudioSource MenuClickAudioSource => menuClickAudioSource;
@@ -50,15 +55,24 @@ public sealed class WordListHubGameBridge : MonoBehaviour
             return;
         }
 
+        publicationResolverLease = CommunityServiceRegistry.RegisterPublicationRequestResolver(
+            ResolveCommunityPublicationRequest);
+        openExternalUrl = Application.OpenURL;
+        communityFacade = new WordListHubCommunityFacade(
+            CommunityServiceRegistry.GetShared(), QueueMainThread);
         backend = new WordListHubProductionBackend(
             WordListLibraryService.Shared,
             levelPanelController,
             () => gameCoordinator.HasAchievementProgressSnapshot
                 ? gameCoordinator.AchievementProgressSnapshot
-                : default);
+                : default,
+            communityFacade);
 
         hubController.PlayRequested += HandlePlayRequested;
+        hubController.CommunityPlayRequested += HandleCommunityPlayRequested;
+        hubController.SteamCommunityPageRequested += HandleSteamCommunityPageRequested;
         hubController.HubVisibilityChanged += HandleHubVisibilityChanged;
+        hubController.PageChanged += HandleHubPageChanged;
         hubController.ImportRequested += HandleImportRequested;
         hubController.ExportRequested += HandleExportRequested;
         gameCoordinator.RunCompleted += HandleRunCompleted;
@@ -73,10 +87,16 @@ public sealed class WordListHubGameBridge : MonoBehaviour
     {
         isShuttingDown = true;
         while (mainThreadActions.TryDequeue(out _)) { }
+        publicationResolverLease?.Dispose();
+        publicationResolverLease = null;
+        communityFacade?.Dispose();
         if (hubController != null)
         {
             hubController.PlayRequested -= HandlePlayRequested;
+            hubController.CommunityPlayRequested -= HandleCommunityPlayRequested;
+            hubController.SteamCommunityPageRequested -= HandleSteamCommunityPageRequested;
             hubController.HubVisibilityChanged -= HandleHubVisibilityChanged;
+            hubController.PageChanged -= HandleHubPageChanged;
             hubController.ImportRequested -= HandleImportRequested;
             hubController.ExportRequested -= HandleExportRequested;
         }
@@ -97,6 +117,11 @@ public sealed class WordListHubGameBridge : MonoBehaviour
     private void Update()
     {
         if (isShuttingDown) return;
+        if (communityFacade != null && Time.unscaledTime >= nextCommunityPollTime)
+        {
+            nextCommunityPollTime = Time.unscaledTime + 1f;
+            communityFacade.PollConnection();
+        }
         while (mainThreadActions.TryDequeue(out Action action))
         {
             if (isShuttingDown) return;
@@ -211,8 +236,61 @@ public sealed class WordListHubGameBridge : MonoBehaviour
 
     private void HandleHubVisibilityChanged(bool visible)
     {
+        if (visible)
+            communityFacade?.PollConnection(force: true);
         if (gameCoordinator != null)
             gameCoordinator.SetHubVisible(visible);
+    }
+
+    private void HandleHubPageChanged(WordListHubPage page)
+    {
+        if (page == WordListHubPage.Community && hubController != null && hubController.IsHubVisible)
+            communityFacade?.PollConnection(force: true);
+    }
+
+    private CommunityPublishRequest ResolveCommunityPublicationRequest(string localListId)
+    {
+        if (isShuttingDown || string.IsNullOrWhiteSpace(localListId)) return null;
+        WordListLibraryItem item = WordListLibraryService.Shared.FindById(localListId);
+        if (item == null || !string.Equals(item.LocalListId, localListId, StringComparison.Ordinal)
+            || !item.IsEditable || item.IsChallenge || item.Content == null)
+            return null;
+
+        return new CommunityPublishRequest(item.LocalListId, item.Title, item.Description,
+            Array.Empty<string>(), item.Content.Clone());
+    }
+
+    private void HandleSteamCommunityPageRequested(string pageUri)
+    {
+        if (isShuttingDown || !TryValidateSteamItemUri(pageUri, out string validatedUri))
+        {
+            hubController?.ShowExternalMessage(
+                "Steam did not provide a safe Workshop item page. No page was opened.", true);
+            return;
+        }
+
+        try
+        {
+            openExternalUrl?.Invoke(validatedUri);
+        }
+        catch (Exception exception)
+        {
+            hubController?.ShowExternalMessage("The Steam Workshop page could not be opened: "
+                + exception.Message, true);
+        }
+    }
+
+    private static bool TryValidateSteamItemUri(string value, out string validatedUri)
+    {
+        validatedUri = string.Empty;
+        if (!Uri.TryCreate(value, UriKind.Absolute, out Uri uri)
+            || uri.Scheme != Uri.UriSchemeHttps
+            || !string.Equals(uri.Host, "steamcommunity.com", StringComparison.OrdinalIgnoreCase)
+            || !string.Equals(uri.AbsolutePath.TrimEnd('/'), "/sharedfiles/filedetails",
+                StringComparison.OrdinalIgnoreCase))
+            return false;
+        validatedUri = uri.AbsoluteUri;
+        return true;
     }
 
     private void HandlePlayRequested(string localListId)
@@ -238,7 +316,8 @@ public sealed class WordListHubGameBridge : MonoBehaviour
             return;
         }
 
-        if (!WordListLibraryService.Shared.MarkPlayed(provider, out string recordError))
+        if (!item.IsChallenge
+            && !WordListLibraryService.Shared.MarkPlayed(provider, out string recordError))
             Debug.LogWarning("[WordListHubGameBridge] The run started, but last-played metadata was not saved: "
                 + recordError, this);
 
@@ -247,9 +326,46 @@ public sealed class WordListHubGameBridge : MonoBehaviour
         hubController.HideHub();
     }
 
+    private void HandleCommunityPlayRequested(string remoteItemId, string contentHash)
+    {
+        if (isShuttingDown || backend == null || communityFacade == null
+            || hubController == null || levelPanelController == null)
+            return;
+
+        if (!communityFacade.TryGetCachedProvider(remoteItemId, contentHash,
+            out Words.Community.CommunityWordListProvider provider, out string cacheError))
+        {
+            hubController.ShowExternalMessage(cacheError, true);
+            return;
+        }
+
+        ulong accountId = communityFacade.EffectiveLocalAccountId;
+        if (!levelPanelController.TryStartCommunityProvider(provider, accountId, out string error))
+        {
+            hubController.ShowExternalMessage(error, true);
+            return;
+        }
+
+        // Community identity is remote/app/hash scoped; it never becomes a canonical Library ID.
+        hubController.HideHub();
+    }
+
     private void HandleRunCompleted(GameRunCompletionSnapshot snapshot)
     {
         if (snapshot == null || hubController == null) return;
+        if (snapshot.SourceKind == GameRunSourceKind.Community)
+        {
+            string remoteItemId = snapshot.CommunityKey != null
+                ? snapshot.CommunityKey.RemoteItemId.ToString(System.Globalization.CultureInfo.InvariantCulture)
+                : string.Empty;
+            hubController.ShowCommunityCompletedRun(remoteItemId,
+                snapshot.CommunityContentHash,
+                snapshot.RecordPersisted,
+                snapshot.Stars,
+                snapshot.TotalTimeSeconds,
+                snapshot.RecordError);
+            return;
+        }
         if (snapshot.IsChallenge)
         {
             // The existing completion panel retains its Enter-to-next behavior while
@@ -266,12 +382,7 @@ public sealed class WordListHubGameBridge : MonoBehaviour
             return;
         }
 
-        hubController.ShowCompletedRun(
-            snapshot.LocalListId,
-            snapshot.IsChallenge,
-            snapshot.RecordPersisted,
-            snapshot.Stars,
-            snapshot.TotalTimeSeconds,
-            snapshot.RecordError);
+        // Custom-list completion remains on the existing game result panel.
+        // Showing the Hub here would interrupt the normal next-word/return flow.
     }
 }

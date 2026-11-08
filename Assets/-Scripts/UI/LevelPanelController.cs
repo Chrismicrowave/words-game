@@ -7,6 +7,7 @@ using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.Serialization;
 using UnityEngine.UI;
+using Words.Community;
 
 public enum LevelTab
 {
@@ -66,9 +67,9 @@ public class LevelPanelController : MonoBehaviour
     public bool HasAccessProfileFromHub => ActiveProfile != null;
     public bool IsCommunityEnabledFromHub => ActiveProfile != null && ActiveProfile.IsCommunityAvailable;
     public bool IsLibraryUnlockBypassedFromHub => ActiveProfile != null
-        && (ActiveProfile.unlockAllFeatures || ActiveProfile.ignoreProgressionLocks);
+        && ActiveProfile.unlockAllFeatures;
     public bool IsCommunityUnlockBypassedFromHub => ActiveProfile != null
-        && (ActiveProfile.unlockAllFeatures || ActiveProfile.ignoreProgressionLocks);
+        && ActiveProfile.unlockAllFeatures;
     public int CompletedChallengesForHub
     {
         get
@@ -659,8 +660,10 @@ public class LevelPanelController : MonoBehaviour
 
     private void SetUnlockDisplay(GameObject btnObj, int levelNum)
     {
-        bool customAlwaysUnlocked = ActiveProfile != null && ActiveProfile.ignoreProgressionLocks;
-        bool communityAlwaysUnlocked = IsCommunityEnabledFromHub && ActiveProfile.ignoreProgressionLocks;
+        bool customAlwaysUnlocked = ActiveProfile != null
+            && ActiveProfile.CanOpenCustomLists(completedChallenges: 0);
+        bool communityAlwaysUnlocked = ActiveProfile != null
+            && ActiveProfile.CanOpenCommunityLists(completedChallenges: 0);
         bool isCustomUnlock = ActiveProfile != null && !customAlwaysUnlocked && CustomUnlockRequirementForHub > 0
             && levelNum == CustomUnlockRequirementForHub;
         bool isCommunityUnlock = IsCommunityEnabledFromHub && !communityAlwaysUnlocked && CommunityUnlockRequirementForHub > 0
@@ -836,6 +839,19 @@ public class LevelPanelController : MonoBehaviour
     /// </summary>
     public bool TryStartProvider(LevelWordListProvider provider, LevelTab tab, out string error)
     {
+        return TryStartProviderCore(provider, tab, 0, out error);
+    }
+
+    /// <summary>Starts only the exact immutable cache provider after Community profile/cache validation.</summary>
+    public bool TryStartCommunityProvider(CommunityWordListProvider provider,
+        ulong runStartAccountId, out string error)
+    {
+        return TryStartProviderCore(provider, LevelTab.Community, runStartAccountId, out error);
+    }
+
+    private bool TryStartProviderCore(IWordListProvider provider, LevelTab tab,
+        ulong runStartAccountId, out string error)
+    {
         error = string.Empty;
         if (provider == null)
         {
@@ -843,46 +859,95 @@ public class LevelPanelController : MonoBehaviour
             return false;
         }
 
-        RefreshProviderCacheForStart();
+        bool isCommunityProvider = provider is CommunityWordListProvider;
+        if (tab == LevelTab.Community)
+        {
+            if (!isCommunityProvider)
+            {
+                error = "A validated Community download is required before playing this item.";
+                return false;
+            }
+            if (!CanOpenCommunityFromHub)
+            {
+                error = "Community lists are still locked or disabled for the active profile.";
+                return false;
+            }
 
-        if (!provider.IsValid || string.IsNullOrWhiteSpace(provider.FilePath)
-            || !File.Exists(provider.FilePath))
-        {
-            error = "The selected word list is invalid or its file is missing.";
-            return false;
-        }
-
-        if (tab == LevelTab.Custom)
-        {
-            if (!IsCustomUnlocked)
+            var communityProvider = (CommunityWordListProvider)provider;
+            ICommunityService communityService = CommunityServiceRegistry.GetShared();
+            CommunityCacheEntry entry = null;
+            IReadOnlyList<CommunityCacheEntry> cachedEntries = communityService.GetCachedEntries();
+            if (cachedEntries != null)
             {
-                error = "Custom lists are still locked for the active profile.";
+                foreach (CommunityCacheEntry candidate in cachedEntries)
+                {
+                    if (candidate != null && candidate.Key != null && candidate.Version != null
+                        && candidate.Key.Equals(communityProvider.Key)
+                        && candidate.Version.Equals(communityProvider.Version))
+                    {
+                        entry = candidate;
+                        break;
+                    }
+                }
+            }
+            if (entry == null)
+            {
+                error = "This Community cache version is no longer available; download it again before playing.";
                 return false;
             }
-            if (FindProviderIndex(customProviders, provider) < 0)
+            if (!TryResolveValidatedCommunityProvider(communityProvider, entry,
+                out CommunityWordListProvider resolvedProvider, out error))
             {
-                error = "The selected provider is not an available custom list.";
                 return false;
             }
-        }
-        else if (tab == LevelTab.Challenges)
-        {
-            List<LevelWordListProvider> currentChallenges = GetCurrentChallengeProviders();
-            if (FindProviderIndex(currentChallenges, provider) < 0)
-            {
-                error = "The selected challenge is not available for the current language settings.";
-                return false;
-            }
-            if (!IsChallengeUnlocked(currentChallenges, provider))
-            {
-                error = "The selected challenge is locked by the active profile or progression.";
-                return false;
-            }
+            // Cache reads reconstruct an immutable provider from the validated on-disk payload.
+            // Start that trusted instance; the UI's provider is only an app/key/version selector.
+            provider = resolvedProvider;
         }
         else
         {
-            error = "Community entries cannot start a local game.";
-            return false;
+            if (!(provider is LevelWordListProvider localProvider))
+            {
+                error = "Only downloaded Community items can start from the Community page.";
+                return false;
+            }
+
+            RefreshProviderCacheForStart();
+
+            if (!localProvider.IsValid || string.IsNullOrWhiteSpace(localProvider.FilePath)
+                || !File.Exists(localProvider.FilePath))
+            {
+                error = "The selected word list is invalid or its file is missing.";
+                return false;
+            }
+
+            if (tab == LevelTab.Custom)
+            {
+                if (!IsCustomUnlocked)
+                {
+                    error = "Custom lists are still locked for the active profile.";
+                    return false;
+                }
+                if (FindProviderIndex(customProviders, localProvider) < 0)
+                {
+                    error = "The selected provider is not an available custom list.";
+                    return false;
+                }
+            }
+            else if (tab == LevelTab.Challenges)
+            {
+                List<LevelWordListProvider> currentChallenges = GetCurrentChallengeProviders();
+                if (FindProviderIndex(currentChallenges, localProvider) < 0)
+                {
+                    error = "The selected challenge is not available for the current language settings.";
+                    return false;
+                }
+                if (!IsChallengeUnlocked(currentChallenges, localProvider))
+                {
+                    error = "The selected challenge is locked by the active profile or progression.";
+                    return false;
+                }
+            }
         }
 
         var phaseManager = Services.Get<PhaseManager>();
@@ -904,17 +969,37 @@ public class LevelPanelController : MonoBehaviour
         phaseManager.CurrentLevelMode = tab == LevelTab.Challenges
             ? LevelMode.Challenge
             : LevelMode.Custom;
-        if (!phaseManager.LoadWordList(provider))
+        if (tab == LevelTab.Community)
+            CommunityGameplayRunContext.Prepare((CommunityWordListProvider)provider, runStartAccountId);
+        bool loaded;
+        try
         {
+            loaded = phaseManager.LoadWordList(provider);
+        }
+        catch
+        {
+            if (tab == LevelTab.Community)
+                CommunityGameplayRunContext.ClearPending();
+            phaseManager.CurrentLevelMode = previousMode;
+            throw;
+        }
+        if (!loaded)
+        {
+            if (tab == LevelTab.Community)
+                CommunityGameplayRunContext.ClearPending();
             phaseManager.CurrentLevelMode = previousMode;
             error = "The selected word list could not be loaded.";
             return false;
         }
 
-        // Persist selection across sessions
-        PlayerPrefs.SetString(LastLevelPathPrefKey, provider.FilePath);
-        PlayerPrefs.SetString(LastLevelTabPrefKey, tab.ToString());
-        PlayerPrefs.Save();
+        // Community items are account-scoped remote identities, not a local file path.
+        // Keep the existing local selection preference untouched for Community runs.
+        if (tab != LevelTab.Community)
+        {
+            PlayerPrefs.SetString(LastLevelPathPrefKey, ((LevelWordListProvider)provider).FilePath);
+            PlayerPrefs.SetString(LastLevelTabPrefKey, tab.ToString());
+            PlayerPrefs.Save();
+        }
 
         // Restart timer and transition to playing
         timerSystem.ResetAll();
@@ -922,6 +1007,42 @@ public class LevelPanelController : MonoBehaviour
         gameStateManager.TransitionTo(GameState.Playing);
         if (gameObject.activeSelf)
             gameObject.SetActive(false);
+        return true;
+    }
+
+    private static bool TryResolveValidatedCommunityProvider(
+        CommunityWordListProvider requestedProvider,
+        CommunityCacheEntry entry,
+        out CommunityWordListProvider resolvedProvider,
+        out string error)
+    {
+        resolvedProvider = null;
+        error = string.Empty;
+        if (requestedProvider == null || requestedProvider.Key == null
+            || requestedProvider.Version == null || entry == null
+            || entry.Key == null || entry.Version == null)
+        {
+            error = "The selected Community cache identity is invalid.";
+            return false;
+        }
+
+        if (!entry.Key.Equals(requestedProvider.Key)
+            || !entry.Version.Equals(requestedProvider.Version))
+        {
+            error = "This exact Community content version is no longer cached; it was not replaced.";
+            return false;
+        }
+
+        CommunityWordListProvider cachedProvider = entry.Provider;
+        if (cachedProvider == null || cachedProvider.Key == null || cachedProvider.Version == null
+            || !cachedProvider.Key.Equals(entry.Key)
+            || !cachedProvider.Version.Equals(entry.Version))
+        {
+            error = "The validated Community cache entry does not match its content identity.";
+            return false;
+        }
+
+        resolvedProvider = cachedProvider;
         return true;
     }
 

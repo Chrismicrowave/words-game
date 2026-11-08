@@ -25,7 +25,7 @@ namespace Words.UiMockups.Editor
     /// </summary>
     public static class WordListHubSceneMigrationTool
     {
-        private const string ScenePath = "Assets/Scenes/UI-Mockups/WordListHubMockup.unity";
+        private const string ScenePath = "Assets/Scenes/WordListHubMockup.unity";
         private const string ControllerPath = "Card/HubGenerated";
         private const string LibraryPageName = "PageContent";
         private const string TemplateRootName = "SceneTemplates";

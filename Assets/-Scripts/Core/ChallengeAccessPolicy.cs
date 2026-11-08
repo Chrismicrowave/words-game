@@ -16,6 +16,9 @@ public static class ChallengeAccessPolicy
         if (challengeIndex < 0)
             return false;
 
+        if (profile != null && profile.unlockAllFeatures)
+            return true;
+
         int challengeCap = profile != null
             ? profile.EffectiveChallengeCap
             : Math.Max(0, legacyMaxChallengeLevels);
@@ -24,9 +27,6 @@ public static class ChallengeAccessPolicy
 
         if (profile != null)
         {
-            if (profile.unlockAllFeatures || profile.ignoreProgressionLocks)
-                return true;
-
             return ChallengeProgression.IsChallengeIndexUnlocked(
                 challengeIndex, unlockedCount, challengeCap);
         }

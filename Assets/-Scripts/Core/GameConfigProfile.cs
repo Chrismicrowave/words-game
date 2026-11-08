@@ -11,6 +11,12 @@ public enum InitialChallengeTab
     Custom
 }
 
+public enum BuildPurpose
+{
+    LocalTesting,
+    PlayerRelease
+}
+
 [Serializable]
 public sealed class GameDefaultSettings
 {
@@ -48,6 +54,16 @@ public sealed class GameConfigProfile : ScriptableObject
     [Tooltip("Stable ID used to scope an optional first-run reset marker. Each profile must have a unique ID.")]
     public string profileId;
 
+    [Header("Build Purpose")]
+    [Tooltip("Select LocalTesting for developer/test builds or PlayerRelease for a player-facing build.")]
+    public BuildPurpose buildPurpose = BuildPurpose.LocalTesting;
+
+    [Header("Steam Debug")]
+    [Tooltip("Show read-only runtime Steam and Community diagnostics in LocalTesting builds. Does not change which Steam account is used.")]
+    public bool enableSteamDiagnostics;
+    [Tooltip("Allow the Editor-only Steam achievement maintenance controls. This is a tooling opt-in, not an account permission or identity setting.")]
+    public bool allowEditorSteamTestTools;
+
     [Tooltip("Targets for this profile's optional, one-time local reset. Steam's remote achievements are never reset here.")]
     public GameResetTargets resetTargets = GameResetTargets.None;
     [Tooltip("When enabled, apply the selected local reset once per profileId and resetRevision. Leave disabled to preserve existing saves.")]
@@ -61,7 +77,7 @@ public sealed class GameConfigProfile : ScriptableObject
     public bool resetAllLocalDataOnFirstBuildRun;
 
     [Header("Feature Access and Caps")]
-    [Tooltip("Maximum challenge levels available. 0 means unlimited; overrides do not bypass this cap.")]
+    [Tooltip("Maximum challenge levels available. 0 means unlimited. Unlock All Features bypasses this challenge cap.")]
     [Min(0)] public int maxChallengeLevels = 5;
     [Tooltip("Maximum number of custom lists. 0 means unlimited.")]
     [Min(0)] public int maxCustomLists = 1;
@@ -73,14 +89,20 @@ public sealed class GameConfigProfile : ScriptableObject
     public bool allowChineseAndMixed = true;
 
     [Header("Progression")]
-    [Tooltip("Developer master unlock: bypass progression gates and the Community enabled switch. Numeric caps still apply.")]
+    [Tooltip("Developer master unlock: bypass all progression thresholds, challenge-level caps, and the Community enabled switch. Custom-list and word-count caps still apply.")]
     public bool unlockAllFeatures;
-    [Tooltip("Bypass challenge, Custom, and enabled Community progression thresholds. Numeric caps and the Community enabled switch still apply.")]
+    // Retained only so existing serialized profiles deserialize without losing data.
+    [HideInInspector]
+    [Tooltip("Legacy serialized compatibility field. No longer affects access; use Unlock All Features for the developer bypass.")]
     public bool ignoreProgressionLocks;
     [Min(0)] public int customUnlockLevels = 5;
     [Tooltip("Enable or disable Community independently of its progression threshold.")]
     public bool communityEnabled = true;
     [Min(0)] public int communityUnlockLevels = 10;
+
+    [Header("Debug")]
+    [Tooltip("Allow one key press to complete the current word normally and advance automatically. Scores, achievements, and progression are recorded as usual.")]
+    public bool debugAnyKeyCompletesWord;
 
     [Header("Default Settings")]
     public GameDefaultSettings defaults = new GameDefaultSettings();
@@ -88,7 +110,7 @@ public sealed class GameConfigProfile : ScriptableObject
     /// <summary>Configured challenge cap, or zero when there is no active cap.</summary>
     public int EffectiveChallengeCap
     {
-        get => Mathf.Max(0, maxChallengeLevels);
+        get => unlockAllFeatures ? 0 : Mathf.Max(0, maxChallengeLevels);
     }
 
     public bool IsCommunityAvailable => communityEnabled || unlockAllFeatures;
@@ -97,16 +119,15 @@ public sealed class GameConfigProfile : ScriptableObject
     public bool CanOpenCustomLists(int completedChallenges)
     {
         int completed = Mathf.Max(0, completedChallenges);
-        return unlockAllFeatures || ignoreProgressionLocks
-            || completed >= Mathf.Max(0, customUnlockLevels);
+        return unlockAllFeatures || completed >= Mathf.Max(0, customUnlockLevels);
     }
 
     /// <summary>Returns whether Community can be opened for the completed challenge count.</summary>
     public bool CanOpenCommunityLists(int completedChallenges)
     {
         int completed = Mathf.Max(0, completedChallenges);
-        return unlockAllFeatures || (communityEnabled && (ignoreProgressionLocks
-            || completed >= Mathf.Max(0, communityUnlockLevels)));
+        return unlockAllFeatures || (communityEnabled
+            && completed >= Mathf.Max(0, communityUnlockLevels));
     }
 
     private void OnValidate()

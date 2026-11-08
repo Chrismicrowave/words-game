@@ -66,14 +66,16 @@ public sealed class MasterConfigWindow : EditorWindow
         GameResetTargets.TimeRecords,
         GameResetTargets.MyLists,
         GameResetTargets.CustomLists,
-        GameResetTargets.LocalAchievements
+        GameResetTargets.LocalAchievements,
+        GameResetTargets.WordListLibraryMetadata
     };
 
     private static readonly string[] TargetNames =
     {
         "Audio settings", "Display settings", "Visual effects", "Input hints", "UI language", "Pinyin",
         "Player name", "Panel visibility", "Navigation memory", "English challenge progress",
-        "Chinese challenge progress", "Time records", "My lists", "Custom lists", "Local achievements"
+        "Chinese challenge progress", "Time records", "My lists", "Custom lists", "Local achievements",
+        "Word list library metadata"
     };
 
     private static readonly string[] TargetDescriptions =
@@ -92,7 +94,8 @@ public sealed class MasterConfigWindow : EditorWindow
         "Moves ListTimeRecords.json into the backup.",
         "Moves the WordLists folder into the backup and clears its selected-path preference.",
         "Moves Levels/Custom into the backup. The bundled hello-world seed remains in StreamingAssets and can be reseeded by the game.",
-        "Moves all local word-achievement profiles into the backup. Steam account achievements are not changed."
+        "Moves all local word-achievement profiles into the backup. Steam account achievements are not changed.",
+        "Removes local library favorites, play counts, run records, and revision history metadata. Word-list content files are not removed."
     };
 
     private GameConfig activeConfig;
@@ -255,14 +258,16 @@ public sealed class MasterConfigWindow : EditorWindow
         BuildProfileView();
 
         scroll.Add(new Label("Build with active profile") { style = { unityFontStyleAndWeight = FontStyle.Bold, marginTop = 12 } });
-        scroll.Add(new HelpBox("This wrapper temporarily applies the active profile's window mode, startup resolution, and resizable-window setting to the current Standalone target. Original PlayerSettings are restored after success, failure, or exception.", HelpBoxMessageType.Info));
+        scroll.Add(new HelpBox("LocalTesting profiles always produce a Development build and receive steam_appid.txt beside the player for local Steam testing. PlayerRelease profiles reject Development builds and unsafe debug/reset settings. Both use the signed-in Steam client account.", HelpBoxMessageType.Info));
         developmentBuildToggle = new Toggle("Development build") { value = false };
         scroll.Add(developmentBuildToggle);
+        UpdateBuildPurposeControls();
         buildProfileButton = new Button(BuildWithActiveProfile) { text = "Choose output and build" };
         scroll.Add(buildProfileButton);
 
         scroll.Add(new Label("Master Reset") { style = { unityFontStyleAndWeight = FontStyle.Bold, marginTop = 12 } });
         scroll.Add(new HelpBox("Reset all local settings, progress, lists, records, and local achievement profiles now, or arm this profile to reset on its next Editor Play and/or each profile build's first run. A build's first run clears that player's local data; on this machine it shares the game's save. Editor Play clears Editor local data and does not also clear the Standalone app's separate PlayerPrefs. Steam account achievements remain separate.", HelpBoxMessageType.Warning));
+        scroll.Add(new HelpBox("Resetting stored progress does not change Unlock All Features. When enabled, it keeps challenge levels and gated library pages accessible.", HelpBoxMessageType.Info));
         var masterResetRow = new VisualElement();
         masterResetRow.style.flexDirection = FlexDirection.Row;
         masterResetNowButton = new Button(ResetAllLocalNow) { text = "Reset all local data now" };
@@ -368,7 +373,11 @@ public sealed class MasterConfigWindow : EditorWindow
     {
         AddFoldout(root, profileObject, "Profile identity", "profileId");
         AddFoldout(root, profileObject, "Default settings", "defaults");
-        AddFoldout(root, profileObject, "Access and caps", "customUnlockLevels", "communityEnabled", "communityUnlockLevels", "maxChallengeLevels", "maxCustomLists", "maxWordsPerList", "ignoreProgressionLocks", "unlockAllFeatures", "allowChineseAndMixed");
+        AddFoldout(root, profileObject, "Access and caps", "customUnlockLevels", "communityEnabled", "communityUnlockLevels", "maxChallengeLevels", "maxCustomLists", "maxWordsPerList", "unlockAllFeatures", "allowChineseAndMixed");
+        root.Add(new HelpBox("Legacy Ignore Progression Locks profile data is retained for compatibility and ignored. Unlock All Features controls the developer bypass.", HelpBoxMessageType.Info));
+        AddFoldout(root, profileObject, "Steam testing and build purpose", "buildPurpose", "enableSteamDiagnostics", "allowEditorSteamTestTools");
+        root.Add(new HelpBox("These options never store or select a Steam account. Steam uses the account signed in to the Steam client. Editor achievement maintenance is account-wide and requires its separate opt-in plus the existing confirmation.", HelpBoxMessageType.Warning));
+        AddFoldout(root, profileObject, "Debug", "debugAnyKeyCompletesWord");
         AddMasterResetScheduleFoldout(root, profileObject);
         string[] resetProperties = includeResetRecipe
             ? new[] { "resetLocalDataOnFirstRun", "resetRevision", "resetTargets" }
@@ -444,7 +453,9 @@ public sealed class MasterConfigWindow : EditorWindow
         if (profileField != null)
             profileField.SetValueWithoutNotify(activeProfile);
         BuildProfileView();
+        UpdateBuildPurposeControls();
         UpdateManualPlanControls();
+        UpdateSteamControls();
     }
 
     private void SetActiveProfile(GameConfigProfile profile)
@@ -460,7 +471,12 @@ public sealed class MasterConfigWindow : EditorWindow
             AssetDatabase.SaveAssetIfDirty(activeConfig);
         }
         BuildProfileView();
+        inspectedSteamId = null;
+        if (steamOutput != null)
+            steamOutput.text = SteamInspectCoordinator.NotCheckedMessage;
+        UpdateBuildPurposeControls();
         UpdateManualPlanControls();
+        UpdateSteamControls();
     }
 
     private void CreateProfile()
@@ -545,6 +561,17 @@ public sealed class MasterConfigWindow : EditorWindow
             return;
         }
 
+        BuildOptions requestedOptions = activeProfile.buildPurpose == BuildPurpose.LocalTesting
+            || (developmentBuildToggle != null && developmentBuildToggle.value)
+            ? BuildOptions.Development
+            : BuildOptions.None;
+        string buildValidationError = SteamBuildProfileProcessor.ValidateBuild(activeProfile, target, requestedOptions);
+        if (!string.IsNullOrEmpty(buildValidationError))
+        {
+            EditorUtility.DisplayDialog("Build blocked", buildValidationError, "OK");
+            return;
+        }
+
         string location = ChooseBuildLocation(target);
         if (string.IsNullOrEmpty(location))
             return;
@@ -561,9 +588,7 @@ public sealed class MasterConfigWindow : EditorWindow
             scenes = scenes,
             locationPathName = location,
             target = target,
-            options = developmentBuildToggle != null && developmentBuildToggle.value
-                ? BuildOptions.Development
-                : BuildOptions.None
+            options = requestedOptions
         };
 
         FullScreenMode originalMode = PlayerSettings.fullScreenMode;
@@ -812,6 +837,12 @@ public sealed class MasterConfigWindow : EditorWindow
 
     private void InspectSteamAccount()
     {
+        if (activeProfile == null || !activeProfile.enableSteamDiagnostics)
+        {
+            steamInspectCoordinator?.Fail("Steam diagnostics are disabled by the active profile.");
+            return;
+        }
+
         EnsureSteamInspectCoordinator();
         steamHelperType = Type.GetType("SteamAchievementMaintenance, SteamAchievementIntegration", false);
         if (steamHelperType == null)
@@ -863,6 +894,12 @@ public sealed class MasterConfigWindow : EditorWindow
     {
         if (steamOutput == null)
             return;
+        if (activeProfile == null || !activeProfile.enableSteamDiagnostics)
+        {
+            inspectedSteamId = null;
+            steamOutput.text = "Steam diagnostics are disabled by the active profile.";
+            return;
+        }
         if (steamHelperType == null)
             steamHelperType = Type.GetType("SteamAchievementMaintenance, SteamAchievementIntegration", false);
         if (steamHelperType == null)
@@ -905,7 +942,9 @@ public sealed class MasterConfigWindow : EditorWindow
 
     private void ConfirmAndResetSteamAccount()
     {
-        if (string.IsNullOrWhiteSpace(inspectedSteamId) || steamHelperType == null || EditorApplication.isPlaying || EditorApplication.isPlayingOrWillChangePlaymode)
+        if (activeProfile == null || !activeProfile.allowEditorSteamTestTools
+            || string.IsNullOrWhiteSpace(inspectedSteamId) || steamHelperType == null
+            || EditorApplication.isPlaying || EditorApplication.isPlayingOrWillChangePlaymode)
             return;
         string confirmation = "This resets only the three StickyWords achievements for SteamID " + inspectedSteamId
             + " (AppID 4966870). The action affects this Steam account across all profiles and cannot be undone on Steam. Continue?";
@@ -954,6 +993,7 @@ public sealed class MasterConfigWindow : EditorWindow
         UpdateStandaloneControls();
         UpdateMasterResetControls();
         UpdateSteamControls();
+        UpdateBuildPurposeControls();
     }
 
     private bool CanRunEditorMaintenance()
@@ -996,8 +1036,44 @@ public sealed class MasterConfigWindow : EditorWindow
             steamHelperType = Type.GetType("SteamAchievementMaintenance, SteamAchievementIntegration", false);
         bool playAllowed = !EditorApplication.isPlaying && !EditorApplication.isPlayingOrWillChangePlaymode;
         bool busy = ReadSteamBusy() || (steamInspectCoordinator != null && steamInspectCoordinator.IsChecking);
-        if (inspectSteamButton != null) inspectSteamButton.SetEnabled(playAllowed && !busy && steamHelperType != null);
-        if (resetSteamButton != null) resetSteamButton.SetEnabled(playAllowed && !busy && steamHelperType != null && !string.IsNullOrWhiteSpace(inspectedSteamId));
+        bool diagnosticsAllowed = activeProfile != null && activeProfile.enableSteamDiagnostics;
+        bool testToolsAllowed = activeProfile != null && activeProfile.allowEditorSteamTestTools;
+        if (!diagnosticsAllowed)
+        {
+            inspectedSteamId = null;
+            if (steamOutput != null)
+                steamOutput.text = "Steam diagnostics are disabled by the active profile.";
+        }
+        if (inspectSteamButton != null) inspectSteamButton.SetEnabled(playAllowed && diagnosticsAllowed && !busy && steamHelperType != null);
+        if (resetSteamButton != null) resetSteamButton.SetEnabled(playAllowed && testToolsAllowed && !busy
+            && steamHelperType != null && !string.IsNullOrWhiteSpace(inspectedSteamId));
+    }
+
+    private void UpdateBuildPurposeControls()
+    {
+        if (developmentBuildToggle == null)
+            return;
+
+        bool localTesting = activeProfile != null && activeProfile.buildPurpose == BuildPurpose.LocalTesting;
+        bool playerRelease = activeProfile != null && activeProfile.buildPurpose == BuildPurpose.PlayerRelease;
+        if (localTesting)
+        {
+            developmentBuildToggle.SetValueWithoutNotify(true);
+            developmentBuildToggle.SetEnabled(false);
+            developmentBuildToggle.tooltip = "LocalTesting always creates a Development build.";
+        }
+        else if (playerRelease)
+        {
+            developmentBuildToggle.SetValueWithoutNotify(false);
+            developmentBuildToggle.SetEnabled(false);
+            developmentBuildToggle.tooltip = "PlayerRelease builds cannot use Development options.";
+        }
+        else
+        {
+            developmentBuildToggle.SetValueWithoutNotify(false);
+            developmentBuildToggle.SetEnabled(false);
+            developmentBuildToggle.tooltip = "Choose a valid build purpose on the active profile.";
+        }
     }
 
     private bool ReadSteamBusy()

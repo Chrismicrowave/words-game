@@ -170,6 +170,66 @@ public sealed class WordListLanguageDetectorTests
         Assert.AreEqual(" A|b ", normalized.Words[0]);
     }
 
+    [Test]
+    public void FilterEmptyEditorRowsRemovesBlankAndPinyinOnlyRowsButPreservesLiteralPipes()
+    {
+        List<string> filtered = WordListLibraryContentCodec.FilterEmptyEditorRows(new string[]
+        {
+            null,
+            "",
+            "   ",
+            "| pinyin",
+            "  | ni hao",
+            "|ni",
+            "|",
+            "A|B",
+            "word | pinyin"
+        });
+
+        CollectionAssert.AreEqual(new[] { "|ni", "|", "A|B", "word | pinyin" }, filtered);
+    }
+
+    [Test]
+    public void AutoCodecFiltersEditorPlaceholdersAndRetainsOriginalPinyinQueues()
+    {
+        var original = new WordListLibraryContent
+        {
+            LanguageMode = LanguageMode.Chinese,
+            Words = new List<string> { "你", "好" },
+            ChineseWords = new List<ChineseWordEntry>
+            {
+                new ChineseWordEntry
+                {
+                    display = "你",
+                    entries = new List<ChinesePhaseEntry>
+                    {
+                        new ChinesePhaseEntry { character = "你", pinyin = "ni" }
+                    }
+                },
+                new ChineseWordEntry
+                {
+                    display = "好",
+                    entries = new List<ChinesePhaseEntry>
+                    {
+                        new ChinesePhaseEntry { character = "好", pinyin = "hao" }
+                    }
+                }
+            }
+        };
+
+        Assert.IsTrue(WordListLibraryContentCodec.TryParseAutoEditorLines(
+            new[] { "  ", "你", "| ping", "", "好" }, LanguageMode.English, original,
+            out LanguageMode detectedMode, out bool usedFallback,
+            out WordListLibraryContent parsed, out string error), error);
+
+        Assert.AreEqual(LanguageMode.Chinese, detectedMode);
+        Assert.IsFalse(usedFallback);
+        Assert.AreEqual(LanguageMode.Chinese, parsed.LanguageMode);
+        CollectionAssert.AreEqual(new[] { "你", "好" }, parsed.Words);
+        CollectionAssert.AreEqual(new[] { "ni" }, ExtractChinesePinyin(parsed.ChineseWords[0]));
+        CollectionAssert.AreEqual(new[] { "hao" }, ExtractChinesePinyin(parsed.ChineseWords[1]));
+    }
+
     private static List<string> ExtractChinesePinyin(MixedWordEntry word)
     {
         var result = new List<string>();

@@ -13,20 +13,24 @@ MonoBehaviour:
   m_Name: Playtest
   m_EditorClassIdentifier: Core::GameConfigProfile
   profileId: playtest
+  buildPurpose: 0
+  enableSteamDiagnostics: 1
+  allowEditorSteamTestTools: 0
   resetTargets: 0
   resetLocalDataOnFirstRun: 0
   resetRevision: 1
   resetAllLocalDataOnNextEditorPlay: 0
-  resetAllLocalDataOnFirstBuildRun: 0
+  resetAllLocalDataOnFirstBuildRun: 1
   maxChallengeLevels: 0
   maxCustomLists: 0
   maxWordsPerList: 0
   allowChineseAndMixed: 1
-  unlockAllFeatures: 0
+  unlockAllFeatures: 1
   ignoreProgressionLocks: 0
   customUnlockLevels: 5
   communityEnabled: 1
   communityUnlockLevels: 10
+  debugAnyKeyCompletesWord: 1
   defaults:
     fullscreen: 0
     resolutionIndex: 1

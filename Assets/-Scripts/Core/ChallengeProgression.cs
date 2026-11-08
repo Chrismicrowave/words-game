@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
@@ -31,8 +32,74 @@ public static class ChallengeProgression
     public static int GetUnlockedCountForTrack(string trackPrefix) =>
         Mathf.Max(1, PlayerPrefs.GetInt(GetUnlockedCountKey(trackPrefix), 1));
 
-    public static int GetCompletedChallengesForTrack(string trackPrefix) =>
-        Mathf.Max(0, GetUnlockedCountForTrack(trackPrefix) - 1);
+    /// <summary>Returns whether this challenge has a persisted PlayerPrefs completion marker, including zero stars.</summary>
+    public static bool HasCompletedChallengeForTrack(int challengeIndex, string trackPrefix) =>
+        challengeIndex >= 0 && PlayerPrefs.HasKey(GetStarRatingKey(trackPrefix, challengeIndex));
+
+    /// <summary>Counts per-challenge completion markers and saved run records for this track.</summary>
+    public static int GetCompletedChallengesForTrack(string trackPrefix)
+    {
+        int unlockedCount = GetUnlockedCountForTrack(trackPrefix);
+        List<LevelWordListProvider> trackProviders;
+        try
+        {
+            trackProviders = ChallengeTrackResolver.FilterByTrack(
+                LevelWordListProvider.ScanDirectory(LevelWordListProvider.GetChallengeDirectory()),
+                trackPrefix);
+        }
+        catch (Exception exception)
+        {
+            Debug.LogWarning("[ChallengeProgression] Could not scan challenge files while counting completed levels; "
+                + "falling back to saved completion markers. " + exception.Message);
+            return CountCompletedChallengesForTrack(trackPrefix, unlockedCount, null, null);
+        }
+
+        WordListLibraryService library = null;
+        try
+        {
+            library = WordListLibraryService.Shared;
+        }
+        catch (Exception exception)
+        {
+            Debug.LogWarning("[ChallengeProgression] Could not load challenge run metadata while counting completed levels; "
+                + "falling back to saved completion markers. " + exception.Message);
+        }
+
+        return CountCompletedChallengesForTrack(trackPrefix, unlockedCount, trackProviders, library);
+    }
+
+    internal static int CountCompletedChallengesForTrack(
+        string trackPrefix,
+        int unlockedCount,
+        List<LevelWordListProvider> trackProviders,
+        WordListLibraryService library)
+    {
+        int providerCount = trackProviders != null ? trackProviders.Count : 0;
+        int completionRange = Math.Max(Math.Max(1, unlockedCount), providerCount);
+        int completedCount = 0;
+        for (int challengeIndex = 0; challengeIndex < completionRange; challengeIndex++)
+        {
+            bool hasCompletion = HasCompletedChallengeForTrack(challengeIndex, trackPrefix);
+            if (!hasCompletion && challengeIndex < providerCount && library != null)
+            {
+                try
+                {
+                    WordListLibraryItem item = library.FindByProvider(trackProviders[challengeIndex]);
+                    hasCompletion = item != null
+                        && (item.PlayCount > 0 || (item.CurrentRecord != null && item.CurrentRecord.HasRecord));
+                }
+                catch (Exception exception)
+                {
+                    Debug.LogWarning("[ChallengeProgression] Could not read saved run metadata for challenge index "
+                        + challengeIndex + "; saved completion markers remain available. " + exception.Message);
+                }
+            }
+
+            if (hasCompletion)
+                completedCount++;
+        }
+        return completedCount;
+    }
 
     public static void SetUnlockedCountForTrack(string trackPrefix, int value)
     {
@@ -101,6 +168,19 @@ public static class ChallengeProgression
         ResetTrack("");
         ResetTrack("cn_");
 
+        // The Library sidecar also records the first-play marker and challenge run
+        // summaries. Keep this public reset entry point aligned with the selected-
+        // track reset service so direct callers cannot leave those records behind.
+        WordListLibraryService library = WordListLibraryService.Shared;
+        library.ReloadAfterExternalReset();
+        foreach (string prefix in new[] { "", "cn_" })
+        {
+            if (!library.ResetChallengeProgressForTrack(prefix, out string error))
+                Debug.LogWarning("[ChallengeProgression] Could not reset "
+                    + (prefix == "cn_" ? "Chinese" : "English")
+                    + " Library challenge history: " + error);
+        }
+
         // Clear last selected level so game starts at level 1
         PlayerPrefs.DeleteKey("LevelPanel_LastPath");
         // Clear all time records (challenge + custom best times)
@@ -110,9 +190,13 @@ public static class ChallengeProgression
 
     private static void ResetTrack(string prefix)
     {
+        // The saved cursor can extend beyond the legacy 100-level range when
+        // master unlock is enabled. Capture it before resetting the cursor.
+        int maxStarIndex = Math.Max(99,
+            PlayerPrefs.GetInt(GetUnlockedCountKey(prefix), 1) - 1);
         PlayerPrefs.SetInt($"ChallengeUnlockedCount_{prefix}", 1);
         // Clear all star ratings
-        for (int i = 0; i < 100; i++)
+        for (int i = 0; i <= maxStarIndex; i++)
         {
             string key = $"ChallengeStar_{prefix}{i}";
             if (PlayerPrefs.HasKey(key))
@@ -141,14 +225,14 @@ public static class ChallengeProgression
     {
         string key = GetStarRatingKey(trackPrefix, challengeIndex);
         int current = PlayerPrefs.GetInt(key, 0);
-        if (stars > current) // only overwrite if better
+        if (!PlayerPrefs.HasKey(key) || stars > current) // record first completion, including zero stars, and only improve thereafter
         {
             PlayerPrefs.SetInt(key, stars);
             PlayerPrefs.Save();
         }
     }
 
-    /// <summary>Get saved star rating for a challenge (0-3, 0 = unrated).</summary>
+    /// <summary>Get the saved star rating for a challenge (0-3; use HasCompletedChallengeForTrack to distinguish unrated from zero-star).</summary>
     public static int GetStarRating(int challengeIndex) =>
         GetStarRating(challengeIndex, TrackPrefix);
 

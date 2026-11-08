@@ -9,10 +9,12 @@ using Words.UiMockups.WordListHub;
 /// <summary>
 /// Production adapter for the scene-authored Hub. The mockup models produced here are
 /// UI projections only; WordListLibraryService and LevelWordListProvider remain canonical.
-/// Community actions are delegated to a private fixture store and never enter the real Library.
+/// Community actions use the asynchronous service; cached downloads remain separate from the canonical Library.
 /// </summary>
-public sealed class WordListHubProductionBackend : IWordListHubBackend
+public sealed class WordListHubProductionBackend : IWordListHubBackend, IWordListHubCommunityBackend
 {
+    private const string EmptyListContentError = "Add at least one word before saving the list.";
+
     private sealed class PendingImport
     {
         public string path;
@@ -23,7 +25,7 @@ public sealed class WordListHubProductionBackend : IWordListHubBackend
     private readonly WordListLibraryService library;
     private readonly LevelPanelController levelPanel;
     private readonly Func<WordAchievementProgressSnapshot> achievementSnapshot;
-    private readonly MockupWordListStore communityFixtures = MockupWordListStore.CreateCommunityPreviewFixtures();
+    private readonly IWordListHubCommunityAsync communityAsync;
     private readonly Dictionary<string, PendingImport> pendingImports =
         new Dictionary<string, PendingImport>(StringComparer.Ordinal);
 
@@ -33,6 +35,9 @@ public sealed class WordListHubProductionBackend : IWordListHubBackend
     public bool CanDuplicateLists => IsLibraryOpen && levelPanel != null && levelPanel.CanDuplicateListsFromHub;
     public bool CanImportLists => IsLibraryOpen && levelPanel != null && levelPanel.CanImportListsFromHub;
     public bool CanExportLists => IsLibraryOpen && levelPanel != null && levelPanel.CanExportListsFromHub;
+    public bool CanPublishLists => IsLibraryOpen && IsCommunityOpen
+        && communityAsync != null && communityAsync.IsRemoteAuthenticated;
+    public IWordListHubCommunityAsync CommunityAsync => communityAsync;
 
     public MockupHubPageAccess GetPageAccess(WordListHubPage page)
     {
@@ -81,10 +86,20 @@ public sealed class WordListHubProductionBackend : IWordListHubBackend
         WordListLibraryService library,
         LevelPanelController levelPanel,
         Func<WordAchievementProgressSnapshot> achievementSnapshot)
+        : this(library, levelPanel, achievementSnapshot, null)
+    {
+    }
+
+    public WordListHubProductionBackend(
+        WordListLibraryService library,
+        LevelPanelController levelPanel,
+        Func<WordAchievementProgressSnapshot> achievementSnapshot,
+        IWordListHubCommunityAsync communityAsync)
     {
         this.library = library ?? WordListLibraryService.Shared;
         this.levelPanel = levelPanel;
         this.achievementSnapshot = achievementSnapshot;
+        this.communityAsync = communityAsync;
     }
 
     public IReadOnlyList<MockupAchievement> Achievements
@@ -126,20 +141,31 @@ public sealed class WordListHubProductionBackend : IWordListHubBackend
     {
         if (!IsLibraryOpen) return Array.Empty<MockupWordList>();
         query = query ?? new MockupLibraryQuery();
-        IEnumerable<MockupWordList> results = library.GetAll()
-            .Select(item => Project(item, false, true));
+        List<MockupWordList> canonical = library.GetAll()
+            .Select(ProjectWithPublication)
+            .Where(item => item != null)
+            .ToList();
+        IReadOnlyList<MockupWordList> communityDownloads = communityAsync?.DownloadedItems
+            ?? Array.Empty<MockupWordList>();
+        IEnumerable<MockupWordList> results;
 
         switch (query.View)
         {
             case MockupLibraryView.Favorites:
-                results = results.Where(item => item.IsFavorite);
+                results = canonical.Where(item => item.IsFavorite);
                 break;
             case MockupLibraryView.MyLists:
+                results = canonical.Where(item => item.Group == MockupLibraryGroup.MyLists);
                 break;
             case MockupLibraryView.CommunityDownloads:
+                results = communityDownloads;
+                break;
             case MockupLibraryView.MyPublished:
-                // The production local Library does not expose fixture downloads or Workshop.
-                return Array.Empty<MockupWordList>();
+                results = canonical.Where(item => item.Group == MockupLibraryGroup.MyPublished);
+                break;
+            default:
+                results = canonical.Concat(communityDownloads);
+                break;
         }
 
         if (!string.IsNullOrWhiteSpace(query.SearchText))
@@ -176,7 +202,6 @@ public sealed class WordListHubProductionBackend : IWordListHubBackend
             ? ChallengeTrackResolver.ChineseTrackPrefix
             : ChallengeTrackResolver.EnglishTrackPrefix;
         int unlockedCount = ChallengeProgression.GetUnlockedCountForTrack(trackPrefix);
-        int completedForQueriedTrack = Math.Max(0, unlockedCount - 1);
         GameConfigProfile profile = Services.Get<PhaseManager>() != null
             ? Services.Get<PhaseManager>().ActiveProfile
             : null;
@@ -185,13 +210,12 @@ public sealed class WordListHubProductionBackend : IWordListHubBackend
             ? levelPanel.CustomUnlockRequirementForHub : 5;
         int communityUnlockRequirement = levelPanel != null
             ? levelPanel.CommunityUnlockRequirementForHub : 10;
+        bool hasAccessProfile = levelPanel != null && levelPanel.HasAccessProfileFromHub;
         bool customMilestoneVisible = IsUnlockMilestoneVisible(
-            customUnlockRequirement, completedForQueriedTrack,
-            levelPanel != null && levelPanel.IsLibraryUnlockBypassedFromHub);
+            customUnlockRequirement, hasAccessProfile);
         bool communityMilestoneVisible = IsUnlockMilestoneVisible(
-            communityUnlockRequirement, completedForQueriedTrack,
-            levelPanel != null && levelPanel.IsCommunityEnabledFromHub
-                && levelPanel.IsCommunityUnlockBypassedFromHub);
+            communityUnlockRequirement,
+            hasAccessProfile && levelPanel.IsCommunityEnabledFromHub);
 
         for (int index = 0; index < ordered.Count; index++)
         {
@@ -204,18 +228,58 @@ public sealed class WordListHubProductionBackend : IWordListHubBackend
                 levelPanel != null ? levelPanel.LegacyChallengeCap : 0,
                 levelPanel != null && levelPanel.LegacyUnlockAllChallenges);
             int trackStars = ChallengeProgression.GetStarRating(index, trackPrefix);
+            bool challengeCompleted = HasChallengeCompletionEvidence(item, index, trackPrefix);
             string rewardLabel = GetUnlockRewardLabel(index + 1,
                 customUnlockRequirement, customMilestoneVisible,
                 communityUnlockRequirement, communityMilestoneVisible);
-            results.Add(Project(item, true, unlocked, trackStars, rewardLabel));
+            results.Add(Project(item, true, unlocked, trackStars, rewardLabel, index + 1,
+                challengeCompleted,
+                profile != null && profile.unlockAllFeatures));
         }
         return results.AsReadOnly();
     }
 
-    public IReadOnlyList<MockupDiscoveryItem> QueryDiscoveryWithFilters(MockupDiscoveryQuery query) =>
-        IsCommunityOpen
-            ? communityFixtures.QueryDiscoveryWithFilters(query)
-            : Array.Empty<MockupDiscoveryItem>();
+    public IReadOnlyList<MockupDiscoveryItem> QueryDiscoveryWithFilters(MockupDiscoveryQuery query)
+    {
+        if (!IsCommunityOpen || communityAsync == null)
+            return Array.Empty<MockupDiscoveryItem>();
+
+        query = query ?? new MockupDiscoveryQuery();
+        IEnumerable<MockupDiscoveryItem> items = communityAsync.Snapshot
+            ?? Array.Empty<MockupDiscoveryItem>();
+        if (!string.IsNullOrWhiteSpace(query.SearchText))
+        {
+            string term = query.SearchText.Trim();
+            items = items.Where(item => Contains(item.Title, term)
+                || Contains(item.Description, term));
+        }
+        if (query.LanguageFilter != MockupLanguageFilter.All)
+            items = items.Where(item => item.Language.ToString() == query.LanguageFilter.ToString());
+        if (query.DownloadFilter == MockupDiscoveryDownloadFilter.Downloaded)
+            items = items.Where(item => item.IsDownloaded);
+        else if (query.DownloadFilter == MockupDiscoveryDownloadFilter.NotDownloaded)
+            items = items.Where(item => !item.IsDownloaded);
+
+        switch (query.SortMode)
+        {
+            case MockupDiscoverySortMode.Name:
+                items = query.SortDirection == MockupSortDirection.Descending
+                    ? items.OrderByDescending(item => item.Title, StringComparer.OrdinalIgnoreCase)
+                    : items.OrderBy(item => item.Title, StringComparer.OrdinalIgnoreCase);
+                break;
+            case MockupDiscoverySortMode.Likes:
+                items = query.SortDirection == MockupSortDirection.Descending
+                    ? items.OrderByDescending(item => item.LikeCount)
+                    : items.OrderBy(item => item.LikeCount);
+                break;
+            case MockupDiscoverySortMode.WordCount:
+                items = query.SortDirection == MockupSortDirection.Descending
+                    ? items.OrderByDescending(item => item.WordCount)
+                    : items.OrderBy(item => item.WordCount);
+                break;
+        }
+        return items.ToList().AsReadOnly();
+    }
 
     public MockupWordList FindById(string localListId)
     {
@@ -225,7 +289,8 @@ public sealed class WordListHubProductionBackend : IWordListHubBackend
 
         if (!IsLibraryOpen) return null;
         WordListLibraryItem item = library.FindById(localListId);
-        return item != null ? Project(item, false, true) : null;
+        if (item != null) return ProjectWithPublication(item);
+        return communityAsync?.DownloadedItems?.FirstOrDefault(candidate => candidate.Id == localListId);
     }
 
     public LevelWordListProvider FindProvider(string localListId)
@@ -240,23 +305,59 @@ public sealed class WordListHubProductionBackend : IWordListHubBackend
     }
 
     public MockupWordList FindCommunityDownload(string remoteItemId) =>
-        IsCommunityOpen ? communityFixtures.FindCommunityDownload(remoteItemId) : null;
+        communityAsync?.DownloadedItems?.FirstOrDefault(item => item.RemoteItemId == remoteItemId);
 
     public MockupDiscoveryItem FindDiscoveryItem(string remoteItemId) =>
-        IsCommunityOpen ? communityFixtures.FindDiscoveryItem(remoteItemId) : null;
+        IsCommunityOpen && communityAsync != null
+            ? communityAsync.Snapshot?.FirstOrDefault(item => item.RemoteItemId == remoteItemId)
+            : null;
 
     public MockupWordList EditCommunityCopy(string localListId)
     {
-        // This mock action creates a new owned list, so it needs both pages and
-        // the active profile's existing create/duplicate capabilities.
-        if (!IsCommunityOpen || !IsLibraryOpen || !CanCreateLists || !CanDuplicateLists)
+        if (!IsLibraryOpen || communityAsync == null)
             return null;
-        return communityFixtures.EditCommunityCopy(localListId);
+        if (levelPanel == null || !levelPanel.CanDuplicateListsFromHub)
+            return null;
+        MockupWordList source = communityAsync.DownloadedItems?.FirstOrDefault(item => item != null
+            && string.Equals(item.Id, localListId, StringComparison.Ordinal)
+            && item.Ownership == MockupOwnership.CommunityDownloaded);
+        if (source == null || source.WordCount <= 0)
+            return null;
+        if (!levelPanel.CanCreateListFromHub(source.WordCount, out _))
+            return null;
+        if (!communityAsync.TryGetDownloadedContentForCopy(localListId,
+            out WordListLibraryContent content, out string title, out _)
+            || content == null || content.Words == null || content.Words.Count != source.WordCount
+            || !CanWriteContentMode(content.LanguageMode, out _))
+            return null;
+        if (!TryCreateCommunityCopyFromValidatedContent(library,
+            string.IsNullOrWhiteSpace(title) ? source.Title : title,
+            content, out WordListLibraryItem created, out _))
+            return null;
+
+        return Project(created, false, true);
+    }
+
+    private static bool TryCreateCommunityCopyFromValidatedContent(
+        WordListLibraryService targetLibrary, string title, WordListLibraryContent content,
+        out WordListLibraryItem created, out string error)
+    {
+        created = null;
+        if (targetLibrary == null || content == null || content.Words == null || content.Words.Count == 0)
+        {
+            error = "The validated Community content is unavailable.";
+            return false;
+        }
+
+        // WordListLibraryService creates a fresh canonical UUID and preserves the structured
+        // Chinese/mixed payload; the source Community provider remains read-only and unchanged.
+        return targetLibrary.TryCreateList(title, content, out created, out error);
     }
 
     public MockupWordListEdit CreateEditDraft(string localListId)
     {
         if (!IsLibraryOpen) return null;
+        if (IsPublicationLocked(localListId)) return null;
         MockupWordList item = FindById(localListId);
         if (item == null) return null;
 
@@ -287,49 +388,53 @@ public sealed class WordListHubProductionBackend : IWordListHubBackend
     }
 
     public MockupActionResult TryToggleLike(string remoteItemId) =>
-        IsCommunityOpen ? communityFixtures.TryToggleLike(remoteItemId)
+        IsCommunityOpen ? new MockupActionResult(false, "Community actions require the asynchronous service.")
             : new MockupActionResult(false, LockedPageMessage(WordListHubPage.Community));
 
     public MockupActionResult TryDownload(string remoteItemId)
     {
         if (!IsCommunityOpen)
             return new MockupActionResult(false, LockedPageMessage(WordListHubPage.Community));
-        if (!IsLibraryOpen)
-            return new MockupActionResult(false, LockedPageMessage(WordListHubPage.Library));
-        return communityFixtures.TryDownload(remoteItemId);
+        return new MockupActionResult(false, "Community downloads require the asynchronous service.");
     }
 
     public MockupActionResult TryReportAndHide(string remoteItemId) =>
-        IsCommunityOpen ? communityFixtures.TryReportAndHide(remoteItemId)
+        IsCommunityOpen ? new MockupActionResult(false, "Community actions require the asynchronous service.")
             : new MockupActionResult(false, LockedPageMessage(WordListHubPage.Community));
 
     public MockupPlayResult PlayDiscoveryItem(string remoteItemId) =>
-        IsCommunityOpen ? communityFixtures.PlayDiscoveryItem(remoteItemId)
-            : MockupWordListProjection.CreateBlockedPlayResult(
-                LockedPageMessage(WordListHubPage.Community));
+        MockupWordListProjection.CreateBlockedPlayResult(
+            IsCommunityOpen ? "Community lists must be downloaded and validated before they can be played."
+                : LockedPageMessage(WordListHubPage.Community));
 
     public bool CompleteRun(string localListId, int stars, float bestTimeSeconds)
     {
-        // Only the isolated Community sample flow calls this legacy mock action.
-        return IsCommunityOpen && communityFixtures.CompleteRun(localListId, stars, bestTimeSeconds);
+        return false;
     }
 
     public MockupActionResult TryPublish(string localListId)
     {
-        if (!IsCommunityOpen)
-            return new MockupActionResult(false, LockedPageMessage(WordListHubPage.Community));
-        if (!IsLibraryOpen)
-            return new MockupActionResult(false, LockedPageMessage(WordListHubPage.Library));
-        return new MockupActionResult(false, "Publishing is not connected in this production build.");
+        if (!CanPublishLists)
+            return new MockupActionResult(false, !IsLibraryOpen
+                ? LockedPageMessage(WordListHubPage.Library)
+                : !IsCommunityOpen ? LockedPageMessage(WordListHubPage.Community)
+                : "Connect to Steam before publishing.");
+        if (IsPublicationLocked(localListId))
+            return new MockupActionResult(false, "This My List already has a Workshop publication binding.");
+        return new MockupActionResult(false, "Publishing requires the asynchronous Community service.");
     }
 
     public MockupActionResult TryUnpublish(string localListId)
     {
-        if (!IsCommunityOpen)
-            return new MockupActionResult(false, LockedPageMessage(WordListHubPage.Community));
-        if (!IsLibraryOpen)
-            return new MockupActionResult(false, LockedPageMessage(WordListHubPage.Library));
-        return new MockupActionResult(false, "Publishing is not connected in this production build.");
+        if (!IsPublicationLocked(localListId))
+            return new MockupActionResult(false, "This My List has no active Workshop publication to unpublish.");
+        if (communityAsync == null || !communityAsync.IsRemoteAuthenticated
+            || !(communityAsync.Publications ?? Array.Empty<MockupCommunityPublicationInfo>())
+                .Any(publication => publication != null
+                && string.Equals(publication.LocalListId, localListId, StringComparison.Ordinal)))
+            return new MockupActionResult(false,
+                "Reconnect to the Steam account that published this item to unpublish it.");
+        return new MockupActionResult(false, "Unpublish requires the asynchronous Community service.");
     }
 
     public MockupActionResult TryDeleteList(string localListId)
@@ -339,6 +444,9 @@ public sealed class WordListHubProductionBackend : IWordListHubBackend
         WordListLibraryItem item = library.FindById(localListId);
         if (item == null)
             return new MockupActionResult(false, "The selected list could not be found.");
+        if (IsPublicationLocked(localListId))
+            return new MockupActionResult(false,
+                "Refresh publication status and unpublish this Workshop item before deleting its My List.");
         if (!item.IsEditable || item.IsChallenge)
             return new MockupActionResult(false, "Official challenge lists are read-only.");
         if (!CanDeleteLists)
@@ -379,7 +487,12 @@ public sealed class WordListHubProductionBackend : IWordListHubBackend
             error = LockedPageMessage(WordListHubPage.Library);
             return false;
         }
-        List<string> rows = displayWords == null ? new List<string>() : displayWords.ToList();
+        List<string> rows = WordListLibraryContentCodec.FilterEmptyEditorRows(displayWords);
+        if (rows.Count == 0)
+        {
+            error = EmptyListContentError;
+            return false;
+        }
         if (levelPanel != null && !levelPanel.CanCreateListFromHub(rows.Count, out error))
             return false;
         if (!ValidatePinyinForContentChange(rows, out error))
@@ -485,13 +598,18 @@ public sealed class WordListHubProductionBackend : IWordListHubBackend
             error = "The selected file changed during review. Select it again before importing.";
             return false;
         }
-        if (levelPanel != null && !levelPanel.CanCreateListFromHub(
-            draft.Words == null ? 0 : draft.Words.Count, out error))
+        List<string> editorRows = WordListLibraryContentCodec.FilterEmptyEditorRows(draft.Words);
+        if (editorRows.Count == 0)
+        {
+            error = EmptyListContentError;
             return false;
-        if (!ValidatePinyinForContentChange(draft.Words, out error))
+        }
+        if (levelPanel != null && !levelPanel.CanCreateListFromHub(editorRows.Count, out error))
+            return false;
+        if (!ValidatePinyinForContentChange(editorRows, out error))
             return false;
         if (!WordListLibraryContentCodec.TryParseAutoEditorLines(
-            draft.Words, pending.content.LanguageMode, pending.content,
+            editorRows, pending.content.LanguageMode, pending.content,
             out _, out _, out WordListLibraryContent content, out error))
             return false;
         if (!CanWriteContentMode(content.LanguageMode, out error))
@@ -565,12 +683,19 @@ public sealed class WordListHubProductionBackend : IWordListHubBackend
     {
         if (!IsLibraryOpen)
             return MockupEditResult.Failure(LockedPageMessage(WordListHubPage.Library));
+        if (IsPublicationLocked(localListId))
+            return MockupEditResult.Failure(
+                "Refresh publication status and unpublish this Workshop item before editing it.");
         if (edit == null) return MockupEditResult.Failure("The edit form is unavailable.");
         WordListLibraryItem current = library.FindById(localListId);
         if (current == null || !current.IsEditable || current.IsChallenge)
             return MockupEditResult.Failure("This list is read-only or no longer available.");
 
-        bool contentChanged = IsGameplayContentChanged(current, edit);
+        List<string> editorRows = WordListLibraryContentCodec.FilterEmptyEditorRows(edit.Words);
+        if (editorRows.Count == 0)
+            return MockupEditResult.Failure(EmptyListContentError);
+
+        bool contentChanged = IsGameplayContentChanged(current, editorRows);
         if (levelPanel != null)
         {
             WordListLibraryContent existingContent = current.Content
@@ -580,20 +705,20 @@ public sealed class WordListHubProductionBackend : IWordListHubBackend
             if (!levelPanel.CanEditListsFromHub)
                 return MockupEditResult.Failure("Editing custom lists is disabled by the active profile.");
             if (!levelPanel.CanEditListFromHub(
-                edit.Words == null ? 0 : edit.Words.Count, contentChanged,
+                editorRows.Count, contentChanged,
                 out string policyError, existingWordCount))
                 return MockupEditResult.Failure(policyError);
         }
         WordListLibraryContent contentOrNull = null;
         if (contentChanged)
         {
-            if (!ValidatePinyinForContentChange(edit.Words, out string pinyinError))
+            if (!ValidatePinyinForContentChange(editorRows, out string pinyinError))
                 return MockupEditResult.Failure(pinyinError);
             WordListLibraryContent originalContent = current.Content
                 ?? (current.Provider != null ? WordListLibraryContent.FromProvider(current.Provider) : null);
             LanguageMode fallback = originalContent != null ? originalContent.LanguageMode : current.LanguageMode;
             if (!WordListLibraryContentCodec.TryParseAutoEditorLines(
-                edit.Words, fallback, originalContent,
+                editorRows, fallback, originalContent,
                 out _, out _, out contentOrNull, out string codecError))
                 return MockupEditResult.Failure(codecError);
             if (!CanWriteContentMode(contentOrNull.LanguageMode, out string languageError))
@@ -622,18 +747,22 @@ public sealed class WordListHubProductionBackend : IWordListHubBackend
             return MockupEditResult.Failure(
                 "Only an unlocked challenge in the current language track can be copied to My Lists.");
 
-        bool contentChanged = IsGameplayContentChanged(source, edit);
+        List<string> editorRows = WordListLibraryContentCodec.FilterEmptyEditorRows(edit.Words);
+        if (editorRows.Count == 0)
+            return MockupEditResult.Failure(EmptyListContentError);
+
+        bool contentChanged = IsGameplayContentChanged(source, editorRows);
         WordListLibraryContent sourceContent = source.Content ?? WordListLibraryContent.FromProvider(source.Provider);
         if (levelPanel != null && (!levelPanel.CanCreateListFromHub(
-            edit.Words == null ? 0 : edit.Words.Count, out string policyError)
+            editorRows.Count, out string policyError)
             || !levelPanel.CanDuplicateListsFromHub))
             return MockupEditResult.Failure(policyError ?? "Copying lists is disabled by the active profile.");
         WordListLibraryItem created;
         string error;
-        if (contentChanged && !ValidatePinyinForContentChange(edit.Words, out string pinyinError))
+        if (contentChanged && !ValidatePinyinForContentChange(editorRows, out string pinyinError))
             return MockupEditResult.Failure(pinyinError);
         if (!WordListLibraryContentCodec.TryParseAutoEditorLines(
-            edit.Words, sourceContent.LanguageMode, sourceContent,
+            editorRows, sourceContent.LanguageMode, sourceContent,
             out _, out _, out WordListLibraryContent content, out string codecError))
             return MockupEditResult.Failure(codecError);
         if (!CanWriteContentMode(content.LanguageMode, out string languageError))
@@ -683,6 +812,11 @@ public sealed class WordListHubProductionBackend : IWordListHubBackend
         if (content == null)
         {
             error = "List content is unavailable.";
+            return false;
+        }
+        if (WordListLibraryContentCodec.FilterEmptyEditorRows(content.Words).Count == 0)
+        {
+            error = EmptyListContentError;
             return false;
         }
         if (!CanWriteContentMode(content.LanguageMode, out error))
@@ -738,13 +872,9 @@ public sealed class WordListHubProductionBackend : IWordListHubBackend
         return null;
     }
 
-    private static bool IsUnlockMilestoneVisible(int requiredChallenges,
-        int completedForQueriedTrack, bool isOverridden)
+    private static bool IsUnlockMilestoneVisible(int requiredChallenges, bool featureAvailable)
     {
-        if (requiredChallenges <= 0) return false;
-        // A bypass suppresses only a milestone still ahead on this exact track.
-        // Reaching the threshold on a different language track cannot hide it.
-        return !isOverridden || completedForQueriedTrack >= requiredChallenges;
+        return requiredChallenges > 0 && featureAvailable;
     }
 
     private static string GetUnlockRewardLabel(int challengeNumber,
@@ -799,6 +929,29 @@ public sealed class WordListHubProductionBackend : IWordListHubBackend
             unlocked ? "Unlocked" : progress + " / " + target + " words completed");
     }
 
+    private bool IsPublicationLocked(string localListId) =>
+        !string.IsNullOrWhiteSpace(localListId)
+        && communityAsync != null
+        && communityAsync.IsLocalListPublicationLocked(localListId);
+
+    private MockupWordList ProjectWithPublication(WordListLibraryItem item)
+    {
+        MockupWordList projected = Project(item, false, true);
+        if (projected == null) return null;
+        MockupCommunityPublicationInfo publication = communityAsync?.Publications?
+            .FirstOrDefault(candidate => candidate != null
+                && string.Equals(candidate.LocalListId, item.LocalListId, StringComparison.Ordinal));
+        if (publication != null)
+            return MockupWordListProjection.WithPublication(projected, publication);
+        if (!IsPublicationLocked(item.LocalListId))
+            return projected;
+
+        return MockupWordListProjection.WithPublication(projected,
+            new MockupCommunityPublicationInfo(item.LocalListId, item.Title, string.Empty,
+                item.ContentHash, MockupCommunityPublicationState.RecoveryRequired, false,
+                "This list has a Workshop binding under another Steam account. Sign in to that account to manage it."));
+    }
+
     private bool IsChineseTrackAvailable()
     {
         PhaseManager phaseManager = Services.Get<PhaseManager>();
@@ -816,7 +969,8 @@ public sealed class WordListHubProductionBackend : IWordListHubBackend
 
     private static MockupWordList Project(
         WordListLibraryItem item, bool isChallenge, bool isChallengeUnlocked,
-        int? challengeStars = null, string unlockRewardLabel = null)
+        int? challengeStars = null, string unlockRewardLabel = null, int challengeNumber = 0,
+        bool challengeCompleted = false, bool revealChallengeDetails = false)
     {
         if (item == null) return null;
         List<string> editorLines = ToEditorLines(item.Content);
@@ -858,7 +1012,19 @@ public sealed class WordListHubProductionBackend : IWordListHubBackend
             isChallenge,
             isChallengeUnlocked,
             unlockRewardLabel,
-            detectedLanguage: ToMockupLanguage(detectedMode));
+            detectedLanguage: ToMockupLanguage(detectedMode),
+            challengeNumber: challengeNumber,
+            challengeCompleted: challengeCompleted,
+            revealChallengeDetails: isChallenge && revealChallengeDetails);
+    }
+
+    private static bool HasChallengeCompletionEvidence(
+        WordListLibraryItem item, int challengeIndex, string trackPrefix)
+    {
+        return item != null
+            && (item.PlayCount > 0
+                || (item.CurrentRecord != null && item.CurrentRecord.HasRecord)
+                || ChallengeProgression.HasCompletedChallengeForTrack(challengeIndex, trackPrefix));
     }
 
     private static bool TryDetectContentLanguage(WordListLibraryContent content, LanguageMode fallback,
@@ -944,10 +1110,12 @@ public sealed class WordListHubProductionBackend : IWordListHubBackend
             + string.Join(" ", entries.Select(entry => entry.pinyin));
     }
 
-    private static bool IsGameplayContentChanged(WordListLibraryItem item, MockupWordListEdit edit)
+    private static bool IsGameplayContentChanged(WordListLibraryItem item, IEnumerable<string> editorRows)
     {
-        if (item == null || edit == null) return false;
-        return !WordsEqual(item.Content == null ? null : ToEditorLines(item.Content), edit.Words);
+        if (item == null) return false;
+        List<string> currentRows = WordListLibraryContentCodec.FilterEmptyEditorRows(
+            item.Content == null ? null : ToEditorLines(item.Content));
+        return !WordsEqual(currentRows, editorRows);
     }
 
     private static bool WordsEqual(IEnumerable<string> left, IEnumerable<string> right)

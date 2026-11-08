@@ -23,7 +23,7 @@ namespace Words.UiMockups.Editor
     public static class WordListHubProductionMergeTool
     {
         private const string MainScene = "Assets/Scenes/mainGame.unity";
-        private const string PreviewScene = "Assets/Scenes/UI-Mockups/WordListHubMockup.unity";
+        private const string PreviewScene = "Assets/Scenes/WordListHubMockup.unity";
         private const string PreviewCanvas = "WordListHubMockupCanvas";
         private const string ProductionCanvas = "ProductionWordListHubCanvas";
         private const string ProductionBridge = "ProductionWordListHubBridgeHost";

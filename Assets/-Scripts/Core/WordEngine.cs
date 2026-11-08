@@ -9,6 +9,7 @@ public class WordEngine
     private readonly Dictionary<string, int> letterOccurrences = new Dictionary<string, int>();
     private string targetText = "";
     private const string CursorBlockChar = "<size=75%>\u2588</size>";
+    private bool debugCompletionConsumed;
 
     public int CurrentStep { get; private set; }
     public int TotalSteps => steps.Count;
@@ -59,7 +60,11 @@ public class WordEngine
         CurrentMixedData = default;
         targetText = word;
         CurrentStep = 0;
+        debugCompletionConsumed = false;
         LastFailureMessage = "";
+        FailedExpectedAction = "";
+        FailedExpectedKey = "";
+        FailedGotKey = "";
         ParseSteps();
     }
 
@@ -107,10 +112,34 @@ public class WordEngine
     public void Reset()
     {
         CurrentStep = 0;
+        debugCompletionConsumed = false;
         LastFailureMessage = "";
         FailedExpectedAction = "";
         FailedExpectedKey = "";
         FailedGotKey = "";
+    }
+
+    /// <summary>
+    /// Completes the current non-empty target without simulating input. The caller
+    /// remains responsible for running the normal phase-completion flow.
+    /// </summary>
+    public bool TryCompleteCurrentWordForDebug()
+    {
+        if (string.IsNullOrWhiteSpace(targetText) || debugCompletionConsumed)
+            return false;
+
+        // A non-empty target with no key steps (for example punctuation only) can
+        // be completed once. For ordinary words, normal input completion wins.
+        if (steps.Count > 0 && CurrentStep >= steps.Count)
+            return false;
+
+        CurrentStep = steps.Count;
+        debugCompletionConsumed = true;
+        LastFailureMessage = "";
+        FailedExpectedAction = "";
+        FailedExpectedKey = "";
+        FailedGotKey = "";
+        return true;
     }
 
     private void ParseSteps()

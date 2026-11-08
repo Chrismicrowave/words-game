@@ -9,18 +9,58 @@ using System.Text;
 /// </summary>
 public static class WordListLibraryContentCodec
 {
+    /// <summary>
+    /// Removes blank editor placeholders and pinyin-only annotation rows while
+    /// retaining the original text/order of every row with display text.
+    /// A separator is treated as an annotation marker only when it is followed
+    /// by whitespace and a lowercase pinyin-like suffix; literal pipe displays
+    /// such as "|" and "|ni" are preserved.
+    /// </summary>
+    public static List<string> FilterEmptyEditorRows(IEnumerable<string> editorLines)
+    {
+        var filtered = new List<string>();
+        if (editorLines == null) return filtered;
+
+        foreach (string raw in editorLines)
+        {
+            if (string.IsNullOrWhiteSpace(raw) || IsPinyinOnlyEditorRow(raw))
+                continue;
+            filtered.Add(raw);
+        }
+        return filtered;
+    }
+
     public static bool TryParseAutoEditorLines(IEnumerable<string> lines, LanguageMode fallback,
         WordListLibraryContent original, out LanguageMode detectedMode, out bool usedFallback,
         out WordListLibraryContent content, out string error)
     {
         content = null;
-        List<string> stableLines = lines != null ? new List<string>(lines) : null;
+        List<string> stableLines = FilterEmptyEditorRows(lines);
         if (!WordListLanguageDetector.TryDetectEditorLines(stableLines, fallback,
             out detectedMode, out usedFallback, out error))
             return false;
         LanguageMode storageMode = SelectAutoStorageMode(
             stableLines, detectedMode, usedFallback, true);
         return TryParseEditorLinesInternal(stableLines, storageMode, original, true, out content, out error);
+    }
+
+    private static bool IsPinyinOnlyEditorRow(string line)
+    {
+        int separator = line.IndexOf('|');
+        if (separator < 0 || separator != line.LastIndexOf('|')
+            || !string.IsNullOrWhiteSpace(line.Substring(0, separator)))
+            return false;
+
+        string suffix = line.Substring(separator + 1);
+        if (suffix.Length == 0 || !char.IsWhiteSpace(suffix[0]))
+            return false;
+
+        string pinyin = suffix.Trim();
+        if (pinyin.Length == 0) return false;
+        foreach (char character in pinyin)
+            if ((character < 'a' || character > 'z') && !char.IsWhiteSpace(character))
+                return false;
+        return true;
     }
 
     public static bool TryParseEditorLines(IEnumerable<string> lines, LanguageMode mode,

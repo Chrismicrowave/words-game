@@ -12,6 +12,8 @@ public class InputHandler : SingletonBehaviour<InputHandler>
     public event Action OnBackspacePressed;
     public event Action OnEnterPressed;
 
+    private Func<bool> debugKeyDownConsumer;
+
     private Keyboard keyboard;
     private bool _gameplayBlocked;
     private bool _hubGameplayBlocked;
@@ -29,6 +31,14 @@ public class InputHandler : SingletonBehaviour<InputHandler>
 
     public void SetGameplayBlocked(bool blocked) => _gameplayBlocked = blocked;
     public void SetHubGameplayBlocked(bool blocked) => _hubGameplayBlocked = blocked;
+
+    public void RegisterDebugKeyDownConsumer(Func<bool> consumer) => debugKeyDownConsumer = consumer;
+
+    public void UnregisterDebugKeyDownConsumer(Func<bool> consumer)
+    {
+        if (debugKeyDownConsumer == consumer)
+            debugKeyDownConsumer = null;
+    }
 
     void BuildKeyMap()
     {
@@ -65,14 +75,36 @@ public class InputHandler : SingletonBehaviour<InputHandler>
         var selected = EventSystem.current?.currentSelectedGameObject;
         if (selected == null) return false;
         // Check for both TMP and legacy input fields
-        return selected.GetComponent<TMPro.TMP_InputField>() != null
-            || selected.GetComponent<UnityEngine.UI.InputField>() != null;
+        return selected.GetComponentInParent<TMPro.TMP_InputField>() != null
+            || selected.GetComponentInParent<UnityEngine.UI.InputField>() != null;
+    }
+
+    private static bool AnyKeyPressedThisFrame(Keyboard source)
+    {
+        foreach (KeyControl key in source.allKeys)
+            if (key.wasPressedThisFrame)
+                return true;
+        return false;
+    }
+
+    private bool TryConsumeDebugKeyDown(bool anyKeyPressedThisFrame)
+    {
+        if (!anyKeyPressedThisFrame || _gameplayBlocked || _hubGameplayBlocked || IsUIFocused()
+            || debugKeyDownConsumer == null)
+            return false;
+
+        return debugKeyDownConsumer();
     }
 
     void Update()
     {
         keyboard = Keyboard.current;
         if (keyboard == null || IsUIFocused()) return;
+
+        if (TryConsumeDebugKeyDown(AnyKeyPressedThisFrame(keyboard)))
+        {
+            return;
+        }
 
         // Check backspace
         if (!_hubGameplayBlocked && keyboard.backspaceKey.wasPressedThisFrame)

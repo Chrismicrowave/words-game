@@ -19,5 +19,6 @@ public enum GameResetTargets
     MyLists = 1 << 12,
     CustomLists = 1 << 13,
     LocalAchievements = 1 << 14,
-    AllLocal = (1 << 15) - 1
+    WordListLibraryMetadata = 1 << 15,
+    AllLocal = (1 << 16) - 1
 }

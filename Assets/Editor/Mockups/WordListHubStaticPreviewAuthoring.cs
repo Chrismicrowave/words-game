@@ -15,7 +15,7 @@ using Words.UiMockups.WordListHub;
 /// </summary>
 public static class WordListHubStaticPreviewAuthoring
 {
-    private const string ScenePath = "Assets/Scenes/UI-Mockups/WordListHubMockup.unity";
+    private const string ScenePath = "Assets/Scenes/WordListHubMockup.unity";
 
     [MenuItem("Tools/Mockups/Synchronize Word List Hub Static Preview")]
     public static void Synchronize()

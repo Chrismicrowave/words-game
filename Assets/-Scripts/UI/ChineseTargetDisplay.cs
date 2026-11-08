@@ -292,7 +292,7 @@ public class ChineseTargetDisplay : MonoBehaviour
             t.localScale = Vector3.one;
 
             // Landing sound on every cell
-            if (landingSound != null && audioSrc != null)
+            if (landingSound != null && audioSrc != null && AudioManager.TryRouteToSfx(audioSrc))
             {
                 audioSrc.pitch = Random.Range(1f / landingSoundPitchRandomization, landingSoundPitchRandomization);
                 audioSrc.PlayOneShot(landingSound, landingSoundVolume);
